@@ -1,6 +1,6 @@
-const DAYS_IN_WEEK = 7;
-
 import { getLocale } from "../i18n/strings.js";
+
+const DAYS_IN_WEEK = 7;
 
 export function getStartOfWeek(date = new Date(), weekStartsOn = 1) {
   const current = new Date(date);
@@ -35,4 +35,11 @@ export function formatMonthDay(date) {
     month: "numeric",
     day: "numeric"
   }).format(date);
+}
+
+export function formatDateKey(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
