@@ -32,7 +32,8 @@ export function renderDayHeader(date) {
   return header;
 }
 
-export function renderDayColumn(date, events, pixelsPerHour) {
+export function renderDayColumn(date, events, pixelsPerHour, options = {}) {
+  const { onEventClick = () => {} } = options;
   const column = document.createElement("div");
   column.className = "day-column";
   column.dataset.date = formatDateKey(date);
@@ -43,7 +44,7 @@ export function renderDayColumn(date, events, pixelsPerHour) {
     column.appendChild(cell);
   }
 
-  column.appendChild(renderEventBlocks(events, pixelsPerHour));
+  column.appendChild(renderEventBlocks(events, pixelsPerHour, onEventClick));
 
   return column;
 }

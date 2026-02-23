@@ -1,0 +1,328 @@
+import { t } from "../../i18n/strings.js";
+import { getState } from "../../state.js";
+
+function invoke(command, payload = {}) {
+  const invokeFn = window.__TAURI__?.core?.invoke;
+  if (typeof invokeFn !== "function") {
+    throw new Error("Tauri invoke API unavailable");
+  }
+
+  return invokeFn(command, payload);
+}
+
+function todayDateKey() {
+  const date = new Date();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+function defaultTimes() {
+  return { startTime: "09:00", endTime: "10:00" };
+}
+
+function createField(labelText, input, className = "") {
+  const wrapper = document.createElement("label");
+  wrapper.className = `event-modal__field ${className}`.trim();
+
+  const label = document.createElement("span");
+  label.className = "event-modal__label";
+  label.textContent = labelText;
+
+  wrapper.appendChild(label);
+  wrapper.appendChild(input);
+  return wrapper;
+}
+
+function createInput(type, name) {
+  const input = document.createElement("input");
+  input.className = "event-modal__input";
+  input.type = type;
+  input.name = name;
+  return input;
+}
+
+export function createEventModal({ onPersist }) {
+  const dialog = document.createElement("dialog");
+  dialog.className = "event-modal";
+
+  const form = document.createElement("form");
+  form.className = "event-modal__form";
+  form.method = "dialog";
+
+  const heading = document.createElement("h2");
+  heading.className = "event-modal__title";
+  form.appendChild(heading);
+
+  const error = document.createElement("p");
+  error.className = "event-modal__error";
+  error.hidden = true;
+  form.appendChild(error);
+
+  const titleInput = createInput("text", "title");
+  titleInput.required = true;
+  titleInput.maxLength = 200;
+  form.appendChild(createField(t("eventFormTitle"), titleInput));
+
+  const calendarSelect = document.createElement("select");
+  calendarSelect.className = "event-modal__input";
+  calendarSelect.name = "calendarId";
+  calendarSelect.required = true;
+  form.appendChild(createField(t("eventFormCalendar"), calendarSelect));
+
+  const dateRow = document.createElement("div");
+  dateRow.className = "event-modal__row";
+  const startDateInput = createInput("date", "startDate");
+  startDateInput.required = true;
+  const endDateInput = createInput("date", "endDate");
+  endDateInput.required = true;
+  dateRow.appendChild(createField(t("eventFormStartDate"), startDateInput));
+  dateRow.appendChild(createField(t("eventFormEndDate"), endDateInput));
+  form.appendChild(dateRow);
+
+  const timeRow = document.createElement("div");
+  timeRow.className = "event-modal__row";
+  const startTimeInput = createInput("time", "startTime");
+  startTimeInput.required = true;
+  const endTimeInput = createInput("time", "endTime");
+  endTimeInput.required = true;
+  timeRow.appendChild(createField(t("eventFormStartTime"), startTimeInput));
+  timeRow.appendChild(createField(t("eventFormEndTime"), endTimeInput));
+  form.appendChild(timeRow);
+
+  const allDayLabel = document.createElement("label");
+  allDayLabel.className = "event-modal__checkbox";
+  const allDayInput = createInput("checkbox", "allDay");
+  allDayInput.className = "event-modal__checkbox-input";
+  const allDayText = document.createElement("span");
+  allDayText.textContent = t("eventFormAllDay");
+  allDayLabel.appendChild(allDayInput);
+  allDayLabel.appendChild(allDayText);
+  form.appendChild(allDayLabel);
+
+  const locationInput = createInput("text", "location");
+  locationInput.maxLength = 200;
+  form.appendChild(createField(t("eventFormLocation"), locationInput));
+
+  const privateDescriptionInput = document.createElement("textarea");
+  privateDescriptionInput.className = "event-modal__input event-modal__textarea";
+  privateDescriptionInput.name = "descriptionPrivate";
+  privateDescriptionInput.rows = 3;
+  form.appendChild(createField(t("eventFormPrivateDescription"), privateDescriptionInput));
+
+  const publicDescriptionInput = document.createElement("textarea");
+  publicDescriptionInput.className = "event-modal__input event-modal__textarea";
+  publicDescriptionInput.name = "descriptionPublic";
+  publicDescriptionInput.rows = 3;
+  form.appendChild(createField(t("eventFormPublicDescription"), publicDescriptionInput));
+
+  const actions = document.createElement("div");
+  actions.className = "event-modal__actions";
+
+  const deleteButton = document.createElement("button");
+  deleteButton.type = "button";
+  deleteButton.className = "event-modal__btn event-modal__btn--danger";
+  deleteButton.textContent = t("eventFormDelete");
+
+  const cancelButton = document.createElement("button");
+  cancelButton.type = "button";
+  cancelButton.className = "event-modal__btn";
+  cancelButton.textContent = t("eventFormCancel");
+
+  const saveButton = document.createElement("button");
+  saveButton.type = "submit";
+  saveButton.className = "event-modal__btn event-modal__btn--primary";
+  saveButton.textContent = t("eventFormSave");
+
+  actions.appendChild(deleteButton);
+  actions.appendChild(cancelButton);
+  actions.appendChild(saveButton);
+  form.appendChild(actions);
+
+  dialog.appendChild(form);
+
+  const state = {
+    mode: "create",
+    editingId: null
+  };
+
+  function showError(message) {
+    error.textContent = message;
+    error.hidden = false;
+  }
+
+  function clearError() {
+    error.hidden = true;
+    error.textContent = "";
+  }
+
+  function applyAllDayState() {
+    const disabled = allDayInput.checked;
+    startTimeInput.disabled = disabled;
+    endTimeInput.disabled = disabled;
+  }
+
+  function fillCalendarOptions(selectedCalendarId) {
+    calendarSelect.innerHTML = "";
+    const calendars = getState().calendars;
+
+    calendars.forEach((calendar) => {
+      const option = document.createElement("option");
+      option.value = calendar.id;
+      option.textContent = calendar.name;
+      calendarSelect.appendChild(option);
+    });
+
+    if (selectedCalendarId) {
+      calendarSelect.value = selectedCalendarId;
+    } else if (calendars.length > 0) {
+      calendarSelect.value = calendars[0].id;
+    }
+  }
+
+  function setDefaults() {
+    const { startTime, endTime } = defaultTimes();
+    const dateKey = todayDateKey();
+
+    titleInput.value = "";
+    startDateInput.value = dateKey;
+    endDateInput.value = dateKey;
+    startTimeInput.value = startTime;
+    endTimeInput.value = endTime;
+    allDayInput.checked = false;
+    locationInput.value = "";
+    privateDescriptionInput.value = "";
+    publicDescriptionInput.value = "";
+    applyAllDayState();
+  }
+
+  function setModeCreate() {
+    state.mode = "create";
+    state.editingId = null;
+    heading.textContent = t("eventFormCreateHeading");
+    deleteButton.hidden = true;
+  }
+
+  function setModeEdit(eventId) {
+    state.mode = "edit";
+    state.editingId = eventId;
+    heading.textContent = t("eventFormEditHeading");
+    deleteButton.hidden = false;
+  }
+
+  function collectPayload() {
+    return {
+      calendarId: calendarSelect.value,
+      title: titleInput.value,
+      startDate: startDateInput.value,
+      endDate: endDateInput.value,
+      startTime: allDayInput.checked ? null : startTimeInput.value,
+      endTime: allDayInput.checked ? null : endTimeInput.value,
+      allDay: allDayInput.checked,
+      descriptionPrivate: privateDescriptionInput.value,
+      descriptionPublic: publicDescriptionInput.value,
+      location: locationInput.value
+    };
+  }
+
+  async function openCreate(prefill = {}) {
+    clearError();
+    setModeCreate();
+    fillCalendarOptions(prefill.calendarId);
+    setDefaults();
+
+    if (prefill.date) {
+      startDateInput.value = prefill.date;
+      endDateInput.value = prefill.date;
+    }
+
+    if (prefill.startTime) {
+      startTimeInput.value = prefill.startTime;
+    }
+
+    if (prefill.endTime) {
+      endTimeInput.value = prefill.endTime;
+    }
+
+    dialog.showModal();
+    titleInput.focus();
+  }
+
+  async function openEdit(eventId) {
+    clearError();
+    setModeEdit(eventId);
+
+    try {
+      const event = await invoke("get_event", { id: eventId });
+      fillCalendarOptions(event.calendarId);
+
+      titleInput.value = event.title ?? "";
+      startDateInput.value = event.startDate ?? todayDateKey();
+      endDateInput.value = event.endDate ?? startDateInput.value;
+      startTimeInput.value = event.startTime ?? "09:00";
+      endTimeInput.value = event.endTime ?? "10:00";
+      allDayInput.checked = Boolean(event.allDay);
+      locationInput.value = event.location ?? "";
+      privateDescriptionInput.value = event.descriptionPrivate ?? "";
+      publicDescriptionInput.value = event.descriptionPublic ?? "";
+      applyAllDayState();
+
+      dialog.showModal();
+      titleInput.focus();
+    } catch (invokeError) {
+      showError(String(invokeError));
+      dialog.showModal();
+    }
+  }
+
+  allDayInput.addEventListener("change", applyAllDayState);
+
+  cancelButton.addEventListener("click", () => {
+    dialog.close();
+  });
+
+  deleteButton.addEventListener("click", async () => {
+    if (!state.editingId) {
+      return;
+    }
+
+    const confirmed = window.confirm(t("eventFormDeleteConfirm"));
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await invoke("delete_event", { id: state.editingId });
+      dialog.close();
+      await onPersist();
+    } catch (invokeError) {
+      showError(String(invokeError));
+    }
+  });
+
+  form.addEventListener("submit", async (submitEvent) => {
+    submitEvent.preventDefault();
+    clearError();
+
+    const payload = collectPayload();
+
+    try {
+      if (state.mode === "edit" && state.editingId) {
+        await invoke("update_event", { id: state.editingId, event: payload });
+      } else {
+        await invoke("create_event", { event: payload });
+      }
+
+      dialog.close();
+      await onPersist();
+    } catch (invokeError) {
+      showError(String(invokeError));
+    }
+  });
+
+  return {
+    element: dialog,
+    openCreate,
+    openEdit
+  };
+}

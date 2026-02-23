@@ -8,6 +8,7 @@ use std::sync::Mutex;
 use uuid::Uuid;
 
 use crate::commands::calendar_cmds::{create_calendar, list_calendars};
+use crate::commands::event_cmds::{create_event, delete_event, get_event, update_event};
 use crate::commands::view_cmds::get_week_events;
 use crate::models::Calendar;
 use crate::state::AppState;
@@ -46,7 +47,11 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             list_calendars,
             create_calendar,
-            get_week_events
+            get_week_events,
+            create_event,
+            update_event,
+            delete_event,
+            get_event
         ])
         .run(tauri::generate_context!())
         .expect("failed to run Ordning application");

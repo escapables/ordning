@@ -87,7 +87,7 @@ function layoutEvents(events) {
   return normalized;
 }
 
-function createEventElement(event, pixelsPerMinute) {
+function createEventElement(event, pixelsPerMinute, onEventClick) {
   const element = document.createElement("article");
   element.className = "event-block";
   element.style.top = `${event.startMinutes * pixelsPerMinute}px`;
@@ -111,11 +111,15 @@ function createEventElement(event, pixelsPerMinute) {
 
   element.appendChild(title);
   element.appendChild(time);
+  element.addEventListener("click", (clickEvent) => {
+    clickEvent.stopPropagation();
+    onEventClick(event.id);
+  });
 
   return element;
 }
 
-export function renderEventBlocks(events, pixelsPerHour) {
+export function renderEventBlocks(events, pixelsPerHour, onEventClick = () => {}) {
   const layer = document.createElement("div");
   layer.className = "event-layer";
 
@@ -125,7 +129,7 @@ export function renderEventBlocks(events, pixelsPerHour) {
   );
 
   laidOutEvents.forEach((event) => {
-    layer.appendChild(createEventElement(event, pixelsPerMinute));
+    layer.appendChild(createEventElement(event, pixelsPerMinute, onEventClick));
   });
 
   return layer;
