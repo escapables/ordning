@@ -1,0 +1,35 @@
+# Build
+/target/
+/src-tauri/target/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Node
+node_modules/
+dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+*.profdata
+*.profraw
+
+# Agent config and working docs (local only)
+.agents/
+.claude/
+CLAUDE.md
+AGENTS.md
+docs/PRIMARY_TODO.md
+docs/TODO.md
+docs/WORKFLOW.md
