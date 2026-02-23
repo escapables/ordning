@@ -5,13 +5,6 @@ import { formatDateKey } from "../../utils/date-utils.js";
 const HOURS_PER_DAY = 24;
 const PIXELS_PER_HOUR = 56;
 
-const FAKE_EVENTS = [
-  { id: "evt-1", dayOffset: 0, startTime: "09:00", endTime: "10:30", title: "Standup", color: "#007aff" },
-  { id: "evt-2", dayOffset: 1, startTime: "10:00", endTime: "11:30", title: "Design Review", color: "#34c759" },
-  { id: "evt-3", dayOffset: 1, startTime: "10:30", endTime: "12:00", title: "Client Call", color: "#ff9500" },
-  { id: "evt-4", dayOffset: 3, startTime: "14:00", endTime: "16:00", title: "Planning", color: "#5856d6" }
-];
-
 function renderTimeLabel(hour) {
   const label = document.createElement("div");
   label.className = "time-label";
@@ -30,16 +23,14 @@ function renderTimeLabels() {
   return labels;
 }
 
-export function renderWeekGrid(dates) {
+export function renderWeekGrid(dates, events = []) {
   const root = document.createElement("section");
   root.className = "week-view";
 
   const eventsByDate = new Map(
-    dates.map((date, index) => {
+    dates.map((date) => {
       const dateKey = formatDateKey(date);
-      const dayEvents = FAKE_EVENTS
-        .filter((event) => event.dayOffset === index)
-        .map((event) => ({ ...event, date: dateKey }));
+      const dayEvents = events.filter((event) => event.date === dateKey);
       return [dateKey, dayEvents];
     })
   );

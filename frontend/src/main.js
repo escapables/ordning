@@ -1,16 +1,39 @@
 import { getLocale, t } from "./i18n/strings.js";
 import { renderWeekGrid } from "./components/week-view/week-grid.js";
-import { getEndOfWeek, getStartOfWeek, getWeekDates } from "./utils/date-utils.js";
+import { formatDateKey, getEndOfWeek, getStartOfWeek, getWeekDates } from "./utils/date-utils.js";
+import { getState, loadCalendars, loadWeekEvents, subscribe } from "./state.js";
 
-function renderAppShell() {
+function mapBackendEvents(events) {
+  return events.map((event) => ({
+    id: event.id,
+    date: event.date,
+    startTime: event.start_time,
+    endTime: event.end_time,
+    title: event.title,
+    color: event.color
+  }));
+}
+
+function renderWeekSection(mainContent, weekDates) {
+  const previous = mainContent.querySelector(".week-view");
+  if (previous) {
+    previous.remove();
+  }
+
+  const mappedEvents = mapBackendEvents(getState().events);
+  mainContent.appendChild(renderWeekGrid(weekDates, mappedEvents));
+}
+
+async function renderAppShell() {
   const app = document.querySelector("#app");
   if (!app) {
     return;
   }
 
-  const weekDates = getWeekDates(new Date(), 1);
-  const start = getStartOfWeek(new Date(), 1);
-  const end = getEndOfWeek(new Date(), 1);
+  const now = new Date();
+  const weekDates = getWeekDates(now, 1);
+  const start = getStartOfWeek(now, 1);
+  const end = getEndOfWeek(now, 1);
 
   app.innerHTML = `
     <div class="app-shell">
@@ -33,7 +56,15 @@ function renderAppShell() {
     return;
   }
 
-  mainContent.appendChild(renderWeekGrid(weekDates));
+  subscribe(() => {
+    renderWeekSection(mainContent, weekDates);
+  });
+
+  renderWeekSection(mainContent, weekDates);
+
+  const startDate = formatDateKey(start);
+  const endDate = formatDateKey(end);
+  await Promise.all([loadCalendars(), loadWeekEvents(startDate, endDate)]);
 }
 
 renderAppShell();
