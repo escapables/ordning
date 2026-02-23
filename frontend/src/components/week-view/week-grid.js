@@ -24,7 +24,10 @@ function renderTimeLabels() {
 }
 
 export function renderWeekGrid(dates, events = [], options = {}) {
-  const { onEventClick = () => {} } = options;
+  const {
+    onEventClick = () => {},
+    onCreateSlot = () => {}
+  } = options;
   const root = document.createElement("section");
   root.className = "week-view";
 
@@ -54,7 +57,12 @@ export function renderWeekGrid(dates, events = [], options = {}) {
   dates.forEach((date) => {
     const dateKey = formatDateKey(date);
     const dayEvents = eventsByDate.get(dateKey) ?? [];
-    body.appendChild(renderDayColumn(date, dayEvents, PIXELS_PER_HOUR, { onEventClick }));
+    body.appendChild(
+      renderDayColumn(date, dayEvents, PIXELS_PER_HOUR, {
+        onEventClick,
+        onCreateSlot
+      })
+    );
   });
 
   mountTimeIndicator(body, dates, PIXELS_PER_HOUR);

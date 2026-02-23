@@ -15,14 +15,14 @@ function mapBackendEvents(events) {
   }));
 }
 
-function renderWeekSection(mainContent, weekDates, onEventClick) {
+function renderWeekSection(mainContent, weekDates, options = {}) {
   const previous = mainContent.querySelector(".week-view");
   if (previous) {
     previous.remove();
   }
 
   const mappedEvents = mapBackendEvents(getState().events);
-  mainContent.appendChild(renderWeekGrid(weekDates, mappedEvents, { onEventClick }));
+  mainContent.appendChild(renderWeekGrid(weekDates, mappedEvents, options));
 }
 
 async function renderAppShell() {
@@ -77,13 +77,23 @@ async function renderAppShell() {
   }
 
   subscribe(() => {
-    renderWeekSection(mainContent, weekDates, (eventId) => {
-      eventModal.openEdit(eventId);
+    renderWeekSection(mainContent, weekDates, {
+      onEventClick: (eventId) => {
+        eventModal.openEdit(eventId);
+      },
+      onCreateSlot: (prefill) => {
+        eventModal.openCreate(prefill);
+      }
     });
   });
 
-  renderWeekSection(mainContent, weekDates, (eventId) => {
-    eventModal.openEdit(eventId);
+  renderWeekSection(mainContent, weekDates, {
+    onEventClick: (eventId) => {
+      eventModal.openEdit(eventId);
+    },
+    onCreateSlot: (prefill) => {
+      eventModal.openCreate(prefill);
+    }
   });
   await refreshWeek();
 }

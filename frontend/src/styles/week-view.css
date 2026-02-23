@@ -91,6 +91,7 @@
 .day-column__hour {
   height: var(--hour-row-height);
   border-top: 1px solid #ececf0;
+  cursor: cell;
 }
 
 .day-column__hour:first-child {
@@ -100,7 +101,18 @@
 .event-layer {
   position: absolute;
   inset: 0;
-  pointer-events: auto;
+  pointer-events: none;
+}
+
+.day-column__selection-preview {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  border: 1px solid rgb(0 122 255 / 0.4);
+  background: rgb(0 122 255 / 0.2);
+  border-radius: 4px;
+  z-index: 2;
+  pointer-events: none;
 }
 
 .event-block {
@@ -114,6 +126,7 @@
   transition: filter 120ms ease, box-shadow 120ms ease, transform 120ms ease;
   cursor: pointer;
   pointer-events: auto;
+  z-index: 3;
 }
 
 .event-block:hover {

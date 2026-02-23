@@ -204,6 +204,11 @@ def _validate_todo_format(path: Path) -> list[str]:
 
     for i, (start_idx, section_number, is_done, _) in enumerate(sections):
         end_idx = sections[i + 1][0] if i + 1 < len(sections) else len(lines)
+        # Also stop block at milestone headings (## vX.X)
+        for j in range(start_idx + 1, end_idx):
+            if VERSION_HEADING_PATTERN.match(lines[j].strip()):
+                end_idx = j
+                break
         raw_block = lines[start_idx + 1 : end_idx]
         block: list[str] = []
         for raw_line in raw_block:
