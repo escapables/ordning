@@ -20,6 +20,18 @@ Personal offline calendar app for Linux, mimicking Apple Calendar's week view. S
 - **Frontend**: Vanilla JS (ES modules) + CSS. No framework — simple reactive state store with pub/sub pattern
 - **Persistence**: JSON file at `~/.local/share/com.ordning.app/ordning-data.json` (atomic write: write to .tmp, rename)
 
+## Internationalization
+
+Swedish default, English toggle. Two-language only — no framework needed.
+
+- **String map**: `src/i18n/strings.js` exports `{ sv: { ... }, en: { ... } }` keyed by string ID
+- **Lookup**: `t('today')` returns current-language string; `setLang('en'|'sv')` switches
+- **Persistence**: Language preference stored in app data JSON (`"lang": "sv"`)
+- **Day/month names**: Included in string map (e.g., `monday: "Måndag"` / `"Monday"`)
+- **Settings toggle**: UI in sidebar or toolbar (later milestone); plumbing from v0.1
+
+All UI text must go through `t()` — no hardcoded user-facing strings in components.
+
 ## Project Structure
 
 ```
@@ -29,6 +41,8 @@ Personal offline calendar app for Linux, mimicking Apple Calendar's week view. S
 ├── src/                          # Frontend
 │   ├── main.js                   # Bootstrap, Tauri API init
 │   ├── state.js                  # Reactive pub/sub state store
+│   ├── i18n/
+│   │   └── strings.js            # { sv: {...}, en: {...} }, t() helper
 │   ├── styles/
 │   │   ├── reset.css
 │   │   ├── variables.css         # Apple Calendar aesthetic tokens
@@ -162,6 +176,7 @@ Dates are timezone-naive (NaiveDate/NaiveTime) — personal calendar operates in
 | NaiveDate/NaiveTime | Offline-only, single timezone. Avoids timezone DB complexity. |
 | Mutex not RwLock | Single-user desktop app, writes hit disk on every mutation. Low contention. |
 | Atomic writes | Write to .tmp then rename. Prevents data corruption on crash. |
+| Simple i18n | Two languages (sv/en), plain JS object. No framework — string map + `t()` lookup. |
 
 ## Risk Areas
 
