@@ -38,3 +38,142 @@
   font-size: 14px;
   background: rgb(255 255 255 / 0.65);
 }
+
+.sidebar__calendar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.calendar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.calendar-list__group {
+  padding-top: 8px;
+  border-top: 1px solid rgb(0 0 0 / 0.06);
+}
+
+.calendar-list__group:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.calendar-list__group-title {
+  margin: 0 0 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-secondary);
+}
+
+.calendar-list__item {
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 8px;
+  padding: 0 8px;
+}
+
+.calendar-list__item:hover {
+  background: rgb(0 0 0 / 0.04);
+}
+
+.calendar-list__checkbox {
+  margin: 0;
+  accent-color: var(--color-accent);
+}
+
+.calendar-list__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.calendar-list__name {
+  flex: 1 1 auto;
+  font-size: 13px;
+  color: var(--color-text-primary);
+}
+
+.calendar-list__delete {
+  border: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.calendar-list__delete:hover {
+  background: rgb(255 59 48 / 0.1);
+  color: #d92f24;
+}
+
+.calendar-create {
+  border-top: 1px solid rgb(0 0 0 / 0.06);
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.calendar-create__input {
+  min-height: 34px;
+  border: 1px solid var(--color-border-muted);
+  border-radius: 7px;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 13px;
+  background: #fff;
+}
+
+.calendar-create__input:focus {
+  outline: 2px solid rgb(0 122 255 / 0.22);
+  outline-offset: 0;
+}
+
+.calendar-create__colors {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.calendar-create__color {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  justify-self: start;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.12);
+}
+
+.calendar-create__color--selected {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px rgb(0 122 255 / 0.5);
+}
+
+.calendar-create__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.calendar-create__submit {
+  min-height: 32px;
+  border: 0;
+  border-radius: 7px;
+  padding: 0 12px;
+  background: var(--color-accent);
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
