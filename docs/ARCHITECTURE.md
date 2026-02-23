@@ -151,7 +151,7 @@ Dates are timezone-naive (NaiveDate/NaiveTime) — personal calendar operates in
 - **Week grid**: CSS Grid for 7 day columns + time label column; hourly rows
 - **Event blocks**: Absolutely positioned within day columns; `top`/`height` computed from start/end times (pixels-per-hour constant)
 - **Overlapping events**: Collision detection groups overlapping events, distributes width evenly
-- **Apple Calendar aesthetic**: System font stack, specific color tokens (#007aff blue, #ff3b30 red time indicator, #f5f5f7 sidebar bg), 4px border-radius on events, 11px event text
+- **Apple Calendar aesthetic**: Liberation Sans font stack (`"Liberation Sans", sans-serif`), specific color tokens (#007aff blue, #ff3b30 red time indicator, #f5f5f7 sidebar bg), 4px border-radius on events, 11px event text
 
 ## Design Decisions
 
