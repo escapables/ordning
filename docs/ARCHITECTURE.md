@@ -18,7 +18,7 @@ Personal offline calendar app for Linux, mimicking Apple Calendar's week view. S
 
 - **Backend**: Rust (serde, chrono, uuid, tauri-plugin-dialog, tauri-plugin-fs)
 - **Frontend**: Vanilla JS (ES modules) + CSS. No framework — simple reactive state store with pub/sub pattern
-- **Persistence**: JSON file at `~/.local/share/com.ordning.app/ordning-data.json` (atomic write: write to .tmp, rename)
+- **Persistence**: JSON file at `<exe_dir>/ordning-data.json` — portable, lives next to the binary (atomic write: write to .tmp, rename)
 
 ## Internationalization
 
@@ -192,4 +192,4 @@ After each sprint:
 1. `cargo tauri dev` — app builds and opens
 2. Manual testing of the sprint's demo scenario
 3. Verify persistence: close app, reopen, data intact
-4. Check JSON file: `cat ~/.local/share/com.ordning.app/ordning-data.json | python3 -m json.tool`
+4. Check JSON file: `cat ordning-data.json | python3 -m json.tool` (next to the binary)

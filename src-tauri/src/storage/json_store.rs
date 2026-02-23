@@ -6,7 +6,6 @@ use anyhow::{Context, Result};
 
 use crate::models::AppData;
 
-const APP_DIR: &str = "com.ordning.app";
 const DATA_FILE_NAME: &str = "ordning-data.json";
 
 #[derive(Debug, Clone)]
@@ -16,8 +15,11 @@ pub struct JsonStore {
 
 impl JsonStore {
     pub fn new() -> Result<Self> {
-        let data_root = dirs::data_dir().context("failed to resolve data directory")?;
-        let data_path = data_root.join(APP_DIR).join(DATA_FILE_NAME);
+        let exe_path = std::env::current_exe().context("failed to resolve executable path")?;
+        let exe_dir = exe_path
+            .parent()
+            .context("failed to resolve executable directory")?;
+        let data_path = exe_dir.join(DATA_FILE_NAME);
         Ok(Self { data_path })
     }
 

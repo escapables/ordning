@@ -1,5 +1,3 @@
-import { invoke } from "@tauri-apps/api/core";
-
 const state = {
   calendars: [],
   events: [],
@@ -35,6 +33,15 @@ export function setCalendars(calendars) {
 export function setEvents(events) {
   state.events = events;
   notify();
+}
+
+async function invoke(command, payload = {}) {
+  const invokeFn = window.__TAURI__?.core?.invoke;
+  if (typeof invokeFn !== "function") {
+    throw new Error("Tauri invoke API unavailable");
+  }
+
+  return invokeFn(command, payload);
 }
 
 export async function loadCalendars() {
