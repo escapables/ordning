@@ -24,7 +24,7 @@ Personal offline calendar app for Linux, mimicking Apple Calendar's week view. S
 
 Swedish default, English toggle. Two-language only — no framework needed.
 
-- **String map**: `src/i18n/strings.js` exports `{ sv: { ... }, en: { ... } }` keyed by string ID
+- **String map**: `frontend/src/i18n/strings.js` exports `{ sv: { ... }, en: { ... } }` keyed by string ID
 - **Lookup**: `t('today')` returns current-language string; `setLang('en'|'sv')` switches
 - **Persistence**: Language preference stored in app data JSON (`"lang": "sv"`)
 - **Day/month names**: Included in string map (e.g., `monday: "Måndag"` / `"Monday"`)
@@ -37,44 +37,45 @@ All UI text must go through `t()` — no hardcoded user-facing strings in compon
 ```
 ~/projects/ordning/
 ├── package.json
-├── index.html
-├── src/                          # Frontend
-│   ├── main.js                   # Bootstrap, Tauri API init
-│   ├── state.js                  # Reactive pub/sub state store
-│   ├── i18n/
-│   │   └── strings.js            # { sv: {...}, en: {...} }, t() helper
-│   ├── styles/
-│   │   ├── reset.css
-│   │   ├── variables.css         # Apple Calendar aesthetic tokens
-│   │   ├── layout.css            # Sidebar + main grid
-│   │   ├── sidebar.css
-│   │   ├── week-view.css
-│   │   ├── event-form.css
-│   │   └── components.css
-│   ├── components/
-│   │   ├── app-shell.js
-│   │   ├── sidebar/
-│   │   │   ├── calendar-list.js
-│   │   │   └── mini-month.js
-│   │   ├── header/
-│   │   │   ├── toolbar.js
-│   │   │   └── search.js
-│   │   ├── week-view/
-│   │   │   ├── week-grid.js
-│   │   │   ├── day-column.js
-│   │   │   ├── event-block.js
-│   │   │   ├── all-day-bar.js
-│   │   │   └── time-indicator.js
-│   │   ├── event-form/
-│   │   │   ├── event-modal.js
-│   │   │   └── recurrence-picker.js
-│   │   └── dialogs/
-│   │       ├── import-dialog.js
-│   │       └── export-dialog.js
-│   └── utils/
-│       ├── date-utils.js
-│       ├── color-utils.js
-│       └── dom-utils.js
+├── frontend/
+│   ├── index.html
+│   └── src/                      # Frontend
+│       ├── main.js               # Bootstrap, Tauri API init
+│       ├── state.js              # Reactive pub/sub state store
+│       ├── i18n/
+│       │   └── strings.js        # { sv: {...}, en: {...} }, t() helper
+│       ├── styles/
+│       │   ├── reset.css
+│       │   ├── variables.css     # Apple Calendar aesthetic tokens
+│       │   ├── layout.css        # Sidebar + main grid
+│       │   ├── sidebar.css
+│       │   ├── week-view.css
+│       │   ├── event-form.css
+│       │   └── components.css
+│       ├── components/
+│       │   ├── app-shell.js
+│       │   ├── sidebar/
+│       │   │   ├── calendar-list.js
+│       │   │   └── mini-month.js
+│       │   ├── header/
+│       │   │   ├── toolbar.js
+│       │   │   └── search.js
+│       │   ├── week-view/
+│       │   │   ├── week-grid.js
+│       │   │   ├── day-column.js
+│       │   │   ├── event-block.js
+│       │   │   ├── all-day-bar.js
+│       │   │   └── time-indicator.js
+│       │   ├── event-form/
+│       │   │   ├── event-modal.js
+│       │   │   └── recurrence-picker.js
+│       │   └── dialogs/
+│       │       ├── import-dialog.js
+│       │       └── export-dialog.js
+│       └── utils/
+│           ├── date-utils.js
+│           ├── color-utils.js
+│           └── dom-utils.js
 └── src-tauri/                    # Rust backend
     ├── Cargo.toml
     ├── tauri.conf.json
