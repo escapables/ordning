@@ -1,4 +1,5 @@
 mod commands;
+mod import_export;
 mod models;
 mod state;
 mod storage;
@@ -11,6 +12,9 @@ use crate::commands::calendar_cmds::{
     create_calendar, delete_calendar, list_calendars, toggle_visibility, update_calendar,
 };
 use crate::commands::event_cmds::{create_event, delete_event, get_event, update_event};
+use crate::commands::io_cmds::{
+    export_json, get_export_event_count, import_json, preview_import_json,
+};
 use crate::commands::view_cmds::get_week_events;
 use crate::models::Calendar;
 use crate::state::AppState;
@@ -45,6 +49,7 @@ pub fn run() {
     };
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .manage(state)
         .invoke_handler(tauri::generate_handler![
             list_calendars,
@@ -56,7 +61,11 @@ pub fn run() {
             create_event,
             update_event,
             delete_event,
-            get_event
+            get_event,
+            export_json,
+            get_export_event_count,
+            preview_import_json,
+            import_json
         ])
         .run(tauri::generate_context!())
         .expect("failed to run Ordning application");

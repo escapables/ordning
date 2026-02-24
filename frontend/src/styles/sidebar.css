@@ -27,6 +27,34 @@
   margin-bottom: 12px;
 }
 
+.sidebar__export-btn {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid var(--color-border-muted);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
+.sidebar__import-btn {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid var(--color-border-muted);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
 .sidebar__placeholder {
   border: 1px dashed var(--color-border-muted);
   border-radius: var(--radius-sm);

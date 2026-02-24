@@ -1,5 +1,7 @@
 import { getLocale, t } from "./i18n/strings.js";
 import { createEventModal } from "./components/event-form/event-modal.js";
+import { createExportDialog } from "./components/export-dialog/export-dialog.js";
+import { createImportDialog } from "./components/import-dialog/import-dialog.js";
 import { renderCalendarList } from "./components/sidebar/calendar-list.js";
 import { renderWeekGrid } from "./components/week-view/week-grid.js";
 import { formatDateKey, getEndOfWeek, getStartOfWeek, getWeekDates } from "./utils/date-utils.js";
@@ -50,6 +52,8 @@ async function renderAppShell() {
       <aside class="sidebar">
         <div class="sidebar__title">${t("sidebarTitle")}</div>
         <button type="button" class="sidebar__new-event-btn">${t("newEventButton")}</button>
+        <button type="button" class="sidebar__export-btn">${t("exportButton")}</button>
+        <button type="button" class="sidebar__import-btn">${t("importButton")}</button>
         <div class="sidebar__calendar-list"></div>
       </aside>
       <main class="main-content">
@@ -84,6 +88,13 @@ async function renderAppShell() {
   });
   app.appendChild(eventModal.element);
 
+  const exportDialog = createExportDialog();
+  app.appendChild(exportDialog.element);
+  const importDialog = createImportDialog({
+    onImported: refreshAndRender
+  });
+  app.appendChild(importDialog.element);
+
   const newEventButton = app.querySelector(".sidebar__new-event-btn");
   if (newEventButton) {
     newEventButton.addEventListener("click", () => {
@@ -91,47 +102,60 @@ async function renderAppShell() {
     });
   }
 
+  const exportButton = app.querySelector(".sidebar__export-btn");
+  if (exportButton) {
+    exportButton.addEventListener("click", () => {
+      exportDialog.open();
+    });
+  }
+
+  const importButton = app.querySelector(".sidebar__import-btn");
+  if (importButton) {
+    importButton.addEventListener("click", () => {
+      importDialog.open();
+    });
+  }
+
   subscribe(() => {
     const calendars = getState().calendars;
     sidebarList.innerHTML = "";
+    sidebarList.appendChild(
+      renderCalendarList(calendars, {
+        onCreate: async ({ name, color }) => {
+          if (!name) {
+            return;
+          }
 
-    if (calendars.length === 0) {
-      sidebarList.textContent = t("sidebarPlaceholder");
-    } else {
-      sidebarList.appendChild(
-        renderCalendarList(calendars, {
-          onCreate: async ({ name, color }) => {
-            if (!name) {
-              return;
-            }
-
-            await invoke("create_calendar", {
-              name,
-              color
-            });
-            await refreshAndRender();
-          },
-          onDelete: async (calendar) => {
-            const confirmed = window.confirm(t("calendarDeleteConfirm"));
-            if (!confirmed) {
-              return;
-            }
-
+          await invoke("create_calendar", {
+            name,
+            color
+          });
+          await refreshAndRender();
+        },
+        onDelete: async (calendar) => {
+          const confirmed = window.confirm(t("calendarDeleteConfirm"));
+          if (!confirmed) {
+            return;
+          }
+          try {
             await invoke("delete_calendar", { id: calendar.id });
             await refreshAndRender();
-          },
-          onToggleVisibility: async (calendarId) => {
-            try {
-              await invoke("toggle_visibility", { id: calendarId });
-              await refreshAndRender();
-            } catch (error) {
-              window.alert(t("calendarVisibilityError"));
-              console.error("Failed to toggle calendar visibility", error);
-            }
+          } catch (error) {
+            window.alert(t("calendarDeleteError"));
+            console.error("Failed to delete calendar", error);
           }
-        })
-      );
-    }
+        },
+        onToggleVisibility: async (calendarId) => {
+          try {
+            await invoke("toggle_visibility", { id: calendarId });
+            await refreshAndRender();
+          } catch (error) {
+            window.alert(t("calendarVisibilityError"));
+            console.error("Failed to toggle calendar visibility", error);
+          }
+        }
+      })
+    );
 
     renderWeekSection(mainContent, weekDates, {
       onEventClick: (eventId) => {
