@@ -52,13 +52,23 @@ async function renderAppShell() {
       <aside class="sidebar">
         <div class="sidebar__title">${t("sidebarTitle")}</div>
         <button type="button" class="sidebar__new-event-btn">${t("newEventButton")}</button>
-        <button type="button" class="sidebar__export-btn">${t("exportButton")}</button>
-        <button type="button" class="sidebar__import-btn">${t("importButton")}</button>
         <div class="sidebar__calendar-list"></div>
       </aside>
       <main class="main-content">
-        <div class="main-content__title">
-          ${t("weekOfPrefix")} ${start.toLocaleDateString(getLocale())} - ${end.toLocaleDateString(getLocale())}
+        <div class="main-toolbar">
+          <div class="main-content__title">
+            ${t("weekOfPrefix")} ${start.toLocaleDateString(getLocale())} - ${end.toLocaleDateString(getLocale())}
+          </div>
+          <div class="main-toolbar__actions">
+            <button type="button" class="main-toolbar__btn main-toolbar__btn--export">
+              <span aria-hidden="true">↑</span>
+              <span>${t("exportButton")}</span>
+            </button>
+            <button type="button" class="main-toolbar__btn main-toolbar__btn--import">
+              <span aria-hidden="true">↓</span>
+              <span>${t("importButton")}</span>
+            </button>
+          </div>
         </div>
       </main>
     </div>
@@ -102,14 +112,14 @@ async function renderAppShell() {
     });
   }
 
-  const exportButton = app.querySelector(".sidebar__export-btn");
+  const exportButton = app.querySelector(".main-toolbar__btn--export");
   if (exportButton) {
     exportButton.addEventListener("click", () => {
       exportDialog.open();
     });
   }
 
-  const importButton = app.querySelector(".sidebar__import-btn");
+  const importButton = app.querySelector(".main-toolbar__btn--import");
   if (importButton) {
     importButton.addEventListener("click", () => {
       importDialog.open();

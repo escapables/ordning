@@ -21,13 +21,17 @@ function defaultTimes() {
   return { startTime: "09:00", endTime: "10:00" };
 }
 
-function createField(labelText, input, className = "") {
+function createField(labelText, input, className = "", options = {}) {
+  const { labelPrefix = "", labelTitle = "" } = options;
   const wrapper = document.createElement("label");
   wrapper.className = `event-modal__field ${className}`.trim();
 
   const label = document.createElement("span");
   label.className = "event-modal__label";
-  label.textContent = labelText;
+  label.textContent = `${labelPrefix}${labelText}`;
+  if (labelTitle) {
+    label.title = labelTitle;
+  }
 
   wrapper.appendChild(label);
   wrapper.appendChild(input);
@@ -108,10 +112,16 @@ export function createEventModal({
   form.appendChild(createField(t("eventFormLocation"), locationInput));
 
   const privateDescriptionInput = document.createElement("textarea");
-  privateDescriptionInput.className = "event-modal__input event-modal__textarea";
+  privateDescriptionInput.className =
+    "event-modal__input event-modal__input--private event-modal__textarea";
   privateDescriptionInput.name = "descriptionPrivate";
   privateDescriptionInput.rows = 3;
-  form.appendChild(createField(t("eventFormPrivateDescription"), privateDescriptionInput));
+  form.appendChild(
+    createField(t("eventFormPrivateDescription"), privateDescriptionInput, "", {
+      labelPrefix: "\uD83D\uDD12 ",
+      labelTitle: t("eventFormPrivateDescriptionTooltip")
+    })
+  );
 
   const publicDescriptionInput = document.createElement("textarea");
   publicDescriptionInput.className = "event-modal__input event-modal__textarea";

@@ -61,6 +61,10 @@
   resize: vertical;
 }
 
+.event-modal__input--private {
+  background: #fffbeb;
+}
+
 .event-modal__checkbox {
   display: inline-flex;
   align-items: center;
