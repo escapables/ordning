@@ -22,6 +22,21 @@ use crate::storage::json_store::JsonStore;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Force conservative WebKit/Mesa runtime defaults for AppImage startup.
+    // Only set when not already defined so test environments can override.
+    // SAFETY: called at startup before any threads are spawned.
+    unsafe {
+        if std::env::var_os("LIBGL_ALWAYS_SOFTWARE").is_none() {
+            std::env::set_var("LIBGL_ALWAYS_SOFTWARE", "1");
+        }
+        if std::env::var_os("WEBKIT_DISABLE_COMPOSITING_MODE").is_none() {
+            std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
+        }
+        if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
+            std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+        }
+    }
+
     let store = JsonStore::new().expect("failed to initialize JSON store");
     let mut app_data = store
         .load_or_create()

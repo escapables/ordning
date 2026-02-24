@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+APPIMAGE="${1:-target/release/bundle/appimage/Ordning_0.1.0_amd64.AppImage}"
+if [[ ! -f "$APPIMAGE" ]]; then
+  echo "Error: AppImage not found: $APPIMAGE" >&2
+  exit 1
+fi
+SOURCE_APPIMAGE="$(realpath "$APPIMAGE")"
+
+WORKDIR="$(mktemp -d)"
+trap 'rm -rf "$WORKDIR"' EXIT
+
+(
+  cd "$WORKDIR"
+  "$SOURCE_APPIMAGE" --appimage-extract >/dev/null
+)
+
+ROOT="$WORKDIR/squashfs-root"
+APP_RUN="$ROOT/AppRun"
+
+require_line() {
+  local needle="$1"
+  if ! grep -Fq "$needle" "$APP_RUN"; then
+    echo "Error: AppRun missing expected line: $needle" >&2
+    exit 1
+  fi
+}
+
+require_absent_lib() {
+  local pattern="$1"
+  if find "$ROOT/usr/lib" -maxdepth 1 -type f -name "$pattern" | grep -q .; then
+    echo "Error: bundled lib still present: $pattern" >&2
+    exit 1
+  fi
+}
+
+require_line 'LIBGL_ALWAYS_SOFTWARE="${LIBGL_ALWAYS_SOFTWARE:-1}"'
+require_line 'WEBKIT_DISABLE_COMPOSITING_MODE="${WEBKIT_DISABLE_COMPOSITING_MODE:-1}"'
+require_line 'WEBKIT_DISABLE_DMABUF_RENDERER="${WEBKIT_DISABLE_DMABUF_RENDERER:-1}"'
+require_line 'MESA_LOADER_DRIVER_OVERRIDE="${MESA_LOADER_DRIVER_OVERRIDE:-llvmpipe}"'
+require_line 'GALLIUM_DRIVER="${GALLIUM_DRIVER:-llvmpipe}"'
+require_line 'if [[ "${1:-}" == "--diagnose" ]]; then'
+require_line 'Ordning diagnose mode enabled. Logging to: $LOG_FILE'
+
+require_absent_lib "libwayland-client.so*"
+require_absent_lib "libwayland-cursor.so*"
+require_absent_lib "libwayland-egl.so*"
+require_absent_lib "libwayland-server.so*"
+require_absent_lib "libgstgl-1.0.so*"
+require_absent_lib "libgbm.so*"
+require_absent_lib "libdrm.so*"
+
+echo "OK: AppImage portability profile verified ($APPIMAGE)"

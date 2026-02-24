@@ -1,35 +1,113 @@
 #!/usr/bin/env bash
-# Build a portable AppImage, stripping bundled Wayland/GL libs so the host's
-# native GPU stack is used (prevents EGL_BAD_PARAMETER crashes on machines
-# with different Mesa/driver versions).
+# Build a portable AppImage with startup/runtime GL safeguards.
+# Strategy:
+# 1) inject AppRun env defaults before process startup
+# 2) strip bundled GL stack libs that conflict across machines
+# 3) repack AppImage
 set -euo pipefail
 
 APPIMAGE="target/release/bundle/appimage/Ordning_0.1.0_amd64.AppImage"
+SOURCE_APPIMAGE="$(pwd)/$APPIMAGE"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 WORKDIR=$(mktemp -d)
 trap 'rm -rf "$WORKDIR"' EXIT
 
-echo "==> Building release..."
 cargo tauri build
 
 echo "==> Extracting AppImage..."
-"$APPIMAGE" --appimage-extract --dest "$WORKDIR/squashfs-root" > /dev/null
-
-echo "==> Stripping bundled Wayland/GL libs (host provides these)..."
-STRIP_LIBS=(
-    libwayland-client.so.0
-    libwayland-cursor.so.0
-    libwayland-egl.so.1
-    libwayland-server.so.0
-    libgstgl-1.0.so.0
+(
+  cd "$WORKDIR"
+  "$SOURCE_APPIMAGE" --appimage-extract >/dev/null
 )
-for lib in "${STRIP_LIBS[@]}"; do
-    rm -f "$WORKDIR/squashfs-root/usr/lib/$lib"
-    echo "   removed $lib"
+
+ROOT="$WORKDIR/squashfs-root"
+APP_RUN="$ROOT/AppRun"
+echo "==> Patching AppRun startup environment..."
+cat >"$APP_RUN" <<'EOF'
+#! /usr/bin/env bash
+
+set -e
+
+this_dir="$(readlink -f "$(dirname "$0")")"
+
+# Ordning runtime defaults (can be overridden by caller env).
+export LIBGL_ALWAYS_SOFTWARE="${LIBGL_ALWAYS_SOFTWARE:-1}"
+export WEBKIT_DISABLE_COMPOSITING_MODE="${WEBKIT_DISABLE_COMPOSITING_MODE:-1}"
+export WEBKIT_DISABLE_DMABUF_RENDERER="${WEBKIT_DISABLE_DMABUF_RENDERER:-1}"
+export MESA_LOADER_DRIVER_OVERRIDE="${MESA_LOADER_DRIVER_OVERRIDE:-llvmpipe}"
+export GALLIUM_DRIVER="${GALLIUM_DRIVER:-llvmpipe}"
+
+DIAG_MODE=0
+if [[ "${ORDNING_DIAGNOSE:-0}" == "1" ]]; then
+  DIAG_MODE=1
+fi
+if [[ "${1:-}" == "--diagnose" ]]; then
+  DIAG_MODE=1
+  shift
+fi
+
+if [[ "$DIAG_MODE" == "1" ]]; then
+  export LIBGL_DEBUG="${LIBGL_DEBUG:-verbose}"
+  export EGL_LOG_LEVEL="${EGL_LOG_LEVEL:-debug}"
+  export MESA_DEBUG="${MESA_DEBUG:-1}"
+  export G_MESSAGES_DEBUG="${G_MESSAGES_DEBUG:-all}"
+  export WEBKIT_FORCE_SANDBOX="0"
+
+  LOG_FILE="$this_dir/appimage-diagnose.log"
+
+  {
+    echo "===== ordning appimage diagnose $(date -Iseconds) ====="
+    echo "pwd=$(pwd)"
+    echo "argv=$*"
+    env | grep -E '^(LIBGL_|EGL_|MESA_|WEBKIT_|GDK_|GALLIUM_|XDG_|DISPLAY|WAYLAND_DISPLAY)=' | sort
+  } >>"$LOG_FILE"
+fi
+source "$this_dir"/apprun-hooks/"linuxdeploy-plugin-gtk.sh"
+if [[ "$DIAG_MODE" == "1" ]]; then
+  echo "Ordning diagnose mode enabled. Logging to: $LOG_FILE" >&2
+  exec "$this_dir"/AppRun.wrapped "$@" >>"$LOG_FILE" 2>&1
+else
+  exec "$this_dir"/AppRun.wrapped "$@"
+fi
+EOF
+chmod +x "$APP_RUN"
+
+echo "==> Stripping bundled GL stack libs..."
+STRIP_PATTERNS=(
+  "libwayland-client.so*"
+  "libwayland-cursor.so*"
+  "libwayland-egl.so*"
+  "libwayland-server.so*"
+  "libgstgl-1.0.so*"
+  "libgbm.so*"
+  "libdrm.so*"
+)
+for pattern in "${STRIP_PATTERNS[@]}"; do
+  rm -f "$ROOT/usr/lib"/$pattern
 done
 
 echo "==> Repacking AppImage..."
-ARCH=x86_64 "$HOME/.cache/tauri/linuxdeploy-plugin-appimage.AppImage" \
-    --appdir "$WORKDIR/squashfs-root" 2>&1 | grep -E 'Success|Error'
+(
+  cd "$WORKDIR"
+  if [[ -x "$HOME/.cache/tauri/linuxdeploy-plugin-appimage.AppImage" ]]; then
+    ARCH=x86_64 "$HOME/.cache/tauri/linuxdeploy-plugin-appimage.AppImage" \
+      --appdir "$ROOT" >/dev/null
+  elif command -v appimagetool >/dev/null 2>&1; then
+    ARCH=x86_64 appimagetool "$ROOT" "Ordning-x86_64.AppImage" >/dev/null
+  else
+    echo "Error: no appimagetool found (neither ~/.cache/tauri/linuxdeploy-plugin-appimage.AppImage nor PATH appimagetool)." >&2
+    exit 1
+  fi
+)
 
-mv "Ordning-x86_64.AppImage" "$APPIMAGE"
+if [[ ! -f "$WORKDIR/Ordning-x86_64.AppImage" ]]; then
+  echo "Error: repack did not produce Ordning-x86_64.AppImage" >&2
+  exit 1
+fi
+
+mv "$WORKDIR/Ordning-x86_64.AppImage" "$APPIMAGE"
+
+echo "==> Verifying portability profile..."
+"$SCRIPT_DIR/check-appimage-portability" "$APPIMAGE"
+
 echo "==> Done: $APPIMAGE ($(du -h "$APPIMAGE" | cut -f1))"
