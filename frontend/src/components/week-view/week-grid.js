@@ -1,3 +1,4 @@
+import { renderAllDayBar } from "./all-day-bar.js";
 import { renderDayColumn, renderDayHeader } from "./day-column.js";
 import { mountTimeIndicator } from "./time-indicator.js";
 import { formatDateKey } from "../../utils/date-utils.js";
@@ -23,7 +24,26 @@ function renderTimeLabels() {
   return labels;
 }
 
-export function renderWeekGrid(dates, events = [], options = {}) {
+function isToday(date) {
+  const now = new Date();
+  return date.getFullYear() === now.getFullYear()
+    && date.getMonth() === now.getMonth()
+    && date.getDate() === now.getDate();
+}
+
+function autoScrollToCurrentTime(body, dates, pixelsPerHour) {
+  const hasToday = dates.some((date) => isToday(date));
+  if (!hasToday) {
+    body.scrollTop = 0;
+    return;
+  }
+
+  const now = new Date();
+  const targetHour = Math.max(0, now.getHours() - 1);
+  body.scrollTop = targetHour * pixelsPerHour;
+}
+
+export function renderWeekGrid(dates, events = [], allDayEvents = [], options = {}) {
   const {
     onEventClick = () => {},
     onCreateSlot = () => {}
@@ -66,8 +86,10 @@ export function renderWeekGrid(dates, events = [], options = {}) {
   });
 
   mountTimeIndicator(body, dates, PIXELS_PER_HOUR);
+  autoScrollToCurrentTime(body, dates, PIXELS_PER_HOUR);
 
   root.appendChild(headers);
+  root.appendChild(renderAllDayBar(dates, allDayEvents));
   root.appendChild(body);
 
   return root;

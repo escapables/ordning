@@ -91,6 +91,9 @@ export function renderDayColumn(date, events, pixelsPerHour, options = {}) {
   } = options;
   const column = document.createElement("div");
   column.className = "day-column";
+  if (isToday(date)) {
+    column.classList.add("day-column--today");
+  }
   column.dataset.date = formatDateKey(date);
 
   for (let hour = 0; hour < HOURS_PER_DAY; hour += 1) {

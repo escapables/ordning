@@ -33,6 +33,15 @@ function mapBackendEvents(events) {
   }));
 }
 
+function mapAllDayEvents(events) {
+  return events.map((event) => ({
+    id: event.id,
+    date: event.date,
+    title: event.title,
+    color: event.color
+  }));
+}
+
 function addDays(date, days) {
   const next = new Date(date);
   next.setDate(next.getDate() + days);
@@ -46,7 +55,8 @@ function renderWeekSection(container, weekDates, options = {}) {
   }
 
   const mappedEvents = mapBackendEvents(getState().events);
-  container.appendChild(renderWeekGrid(weekDates, mappedEvents, options));
+  const mappedAllDayEvents = mapAllDayEvents(getState().allDayEvents);
+  container.appendChild(renderWeekGrid(weekDates, mappedEvents, mappedAllDayEvents, options));
 }
 
 function getWeekBounds(weekStart) {

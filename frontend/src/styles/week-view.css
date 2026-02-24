@@ -53,6 +53,47 @@
   color: var(--color-accent);
 }
 
+.day-header--today {
+  background: rgb(0 122 255 / 0.03);
+}
+
+.all-day-bar {
+  display: grid;
+  grid-template-columns: var(--time-column-width) repeat(7, minmax(120px, 1fr));
+  border-bottom: 1px solid var(--color-border-muted);
+  background: var(--color-bg-main);
+}
+
+.all-day-bar__label {
+  border-right: 1px solid var(--color-border-muted);
+  min-height: 28px;
+}
+
+.all-day-bar__day {
+  min-height: 28px;
+  padding: 4px 2px;
+  border-right: 1px solid var(--color-border-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.all-day-bar__day:last-child {
+  border-right: 0;
+}
+
+.all-day-event {
+  color: #fff;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 1.2;
+  padding: 2px 6px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
 .week-grid__body {
   position: relative;
   display: grid;
@@ -84,6 +125,10 @@
   border-right: 1px solid var(--color-border-muted);
 }
 
+.day-column--today {
+  background: rgb(0 122 255 / 0.03);
+}
+
 .day-column:last-child {
   border-right: 0;
 }
@@ -92,10 +137,21 @@
   height: var(--hour-row-height);
   border-top: 1px solid #ececf0;
   cursor: cell;
+  position: relative;
 }
 
 .day-column__hour:first-child {
   border-top: 0;
+}
+
+.day-column__hour::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: 1px dashed #e8e8ec;
+  pointer-events: none;
 }
 
 .event-layer {

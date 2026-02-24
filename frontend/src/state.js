@@ -1,6 +1,7 @@
 const state = {
   calendars: [],
   events: [],
+  allDayEvents: [],
   lang: "sv",
   currentWeekStart: null
 };
@@ -17,6 +18,7 @@ export function getState() {
   return {
     calendars: [...state.calendars],
     events: [...state.events],
+    allDayEvents: [...state.allDayEvents],
     lang: state.lang,
     currentWeekStart: state.currentWeekStart ? new Date(state.currentWeekStart) : null
   };
@@ -34,6 +36,11 @@ export function setCalendars(calendars) {
 
 export function setEvents(events) {
   state.events = events;
+  notify();
+}
+
+export function setAllDayEvents(events) {
+  state.allDayEvents = events;
   notify();
 }
 
@@ -75,11 +82,12 @@ export async function loadCalendars() {
 
 export async function loadWeekEvents(startDate, endDate) {
   try {
-    const events = await invoke("get_week_events", {
+    const payload = await invoke("get_week_events", {
       startDate,
       endDate
     });
-    setEvents(events);
+    setEvents(payload?.timed ?? []);
+    setAllDayEvents(payload?.all_day ?? []);
   } catch (error) {
     console.error("Failed to load week events", error);
   }
