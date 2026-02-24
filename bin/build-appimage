@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Build a portable AppImage, stripping bundled Wayland/GL libs so the host's
+# native GPU stack is used (prevents EGL_BAD_PARAMETER crashes on machines
+# with different Mesa/driver versions).
+set -euo pipefail
+
+APPIMAGE="target/release/bundle/appimage/Ordning_0.1.0_amd64.AppImage"
+WORKDIR=$(mktemp -d)
+trap 'rm -rf "$WORKDIR"' EXIT
+
+echo "==> Building release..."
+cargo tauri build
+
+echo "==> Extracting AppImage..."
+"$APPIMAGE" --appimage-extract --dest "$WORKDIR/squashfs-root" > /dev/null
+
+echo "==> Stripping bundled Wayland/GL libs (host provides these)..."
+STRIP_LIBS=(
+    libwayland-client.so.0
+    libwayland-cursor.so.0
+    libwayland-egl.so.1
+    libwayland-server.so.0
+    libgstgl-1.0.so.0
+)
+for lib in "${STRIP_LIBS[@]}"; do
+    rm -f "$WORKDIR/squashfs-root/usr/lib/$lib"
+    echo "   removed $lib"
+done
+
+echo "==> Repacking AppImage..."
+ARCH=x86_64 "$HOME/.cache/tauri/linuxdeploy-plugin-appimage.AppImage" \
+    --appdir "$WORKDIR/squashfs-root" 2>&1 | grep -E 'Success|Error'
+
+mv "Ordning-x86_64.AppImage" "$APPIMAGE"
+echo "==> Done: $APPIMAGE ($(du -h "$APPIMAGE" | cut -f1))"

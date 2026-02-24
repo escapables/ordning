@@ -15,11 +15,19 @@ pub struct JsonStore {
 
 impl JsonStore {
     pub fn new() -> Result<Self> {
-        let exe_path = std::env::current_exe().context("failed to resolve executable path")?;
-        let exe_dir = exe_path
-            .parent()
-            .context("failed to resolve executable directory")?;
-        let data_path = exe_dir.join(DATA_FILE_NAME);
+        let base_dir = if let Ok(appimage) = std::env::var("APPIMAGE") {
+            PathBuf::from(appimage)
+                .parent()
+                .context("failed to resolve AppImage parent directory")?
+                .to_path_buf()
+        } else {
+            let exe_path = std::env::current_exe().context("failed to resolve executable path")?;
+            exe_path
+                .parent()
+                .context("failed to resolve executable directory")?
+                .to_path_buf()
+        };
+        let data_path = base_dir.join(DATA_FILE_NAME);
         Ok(Self { data_path })
     }
 
