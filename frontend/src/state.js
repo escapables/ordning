@@ -1,7 +1,8 @@
 const state = {
   calendars: [],
   events: [],
-  lang: "sv"
+  lang: "sv",
+  currentWeekStart: null
 };
 
 const listeners = new Set();
@@ -16,7 +17,8 @@ export function getState() {
   return {
     calendars: [...state.calendars],
     events: [...state.events],
-    lang: state.lang
+    lang: state.lang,
+    currentWeekStart: state.currentWeekStart ? new Date(state.currentWeekStart) : null
   };
 }
 
@@ -32,6 +34,24 @@ export function setCalendars(calendars) {
 
 export function setEvents(events) {
   state.events = events;
+  notify();
+}
+
+export function setCurrentWeekStart(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return;
+  }
+
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+  const nextValue = normalized.getTime();
+  const currentValue = state.currentWeekStart?.getTime?.();
+
+  if (currentValue === nextValue) {
+    return;
+  }
+
+  state.currentWeekStart = normalized;
   notify();
 }
 
