@@ -43,6 +43,10 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
+  padding: 10px;
+  border: 1px solid rgb(0 0 0 / 0.06);
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.62);
 }
 
 .calendar-list {
@@ -76,6 +80,7 @@
   gap: 8px;
   border-radius: 8px;
   padding: 0 8px;
+  transition: background-color 120ms ease;
 }
 
 .calendar-list__item:hover {
@@ -109,6 +114,7 @@
   padding: 4px 6px;
   border-radius: 6px;
   cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
 }
 
 .calendar-list__delete:hover {
@@ -176,4 +182,9 @@
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
+  transition: filter 120ms ease;
+}
+
+.calendar-create__submit:hover {
+  filter: brightness(0.96);
 }

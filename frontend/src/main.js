@@ -79,7 +79,8 @@ async function renderAppShell() {
   };
 
   const eventModal = createEventModal({
-    onPersist: refreshAndRender
+    onPersist: refreshAndRender,
+    onEnsureCalendars: loadCalendars
   });
   app.appendChild(eventModal.element);
 

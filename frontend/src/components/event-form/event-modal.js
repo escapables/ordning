@@ -42,7 +42,10 @@ function createInput(type, name) {
   return input;
 }
 
-export function createEventModal({ onPersist }) {
+export function createEventModal({
+  onPersist,
+  onEnsureCalendars = async () => {}
+}) {
   const dialog = document.createElement("dialog");
   dialog.className = "event-modal";
 
@@ -162,22 +165,45 @@ export function createEventModal({ onPersist }) {
     endTimeInput.disabled = disabled;
   }
 
-  function fillCalendarOptions(selectedCalendarId) {
+  function defaultCalendarId(calendars) {
+    return calendars.find((calendar) => calendar.visible)?.id ?? calendars[0]?.id ?? "";
+  }
+
+  function setCalendarAvailability(hasCalendars) {
+    calendarSelect.disabled = !hasCalendars;
+    saveButton.disabled = !hasCalendars;
+  }
+
+  function fillCalendarOptions(selectedCalendarId, preferVisibleDefault = false) {
     calendarSelect.innerHTML = "";
     const calendars = getState().calendars;
 
     calendars.forEach((calendar) => {
       const option = document.createElement("option");
       option.value = calendar.id;
-      option.textContent = calendar.name;
+      option.textContent = `● ${calendar.name}`;
       calendarSelect.appendChild(option);
     });
 
-    if (selectedCalendarId) {
+    const hasSelectedCalendar = calendars.some((calendar) => calendar.id === selectedCalendarId);
+    if (selectedCalendarId && hasSelectedCalendar) {
       calendarSelect.value = selectedCalendarId;
+    } else if (preferVisibleDefault) {
+      calendarSelect.value = defaultCalendarId(calendars);
     } else if (calendars.length > 0) {
       calendarSelect.value = calendars[0].id;
     }
+
+    setCalendarAvailability(calendars.length > 0);
+    return calendars.length > 0;
+  }
+
+  async function ensureCalendarsLoaded() {
+    if (getState().calendars.length > 0) {
+      return;
+    }
+
+    await onEnsureCalendars();
   }
 
   function setDefaults() {
@@ -228,7 +254,9 @@ export function createEventModal({ onPersist }) {
   async function openCreate(prefill = {}) {
     clearError();
     setModeCreate();
-    fillCalendarOptions(prefill.calendarId);
+
+    await ensureCalendarsLoaded();
+    const hasCalendars = fillCalendarOptions(prefill.calendarId, true);
     setDefaults();
 
     if (prefill.date) {
@@ -244,6 +272,10 @@ export function createEventModal({ onPersist }) {
       endTimeInput.value = prefill.endTime;
     }
 
+    if (!hasCalendars) {
+      showError(t("eventFormNoCalendars"));
+    }
+
     dialog.showModal();
     titleInput.focus();
   }
@@ -253,6 +285,7 @@ export function createEventModal({ onPersist }) {
     setModeEdit(eventId);
 
     try {
+      await ensureCalendarsLoaded();
       const event = await invoke("get_event", { id: eventId });
       fillCalendarOptions(event.calendarId);
 
@@ -303,6 +336,11 @@ export function createEventModal({ onPersist }) {
   form.addEventListener("submit", async (submitEvent) => {
     submitEvent.preventDefault();
     clearError();
+
+    if (!calendarSelect.value) {
+      showError(t("eventFormCalendarRequired"));
+      return;
+    }
 
     const payload = collectPayload();
 
