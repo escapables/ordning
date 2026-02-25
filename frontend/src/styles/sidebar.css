@@ -54,6 +54,86 @@
   background: rgb(255 255 255 / 0.62);
 }
 
+.sidebar__mini-month {
+  margin-bottom: 10px;
+}
+
+.mini-month {
+  border: 1px solid rgb(0 0 0 / 0.06);
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.62);
+  padding: 8px;
+}
+
+.mini-month__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.mini-month__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  text-transform: capitalize;
+}
+
+.mini-month__nav {
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--color-border-muted);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.mini-month__weekdays,
+.mini-month__grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.mini-month__weekday {
+  text-align: center;
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+}
+
+.mini-month__day {
+  min-height: 24px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.mini-month__day:hover {
+  background: rgb(0 122 255 / 0.08);
+}
+
+.mini-month__day--outside {
+  color: rgb(0 0 0 / 0.34);
+}
+
+.mini-month__day--today {
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
+.mini-month__day--current-week {
+  background: rgb(0 122 255 / 0.11);
+}
+
 .calendar-list {
   display: flex;
   flex-direction: column;

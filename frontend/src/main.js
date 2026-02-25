@@ -3,6 +3,7 @@ import { createEventModal } from "./components/event-form/event-modal.js";
 import { createExportDialog } from "./components/export-dialog/export-dialog.js";
 import { createImportDialog } from "./components/import-dialog/import-dialog.js";
 import { renderCalendarList } from "./components/sidebar/calendar-list.js";
+import { renderMiniMonth } from "./components/sidebar/mini-month.js";
 import { renderToolbar } from "./components/toolbar/toolbar.js";
 import { renderWeekGrid } from "./components/week-view/week-grid.js";
 import { formatDateKey, getEndOfWeek, getStartOfWeek, getWeekDates } from "./utils/date-utils.js";
@@ -167,6 +168,7 @@ async function renderAppShell() {
       <aside class="sidebar">
         <div class="sidebar__title">${t("sidebarTitle")}</div>
         <button type="button" class="sidebar__new-event-btn">${t("newEventButton")}</button>
+        <div class="sidebar__mini-month"></div>
         <div class="sidebar__calendar-list"></div>
       </aside>
       <main class="main-content">
@@ -179,9 +181,10 @@ async function renderAppShell() {
   document.title = t("appName");
 
   const sidebarList = app.querySelector(".sidebar__calendar-list");
+  const sidebarMiniMonth = app.querySelector(".sidebar__mini-month");
   const toolbarContainer = app.querySelector(".main-toolbar-container");
   const weekContainer = app.querySelector(".week-view-container");
-  if (!sidebarList || !toolbarContainer || !weekContainer) {
+  if (!sidebarList || !sidebarMiniMonth || !toolbarContainer || !weekContainer) {
     return;
   }
 
@@ -299,6 +302,17 @@ async function renderAppShell() {
             window.alert(t("calendarVisibilityError"));
             console.error("Failed to toggle calendar visibility", error);
           }
+        }
+      })
+    );
+
+    sidebarMiniMonth.innerHTML = "";
+    sidebarMiniMonth.appendChild(
+      renderMiniMonth({
+        currentWeekStart: weekStart,
+        onSelectDay: async (date) => {
+          setCurrentWeekStart(getStartOfWeek(date, 1));
+          await refreshCurrentWeekEvents();
         }
       })
     );

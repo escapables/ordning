@@ -25,6 +25,7 @@ Thumbs.db
 *.profdata
 *.profraw
 .playwright-mcp/
+test-results/
 
 # Agent config and working docs (local only)
 .agents/
