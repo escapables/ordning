@@ -22,7 +22,11 @@ READ_WHEN_INLINE_PATTERN = re.compile(r"^read_when:\s*\[(.+?)\]\s*$", re.MULTILI
 README_DOC_REF_PATTERN = re.compile(r"`(docs/[A-Za-z0-9_.\-/]+\.md)`")
 TODO_SECTION_PATTERN = re.compile(r"^###\s+(DONE\s+)?(\d+)\.\s+(.+?)\s*$")
 VERSION_HEADING_PATTERN = re.compile(r"^##\s+(?:(?:DONE|NOT DONE)\s+)?v(\d+\.\d+(?:\.\d+)?)\b")
+HANDOFF_PATH = DOCS_DIR / "HANDOFF.md"
+HANDOFF_MAX_LINES = 60
+PRIMARY_TODO_MAX_LINES = 70
 STRICT_FRONT_MATTER = os.environ.get("STRICT_DOCS_FRONT_MATTER", "0") == "1"
+DONE_VERSION_HEADING = re.compile(r"^##\s+DONE\s+v")
 
 
 def _iter_docs_markdown() -> list[Path]:
@@ -307,6 +311,37 @@ def _validate_roadmap_format(path: Path, label: str, heading: str) -> list[str]:
     return errors
 
 
+def _validate_handoff_loc(path: Path) -> list[str]:
+    content = path.read_text(encoding="utf-8")
+    line_count = len(content.splitlines())
+    if line_count > HANDOFF_MAX_LINES:
+        return [f"HANDOFF.md exceeds {HANDOFF_MAX_LINES} lines ({line_count}); trim stale content"]
+    return []
+
+
+def _validate_primary_todo_loc(path: Path) -> tuple[list[str], list[str]]:
+    errors: list[str] = []
+    warnings: list[str] = []
+    content = path.read_text(encoding="utf-8")
+    lines = content.splitlines()
+    line_count = len(lines)
+    if line_count <= PRIMARY_TODO_MAX_LINES:
+        return errors, warnings
+
+    has_done_milestones = any(DONE_VERSION_HEADING.match(line.strip()) for line in lines)
+    if has_done_milestones:
+        errors.append(
+            f"PRIMARY_TODO.md exceeds {PRIMARY_TODO_MAX_LINES} lines ({line_count}); "
+            "archive completed milestones to docs/ARCHIVE.md"
+        )
+    else:
+        warnings.append(
+            f"PRIMARY_TODO.md exceeds {PRIMARY_TODO_MAX_LINES} lines ({line_count}); "
+            "consider splitting large milestones"
+        )
+    return errors, warnings
+
+
 def main() -> int:
     if not DOCS_DIR.exists():
         print("[docs] no docs/ directory")
@@ -326,8 +361,13 @@ def main() -> int:
         errors, warnings = _validate_doc(path)
         if path == TODO_PATH:
             errors.extend(_validate_todo_format(path))
+        if path == HANDOFF_PATH:
+            errors.extend(_validate_handoff_loc(path))
         if path == PRIMARY_TODO_PATH:
             errors.extend(_validate_roadmap_format(path, "PRIMARY_TODO.md", "# Roadmap"))
+            loc_errors, loc_warnings = _validate_primary_todo_loc(path)
+            errors.extend(loc_errors)
+            warnings.extend(loc_warnings)
         if path == ARCHIVE_PATH:
             errors.extend(_validate_roadmap_format(path, "ARCHIVE.md", "# Archived Milestones"))
         if errors:
