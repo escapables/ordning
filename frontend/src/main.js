@@ -114,6 +114,23 @@ async function renderAppShell() {
     await Promise.all([loadCalendars(), refreshCurrentWeekEvents()]);
   };
 
+  const goToPreviousWeek = async () => {
+    const weekStart = getState().currentWeekStart ?? getStartOfWeek(new Date(), 1);
+    setCurrentWeekStart(addDays(weekStart, -7));
+    await refreshCurrentWeekEvents();
+  };
+
+  const goToNextWeek = async () => {
+    const weekStart = getState().currentWeekStart ?? getStartOfWeek(new Date(), 1);
+    setCurrentWeekStart(addDays(weekStart, 7));
+    await refreshCurrentWeekEvents();
+  };
+
+  const goToToday = async () => {
+    setCurrentWeekStart(getStartOfWeek(new Date(), 1));
+    await refreshCurrentWeekEvents();
+  };
+
   const eventModal = createEventModal({
     onPersist: refreshAndRender,
     onEnsureCalendars: loadCalendars
@@ -183,18 +200,9 @@ async function renderAppShell() {
     toolbarContainer.appendChild(
       renderToolbar({
         weekStart,
-        onPreviousWeek: async () => {
-          setCurrentWeekStart(addDays(weekStart, -7));
-          await refreshCurrentWeekEvents();
-        },
-        onNextWeek: async () => {
-          setCurrentWeekStart(addDays(weekStart, 7));
-          await refreshCurrentWeekEvents();
-        },
-        onToday: async () => {
-          setCurrentWeekStart(getStartOfWeek(new Date(), 1));
-          await refreshCurrentWeekEvents();
-        },
+        onPreviousWeek: goToPreviousWeek,
+        onNextWeek: goToNextWeek,
+        onToday: goToToday,
         onExport: () => {
           exportDialog.open();
         },
@@ -222,6 +230,82 @@ async function renderAppShell() {
       eventModal.openCreate(prefill);
     }
   });
+
+  document.addEventListener("keydown", (keyboardEvent) => {
+    if (keyboardEvent.altKey || keyboardEvent.ctrlKey || keyboardEvent.metaKey) {
+      return;
+    }
+
+    const targetTagName = keyboardEvent.target?.tagName?.toUpperCase();
+    if (targetTagName === "INPUT" || targetTagName === "TEXTAREA" || targetTagName === "SELECT") {
+      return;
+    }
+
+    const closeOpenDialogs = () => {
+      const openDialogs = document.querySelectorAll("dialog[open]");
+      openDialogs.forEach((dialogElement) => {
+        dialogElement.close();
+      });
+    };
+
+    if (keyboardEvent.key === "Escape") {
+      keyboardEvent.preventDefault();
+      closeOpenDialogs();
+      return;
+    }
+
+    if (keyboardEvent.key === "ArrowLeft") {
+      keyboardEvent.preventDefault();
+      void goToPreviousWeek();
+      return;
+    }
+
+    if (keyboardEvent.key === "ArrowRight") {
+      keyboardEvent.preventDefault();
+      void goToNextWeek();
+      return;
+    }
+
+    if (keyboardEvent.key.toLowerCase() === "t") {
+      keyboardEvent.preventDefault();
+      void goToToday();
+      return;
+    }
+
+    if (keyboardEvent.key.toLowerCase() === "n") {
+      keyboardEvent.preventDefault();
+      eventModal.openCreate();
+      return;
+    }
+
+    if (keyboardEvent.key !== "Delete") {
+      return;
+    }
+
+    const focusedEvent = document.activeElement;
+    if (!(focusedEvent instanceof HTMLElement) || !focusedEvent.classList.contains("event-block")) {
+      return;
+    }
+
+    const eventId = focusedEvent.dataset.eventId;
+    if (!eventId) {
+      return;
+    }
+
+    keyboardEvent.preventDefault();
+    const confirmed = window.confirm(t("eventFormDeleteConfirm"));
+    if (!confirmed) {
+      return;
+    }
+
+    void invoke("delete_event", { id: eventId })
+      .then(() => refreshAndRender())
+      .catch((error) => {
+        window.alert(String(error));
+        console.error("Failed to delete event via keyboard shortcut", error);
+      });
+  });
+
   await refreshAndRender();
 }
 

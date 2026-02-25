@@ -100,6 +100,7 @@ function createEventElement(event, pixelsPerMinute, onEventClick) {
   element.style.left = `calc(${event.column * widthPercent}% + 2px)`;
   element.style.backgroundColor = event.color;
   element.style.setProperty("--event-color", event.color);
+  element.dataset.eventId = event.id;
   element.tabIndex = 3;
 
   const title = document.createElement("div");
