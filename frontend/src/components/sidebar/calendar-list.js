@@ -70,6 +70,10 @@ export function renderCalendarList(calendars, handlers) {
       deleteButton.tabIndex = 2;
       deleteButton.textContent = t("calendarDeleteButton");
       deleteButton.addEventListener("click", () => {
+        const confirmed = window.confirm(t("calendarDeleteConfirm"));
+        if (!confirmed) {
+          return;
+        }
         onDelete(calendar);
       });
 

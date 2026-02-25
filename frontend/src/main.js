@@ -183,10 +183,6 @@ async function renderAppShell() {
           await refreshAndRender();
         },
         onDelete: async (calendar) => {
-          const confirmed = window.confirm(t("calendarDeleteConfirm"));
-          if (!confirmed) {
-            return;
-          }
           try {
             await invoke("delete_calendar", { id: calendar.id });
             await refreshAndRender();
