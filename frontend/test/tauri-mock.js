@@ -97,6 +97,43 @@
     return { timed: timed, all_day: allDay };
   }
 
+  function searchEvents(query) {
+    var visibleIds = visibleCalendarIds();
+    var normalized = String(query || "").trim().toLowerCase();
+    if (!normalized) {
+      return [];
+    }
+
+    return state.events
+      .filter(function (event) {
+        return visibleIds.has(event.calendarId);
+      })
+      .filter(function (event) {
+        var title = String(event.title || "").toLowerCase();
+        var privateDescription = String(event.descriptionPrivate || "").toLowerCase();
+        var publicDescription = String(event.descriptionPublic || "").toLowerCase();
+        var location = String(event.location || "").toLowerCase();
+
+        return (
+          title.includes(normalized) ||
+          privateDescription.includes(normalized) ||
+          publicDescription.includes(normalized) ||
+          location.includes(normalized)
+        );
+      })
+      .sort(function (left, right) {
+        return left.startDate.localeCompare(right.startDate);
+      })
+      .map(function (event) {
+        return {
+          id: event.id,
+          title: event.title,
+          start_date: event.startDate,
+          location: event.location || null
+        };
+      });
+  }
+
   function normalizeEventPayload(id, payload) {
     var nowIso = toIso();
     return {
@@ -290,6 +327,9 @@
         var endDate = (payload && payload.endDate) || "9999-99-99";
         return Promise.resolve(createWeekPayload(startDate, endDate));
       }
+
+      case "search_events":
+        return Promise.resolve(searchEvents(payload && payload.query));
 
       case "get_event": {
         var found = state.events.find(function (event) {

@@ -125,6 +125,8 @@ async function renderAppShell() {
   };
 
   let pendingHighlightEventId = null;
+  let activeHighlight = null;
+  let isDeletingFromKeyboard = false;
 
   const highlightEventBlock = (eventId) => {
     const block = weekContainer.querySelector(`.event-block[data-event-id="${eventId}"]`);
@@ -266,7 +268,17 @@ async function renderAppShell() {
     });
 
     if (pendingHighlightEventId && highlightEventBlock(pendingHighlightEventId)) {
+      activeHighlight = {
+        eventId: pendingHighlightEventId,
+        expiresAt: Date.now() + 1800
+      };
       pendingHighlightEventId = null;
+    }
+
+    if (activeHighlight && Date.now() < activeHighlight.expiresAt) {
+      highlightEventBlock(activeHighlight.eventId);
+    } else {
+      activeHighlight = null;
     }
   });
 
@@ -279,7 +291,7 @@ async function renderAppShell() {
     }
   });
 
-  document.addEventListener("keydown", (keyboardEvent) => {
+  document.addEventListener("keydown", async (keyboardEvent) => {
     if (keyboardEvent.altKey || keyboardEvent.ctrlKey || keyboardEvent.metaKey) {
       return;
     }
@@ -330,6 +342,14 @@ async function renderAppShell() {
       return;
     }
 
+    if (keyboardEvent.repeat || isDeletingFromKeyboard) {
+      return;
+    }
+
+    if (document.querySelector("dialog[open]")) {
+      return;
+    }
+
     const focusedEvent = document.activeElement;
     if (!(focusedEvent instanceof HTMLElement) || !focusedEvent.classList.contains("event-block")) {
       return;
@@ -346,12 +366,16 @@ async function renderAppShell() {
       return;
     }
 
-    void invoke("delete_event", { id: eventId })
-      .then(() => refreshAndRender())
-      .catch((error) => {
-        window.alert(String(error));
-        console.error("Failed to delete event via keyboard shortcut", error);
-      });
+    isDeletingFromKeyboard = true;
+    try {
+      await invoke("delete_event", { id: eventId });
+      await refreshAndRender();
+    } catch (error) {
+      window.alert(String(error));
+      console.error("Failed to delete event via keyboard shortcut", error);
+    } finally {
+      isDeletingFromKeyboard = false;
+    }
   });
 
   await refreshAndRender();
