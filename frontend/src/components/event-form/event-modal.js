@@ -245,10 +245,7 @@ export function createEventModal({
   }
 
   async function ensureCalendarsLoaded() {
-    if (getState().calendars.length > 0) {
-      return;
-    }
-
+    // Always refresh before opening create/edit to avoid stale calendar state.
     await onEnsureCalendars();
   }
 
