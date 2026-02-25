@@ -50,6 +50,7 @@ export function renderCalendarList(calendars, handlers) {
       const visibilityInput = document.createElement("input");
       visibilityInput.className = "calendar-list__checkbox";
       visibilityInput.type = "checkbox";
+      visibilityInput.tabIndex = 2;
       visibilityInput.checked = Boolean(calendar.visible);
       visibilityInput.addEventListener("change", () => {
         onToggleVisibility(calendar.id);
@@ -66,6 +67,7 @@ export function renderCalendarList(calendars, handlers) {
       const deleteButton = document.createElement("button");
       deleteButton.type = "button";
       deleteButton.className = "calendar-list__delete";
+      deleteButton.tabIndex = 2;
       deleteButton.textContent = t("calendarDeleteButton");
       deleteButton.addEventListener("click", () => {
         onDelete(calendar);
@@ -88,6 +90,7 @@ export function renderCalendarList(calendars, handlers) {
   input.type = "text";
   input.maxLength = 100;
   input.required = true;
+  input.tabIndex = 2;
   input.placeholder = t("calendarCreatePlaceholder");
   input.className = "calendar-create__input";
 
@@ -99,6 +102,7 @@ export function renderCalendarList(calendars, handlers) {
     const option = document.createElement("button");
     option.type = "button";
     option.className = "calendar-create__color";
+    option.tabIndex = 2;
     option.style.backgroundColor = color;
     option.setAttribute("aria-label", `${t("calendarColorLabel")} ${color}`);
 
@@ -122,6 +126,7 @@ export function renderCalendarList(calendars, handlers) {
   const submit = document.createElement("button");
   submit.type = "submit";
   submit.className = "calendar-create__submit";
+  submit.tabIndex = 2;
   submit.textContent = t("calendarCreateButton");
 
   actions.appendChild(submit);

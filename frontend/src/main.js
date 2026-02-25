@@ -129,6 +129,7 @@ async function renderAppShell() {
 
   const newEventButton = app.querySelector(".sidebar__new-event-btn");
   if (newEventButton) {
+    newEventButton.tabIndex = 2;
     newEventButton.addEventListener("click", () => {
       eventModal.openCreate();
     });

@@ -84,6 +84,7 @@ export function renderToolbar(options) {
   previousButton.type = "button";
   previousButton.className = "main-toolbar__icon-btn";
   previousButton.setAttribute("aria-label", t("toolbarPreviousWeek"));
+  previousButton.tabIndex = 1;
   previousButton.textContent = "‹";
   previousButton.addEventListener("click", onPreviousWeek);
 
@@ -91,12 +92,14 @@ export function renderToolbar(options) {
   nextButton.type = "button";
   nextButton.className = "main-toolbar__icon-btn";
   nextButton.setAttribute("aria-label", t("toolbarNextWeek"));
+  nextButton.tabIndex = 1;
   nextButton.textContent = "›";
   nextButton.addEventListener("click", onNextWeek);
 
   const todayButton = document.createElement("button");
   todayButton.type = "button";
   todayButton.className = "main-toolbar__today-btn";
+  todayButton.tabIndex = 1;
   todayButton.textContent = t("todayButton");
   todayButton.addEventListener("click", onToday);
 
@@ -112,12 +115,14 @@ export function renderToolbar(options) {
   const exportButton = document.createElement("button");
   exportButton.type = "button";
   exportButton.className = "main-toolbar__btn";
+  exportButton.tabIndex = 1;
   exportButton.innerHTML = `<span aria-hidden="true">↑</span><span>${t("exportButton")}</span>`;
   exportButton.addEventListener("click", onExport);
 
   const importButton = document.createElement("button");
   importButton.type = "button";
   importButton.className = "main-toolbar__btn";
+  importButton.tabIndex = 1;
   importButton.innerHTML = `<span aria-hidden="true">↓</span><span>${t("importButton")}</span>`;
   importButton.addEventListener("click", onImport);
 

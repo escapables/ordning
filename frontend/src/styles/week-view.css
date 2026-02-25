@@ -15,7 +15,7 @@
   display: grid;
   grid-template-columns: var(--time-column-width) repeat(7, minmax(120px, 1fr));
   border-bottom: 1px solid var(--color-border-muted);
-  background: #fafafa;
+  background: var(--color-bg-header);
 }
 
 .week-grid__header-corner {
@@ -100,11 +100,27 @@
   grid-template-columns: var(--time-column-width) repeat(7, minmax(120px, 1fr));
   max-height: calc(var(--hour-row-height) * 12);
   overflow-y: auto;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(0 0 0 / 0.15) transparent;
+}
+
+.week-grid__body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.week-grid__body::-webkit-scrollbar-thumb {
+  background: rgb(0 0 0 / 0.15);
+  border-radius: 3px;
+}
+
+.week-grid__body::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .time-labels {
   border-right: 1px solid var(--color-border-muted);
-  background: #fcfcfd;
+  background: var(--color-bg-time-labels);
 }
 
 .time-label {
@@ -113,7 +129,7 @@
   text-align: right;
   font-size: 11px;
   color: var(--color-text-secondary);
-  border-top: 1px solid #ececf0;
+  border-top: 1px solid var(--color-grid-line);
 }
 
 .time-label:first-child {
@@ -135,7 +151,7 @@
 
 .day-column__hour {
   height: var(--hour-row-height);
-  border-top: 1px solid #ececf0;
+  border-top: 1px solid var(--color-grid-line);
   cursor: cell;
   position: relative;
 }
@@ -150,7 +166,7 @@
   left: 0;
   right: 0;
   top: 50%;
-  border-top: 1px dashed #e8e8ec;
+  border-top: 1px dashed var(--color-grid-line-half);
   pointer-events: none;
 }
 
@@ -175,6 +191,7 @@
   position: absolute;
   padding: 4px 6px;
   border: 1px solid transparent;
+  border-left: 3px solid color-mix(in srgb, var(--event-color) 80%, black);
   border-radius: var(--radius-sm);
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
   color: #fff;
@@ -189,6 +206,11 @@
   filter: saturate(1.07);
   box-shadow: 0 4px 10px rgb(0 0 0 / 0.14);
   transform: translateY(-1px);
+}
+
+.event-block:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 .event-block__title {

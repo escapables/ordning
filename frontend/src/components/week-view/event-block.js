@@ -99,7 +99,8 @@ function createEventElement(event, pixelsPerMinute, onEventClick) {
   element.style.width = `calc(${widthPercent}% - 4px)`;
   element.style.left = `calc(${event.column * widthPercent}% + 2px)`;
   element.style.backgroundColor = event.color;
-  element.style.borderColor = event.color;
+  element.style.setProperty("--event-color", event.color);
+  element.tabIndex = 3;
 
   const title = document.createElement("div");
   title.className = "event-block__title";
@@ -113,6 +114,15 @@ function createEventElement(event, pixelsPerMinute, onEventClick) {
   element.appendChild(time);
   element.addEventListener("click", (clickEvent) => {
     clickEvent.stopPropagation();
+    onEventClick(event.id);
+  });
+  element.addEventListener("keydown", (keyboardEvent) => {
+    if (keyboardEvent.key !== "Enter" && keyboardEvent.key !== " ") {
+      return;
+    }
+
+    keyboardEvent.preventDefault();
+    keyboardEvent.stopPropagation();
     onEventClick(event.id);
   });
 

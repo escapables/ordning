@@ -25,6 +25,11 @@
   font-weight: 600;
   cursor: pointer;
   margin-bottom: 12px;
+  transition: filter 120ms ease;
+}
+
+.sidebar__new-event-btn:hover {
+  filter: brightness(0.96);
 }
 
 .sidebar__placeholder {
@@ -90,6 +95,7 @@
 .calendar-list__checkbox {
   margin: 0;
   accent-color: var(--color-accent);
+  cursor: pointer;
 }
 
 .calendar-list__dot {

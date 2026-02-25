@@ -5,6 +5,7 @@
   padding: 0;
   background: #fff;
   box-shadow: 0 22px 48px rgb(0 0 0 / 0.22);
+  transition: box-shadow 200ms ease, transform 200ms ease;
 }
 
 .import-dialog::backdrop {
@@ -91,6 +92,7 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease, filter 120ms ease;
 }
 
 .import-dialog__btn--primary {

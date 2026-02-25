@@ -4,7 +4,11 @@
   --color-bg-app: #ffffff;
   --color-bg-sidebar: #f5f5f7;
   --color-bg-main: #ffffff;
+  --color-bg-header: #fafafa;
+  --color-bg-time-labels: #fcfcfd;
   --color-border-muted: #d1d1d6;
+  --color-grid-line: #ececf0;
+  --color-grid-line-half: #e8e8ec;
   --color-text-primary: #1c1c1e;
   --color-text-secondary: #636366;
   --color-accent: #007aff;
