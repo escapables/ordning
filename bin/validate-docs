@@ -194,7 +194,7 @@ def _validate_todo_format(path: Path) -> list[str]:
     if not sections:
         return errors + ["TODO.md requires numbered sections like `### 1. Title`"]
 
-    expected = 1
+    expected = sections[0][1]
     for _, number, _, title in sections:
         if number != expected:
             errors.append(f"TODO.md section numbering must be sequential; expected {expected}, got {number}")
@@ -218,6 +218,8 @@ def _validate_todo_format(path: Path) -> list[str]:
         block: list[str] = []
         for raw_line in raw_block:
             stripped = raw_line.strip()
+            if stripped.startswith("//"):
+                continue
             if is_done and stripped:
                 if not raw_line.startswith("#"):
                     errors.append(

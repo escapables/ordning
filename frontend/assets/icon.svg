@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <!-- Squircle clip for GNOME-style rounded square -->
+    <clipPath id="squircle">
+      <rect x="16" y="16" width="224" height="224" rx="48" ry="48"/>
+    </clipPath>
+
+    <!-- Body gradient: subtle top-down lighting -->
+    <linearGradient id="body-fill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f0f0f4"/>
+    </linearGradient>
+
+    <!-- Header gradient: blue with subtle depth -->
+    <linearGradient id="header-fill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3d9dff"/>
+      <stop offset="100%" stop-color="#006ae0"/>
+    </linearGradient>
+
+    <!-- Ring gradient: metallic look -->
+    <linearGradient id="ring-fill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#b0b0b8"/>
+      <stop offset="50%" stop-color="#d8d8dc"/>
+      <stop offset="100%" stop-color="#a0a0a8"/>
+    </linearGradient>
+
+    <!-- Drop shadow -->
+    <filter id="shadow" x="-8%" y="-4%" width="116%" height="120%">
+      <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#000" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+
+  <!-- Shadow layer -->
+  <rect x="16" y="16" width="224" height="224" rx="48" ry="48" filter="url(#shadow)" fill="#e0e0e4"/>
+
+  <!-- Calendar body -->
+  <g clip-path="url(#squircle)">
+    <!-- White page background -->
+    <rect x="16" y="16" width="224" height="224" fill="url(#body-fill)"/>
+
+    <!-- Blue header bar -->
+    <rect x="16" y="16" width="224" height="72" fill="url(#header-fill)"/>
+
+    <!-- Header bottom edge highlight -->
+    <line x1="16" y1="88" x2="240" y2="88" stroke="#005cc8" stroke-width="0.5" opacity="0.4"/>
+
+    <!-- Faint horizontal grid lines -->
+    <line x1="40" y1="142" x2="216" y2="142" stroke="#e0e0e4" stroke-width="1"/>
+    <line x1="40" y1="178" x2="216" y2="178" stroke="#e0e0e4" stroke-width="1"/>
+    <line x1="40" y1="214" x2="216" y2="214" stroke="#e0e0e4" stroke-width="1"/>
+
+    <!-- Faint vertical grid lines -->
+    <line x1="90" y1="96" x2="90" y2="232" stroke="#e0e0e4" stroke-width="1"/>
+    <line x1="128" y1="96" x2="128" y2="232" stroke="#e0e0e4" stroke-width="1"/>
+    <line x1="166" y1="96" x2="166" y2="232" stroke="#e0e0e4" stroke-width="1"/>
+  </g>
+
+  <!-- Outer border for definition -->
+  <rect x="16" y="16" width="224" height="224" rx="48" ry="48"
+        fill="none" stroke="#c8c8cc" stroke-width="1" opacity="0.5"/>
+
+  <!-- Calendar binding rings -->
+  <g>
+    <!-- Left ring -->
+    <rect x="88" y="6" width="8" height="28" rx="4" ry="4" fill="url(#ring-fill)" stroke="#909098" stroke-width="0.75"/>
+    <!-- Right ring -->
+    <rect x="160" y="6" width="8" height="28" rx="4" ry="4" fill="url(#ring-fill)" stroke="#909098" stroke-width="0.75"/>
+  </g>
+
+  <!-- Day of month: "25" -->
+  <text x="128" y="172" text-anchor="middle"
+        font-family="Liberation Sans, Helvetica Neue, Helvetica, Arial, sans-serif"
+        font-size="80" font-weight="700" fill="#1c1c1e" letter-spacing="-2">
+    25
+  </text>
+
+  <!-- Month abbreviation in header -->
+  <text x="128" y="66" text-anchor="middle"
+        font-family="Liberation Sans, Helvetica Neue, Helvetica, Arial, sans-serif"
+        font-size="26" font-weight="600" fill="#ffffff" letter-spacing="1.5" opacity="0.95">
+    FEB
+  </text>
+</svg>
