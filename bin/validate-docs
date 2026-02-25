@@ -209,6 +209,10 @@ def _validate_todo_format(path: Path) -> list[str]:
             )
 
     for i, (start_idx, section_number, is_done, _) in enumerate(sections):
+        if is_done:
+            errors.append(
+                f"TODO section {section_number} marked DONE must be collapsed to `// ### DONE {section_number}. title`")
+            continue
         end_idx = sections[i + 1][0] if i + 1 < len(sections) else len(lines)
         # Also stop block at milestone headings (## vX.X)
         for j in range(start_idx + 1, end_idx):
@@ -221,12 +225,6 @@ def _validate_todo_format(path: Path) -> list[str]:
             stripped = raw_line.strip()
             if stripped.startswith("//"):
                 continue
-            if is_done and stripped:
-                if not raw_line.startswith("#"):
-                    errors.append(
-                        f"TODO section {section_number} marked DONE must prefix all non-empty lines with '#'")
-                    break
-                stripped = raw_line[1:].strip()
             block.append(stripped)
 
         task_idx = scope_idx = done_idx = None
