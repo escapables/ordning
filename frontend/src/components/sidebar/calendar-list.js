@@ -100,8 +100,23 @@ export function renderCalendarList(calendars, handlers) {
     section.appendChild(group);
   });
 
+  const addButton = document.createElement("button");
+  addButton.type = "button";
+  addButton.className = "calendar-list__add";
+  addButton.tabIndex = 2;
+  addButton.textContent = "+";
+  addButton.setAttribute("aria-label", t("calendarCreateOpenButton"));
+
+  const dialog = document.createElement("dialog");
+  dialog.className = "calendar-create-dialog";
+
   const form = document.createElement("form");
-  form.className = "calendar-create";
+  form.className = "calendar-create-dialog__form";
+  form.method = "dialog";
+
+  const title = document.createElement("h3");
+  title.className = "calendar-create-dialog__title";
+  title.textContent = t("calendarCreateDialogTitle");
 
   const input = document.createElement("input");
   input.type = "text";
@@ -109,57 +124,91 @@ export function renderCalendarList(calendars, handlers) {
   input.required = true;
   input.tabIndex = 2;
   input.placeholder = t("calendarCreatePlaceholder");
-  input.className = "calendar-create__input";
+  input.className = "calendar-create-dialog__input";
 
   const colorGrid = document.createElement("div");
-  colorGrid.className = "calendar-create__colors";
+  colorGrid.className = "calendar-create-dialog__colors";
   let selectedColor = pickDefaultColor(calendars);
 
   CALENDAR_COLORS.forEach((color) => {
     const option = document.createElement("button");
     option.type = "button";
-    option.className = "calendar-create__color";
+    option.className = "calendar-create-dialog__color";
     option.tabIndex = 2;
     option.style.backgroundColor = color;
+    option.dataset.color = color;
     option.setAttribute("aria-label", `${t("calendarColorLabel")} ${color}`);
 
     if (color === selectedColor) {
-      option.classList.add("calendar-create__color--selected");
+      option.classList.add("calendar-create-dialog__color--selected");
     }
 
     option.addEventListener("click", () => {
       selectedColor = color;
-      colorGrid.querySelectorAll(".calendar-create__color").forEach((element) => {
-        element.classList.remove("calendar-create__color--selected");
+      colorGrid.querySelectorAll(".calendar-create-dialog__color").forEach((element) => {
+        element.classList.remove("calendar-create-dialog__color--selected");
       });
-      option.classList.add("calendar-create__color--selected");
+      option.classList.add("calendar-create-dialog__color--selected");
     });
     colorGrid.appendChild(option);
   });
 
   const actions = document.createElement("div");
-  actions.className = "calendar-create__actions";
+  actions.className = "calendar-create-dialog__actions";
+
+  const cancel = document.createElement("button");
+  cancel.type = "button";
+  cancel.className = "calendar-create-dialog__btn";
+  cancel.textContent = t("eventFormCancel");
 
   const submit = document.createElement("button");
   submit.type = "submit";
-  submit.className = "calendar-create__submit";
+  submit.className = "calendar-create-dialog__btn calendar-create-dialog__btn--primary";
   submit.tabIndex = 2;
   submit.textContent = t("calendarCreateButton");
 
+  actions.appendChild(cancel);
   actions.appendChild(submit);
+  form.appendChild(title);
   form.appendChild(input);
   form.appendChild(colorGrid);
   form.appendChild(actions);
+  dialog.appendChild(form);
+
+  addButton.addEventListener("click", () => {
+    input.value = "";
+    selectedColor = pickDefaultColor(calendars);
+    colorGrid.querySelectorAll(".calendar-create-dialog__color").forEach((element) => {
+      const color = element.dataset.color || "";
+      element.classList.toggle(
+        "calendar-create-dialog__color--selected",
+        color.toLowerCase() === selectedColor.toLowerCase()
+      );
+    });
+    dialog.showModal();
+    input.focus();
+  });
+
+  cancel.addEventListener("click", () => {
+    dialog.close();
+  });
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    const name = input.value.trim();
+    if (!name) {
+      input.focus();
+      return;
+    }
+
     await onCreate({
-      name: input.value.trim(),
+      name,
       color: selectedColor
     });
-    input.value = "";
+    dialog.close();
   });
 
-  section.appendChild(form);
+  section.appendChild(addButton);
+  section.appendChild(dialog);
   return section;
 }

@@ -140,9 +140,9 @@ async function renderAppShell() {
     onPersist: refreshAndRender,
     onEnsureCalendars: loadCalendars,
     onFocusCalendarCreate: () => {
-      const calendarCreateInput = app.querySelector(".calendar-create__input");
-      if (calendarCreateInput instanceof HTMLElement) {
-        calendarCreateInput.focus();
+      const openCreateDialogButton = app.querySelector(".calendar-list__add");
+      if (openCreateDialogButton instanceof HTMLElement) {
+        openCreateDialogButton.click();
       }
     }
   });
