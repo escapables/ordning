@@ -14,7 +14,7 @@ TODO_PATH = DOCS_DIR / "TODO.md"
 PRIMARY_TODO_PATH = DOCS_DIR / "PRIMARY_TODO.md"
 EXCLUDED_DIRS = {"archive", "research"}
 # Local-only agent docs — not version-controlled, skip if absent
-LOCAL_ONLY_DOCS = {"TODO.md", "PRIMARY_TODO.md", "WORKFLOW.md"}
+LOCAL_ONLY_DOCS = {"TODO.md", "PRIMARY_TODO.md", "WORKFLOW.md", "ARCHIVE.md"}
 SUMMARY_PATTERN = re.compile(r"^summary:\s*(.+)$", re.MULTILINE)
 READ_WHEN_HEADER_PATTERN = re.compile(r"^read_when:\s*$", re.MULTILINE)
 READ_WHEN_INLINE_PATTERN = re.compile(r"^read_when:\s*\[(.+?)\]\s*$", re.MULTILINE)

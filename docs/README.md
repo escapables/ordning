@@ -33,7 +33,7 @@ Internal process documentation:
 2. `docs/ARCHITECTURE.md` - System architecture and design decisions
 3. `docs/APPIMAGE_PORTABILITY.md` - Linux AppImage compatibility baseline
 
-Agent working docs (local, unversioned): TODO.md, PRIMARY_TODO.md, WORKFLOW.md
+Agent working docs (local, unversioned): TODO.md, PRIMARY_TODO.md, WORKFLOW.md, ARCHIVE.md
 
 ## Doc Responsibilities
 
