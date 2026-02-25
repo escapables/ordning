@@ -70,10 +70,6 @@ export function renderCalendarList(calendars, handlers) {
       deleteButton.tabIndex = 2;
       deleteButton.textContent = t("calendarDeleteButton");
       deleteButton.addEventListener("click", () => {
-        if (calendars.length <= 1) {
-          window.alert(t("calendarDeleteError"));
-          return;
-        }
         onDelete(calendar);
       });
 

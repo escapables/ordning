@@ -1,6 +1,7 @@
 import { renderAllDayBar } from "./all-day-bar.js";
 import { renderDayColumn, renderDayHeader } from "./day-column.js";
 import { mountTimeIndicator } from "./time-indicator.js";
+import { t } from "../../i18n/strings.js";
 import { formatDateKey } from "../../utils/date-utils.js";
 
 const HOURS_PER_DAY = 24;
@@ -45,6 +46,7 @@ function autoScrollToCurrentTime(body, dates, pixelsPerHour) {
 
 export function renderWeekGrid(dates, events = [], allDayEvents = [], options = {}) {
   const {
+    calendarsCount = 0,
     onEventClick = () => {},
     onCreateSlot = () => {}
   } = options;
@@ -69,6 +71,25 @@ export function renderWeekGrid(dates, events = [], allDayEvents = [], options = 
   dates.forEach((date) => {
     headers.appendChild(renderDayHeader(date));
   });
+
+  const showZeroCalendarState = calendarsCount === 0 && events.length === 0 && allDayEvents.length === 0;
+  if (showZeroCalendarState) {
+    const emptyState = document.createElement("div");
+    emptyState.className = "week-grid__empty";
+
+    const title = document.createElement("p");
+    title.className = "week-grid__empty-title";
+    title.textContent = t("weekGridNoCalendarsTitle");
+
+    const hint = document.createElement("p");
+    hint.className = "week-grid__empty-hint";
+    hint.textContent = t("weekGridNoCalendarsHint");
+
+    emptyState.append(title, hint);
+    root.appendChild(headers);
+    root.appendChild(emptyState);
+    return root;
+  }
 
   const body = document.createElement("div");
   body.className = "week-grid__body";

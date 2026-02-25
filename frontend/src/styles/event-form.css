@@ -30,6 +30,27 @@
   font-size: 13px;
 }
 
+.event-modal__empty {
+  border: 1px solid var(--color-border-muted);
+  border-radius: 10px;
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+  background: var(--color-bg-main);
+}
+
+.event-modal__empty-text {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.event-modal__empty-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .event-modal__row {
   display: grid;
   gap: 10px;

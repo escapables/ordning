@@ -159,10 +159,6 @@ fn toggle_visibility_in_data(
 }
 
 fn delete_calendar_in_data(app_data: &mut AppData, calendar_id: Uuid) -> Result<(), String> {
-    if app_data.calendars.len() <= 1 {
-        return Err("cannot delete the last calendar".to_owned());
-    }
-
     let before = app_data.calendars.len();
     app_data
         .calendars
@@ -307,6 +303,38 @@ mod tests {
         assert_eq!(app_data.calendars.len(), 1);
         assert_eq!(app_data.events.len(), 1);
         assert_eq!(app_data.events[0].calendar_id, keep_id);
+    }
+
+    #[test]
+    fn delete_last_calendar_is_allowed_and_cascades_events() {
+        let delete_id = Uuid::new_v4();
+
+        let mut app_data = AppData {
+            calendars: vec![sample_calendar(delete_id, true)],
+            events: vec![Event {
+                id: Uuid::new_v4(),
+                calendar_id: delete_id,
+                title: "Delete me".to_owned(),
+                start_date: NaiveDate::from_ymd_opt(2026, 2, 24).unwrap(),
+                end_date: NaiveDate::from_ymd_opt(2026, 2, 24).unwrap(),
+                start_time: Some(NaiveTime::from_hms_opt(9, 0, 0).unwrap()),
+                end_time: Some(NaiveTime::from_hms_opt(9, 30, 0).unwrap()),
+                all_day: false,
+                description_private: String::new(),
+                description_public: String::new(),
+                location: None,
+                recurrence: None,
+                created_at: "2026-02-24T00:00:00Z".to_owned(),
+                updated_at: "2026-02-24T00:00:00Z".to_owned(),
+            }],
+            ..AppData::default()
+        };
+
+        let result = delete_calendar_in_data(&mut app_data, delete_id);
+
+        assert!(result.is_ok());
+        assert!(app_data.calendars.is_empty());
+        assert!(app_data.events.is_empty());
     }
 
     #[test]

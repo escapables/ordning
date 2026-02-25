@@ -56,7 +56,12 @@ function renderWeekSection(container, weekDates, options = {}) {
 
   const mappedEvents = mapBackendEvents(getState().events);
   const mappedAllDayEvents = mapAllDayEvents(getState().allDayEvents);
-  container.appendChild(renderWeekGrid(weekDates, mappedEvents, mappedAllDayEvents, options));
+  container.appendChild(
+    renderWeekGrid(weekDates, mappedEvents, mappedAllDayEvents, {
+      calendarsCount: getState().calendars.length,
+      ...options
+    })
+  );
 }
 
 function getWeekBounds(weekStart) {
@@ -133,7 +138,13 @@ async function renderAppShell() {
 
   const eventModal = createEventModal({
     onPersist: refreshAndRender,
-    onEnsureCalendars: loadCalendars
+    onEnsureCalendars: loadCalendars,
+    onFocusCalendarCreate: () => {
+      const calendarCreateInput = app.querySelector(".calendar-create__input");
+      if (calendarCreateInput instanceof HTMLElement) {
+        calendarCreateInput.focus();
+      }
+    }
   });
   app.appendChild(eventModal.element);
 

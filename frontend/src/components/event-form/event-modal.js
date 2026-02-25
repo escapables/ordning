@@ -48,7 +48,8 @@ function createInput(type, name) {
 
 export function createEventModal({
   onPersist,
-  onEnsureCalendars = async () => {}
+  onEnsureCalendars = async () => {},
+  onFocusCalendarCreate = () => {}
 }) {
   const dialog = document.createElement("dialog");
   dialog.className = "event-modal";
@@ -65,6 +66,31 @@ export function createEventModal({
   error.className = "event-modal__error";
   error.hidden = true;
   form.appendChild(error);
+
+  const noCalendarsPrompt = document.createElement("div");
+  noCalendarsPrompt.className = "event-modal__empty";
+  noCalendarsPrompt.hidden = true;
+
+  const noCalendarsText = document.createElement("p");
+  noCalendarsText.className = "event-modal__empty-text";
+  noCalendarsText.textContent = t("eventFormNoCalendarsPrompt");
+
+  const noCalendarsActions = document.createElement("div");
+  noCalendarsActions.className = "event-modal__empty-actions";
+
+  const focusCalendarCreateButton = document.createElement("button");
+  focusCalendarCreateButton.type = "button";
+  focusCalendarCreateButton.className = "event-modal__btn event-modal__btn--primary";
+  focusCalendarCreateButton.textContent = t("eventFormFocusCalendarCreate");
+
+  const closeEmptyStateButton = document.createElement("button");
+  closeEmptyStateButton.type = "button";
+  closeEmptyStateButton.className = "event-modal__btn";
+  closeEmptyStateButton.textContent = t("eventFormCancel");
+
+  noCalendarsActions.append(focusCalendarCreateButton, closeEmptyStateButton);
+  noCalendarsPrompt.append(noCalendarsText, noCalendarsActions);
+  form.appendChild(noCalendarsPrompt);
 
   const titleInput = createInput("text", "title");
   titleInput.required = true;
@@ -159,6 +185,16 @@ export function createEventModal({
     editingId: null
   };
 
+  function toggleNoCalendarsCreateState(enabled) {
+    noCalendarsPrompt.hidden = !enabled;
+    const editableSections = form.querySelectorAll(
+      ".event-modal__field, .event-modal__row, .event-modal__checkbox, .event-modal__actions"
+    );
+    editableSections.forEach((section) => {
+      section.hidden = enabled;
+    });
+  }
+
   function showError(message) {
     error.textContent = message;
     error.hidden = false;
@@ -244,6 +280,7 @@ export function createEventModal({
     state.editingId = eventId;
     heading.textContent = t("eventFormEditHeading");
     deleteButton.hidden = false;
+    toggleNoCalendarsCreateState(false);
   }
 
   function collectPayload() {
@@ -282,12 +319,17 @@ export function createEventModal({
       endTimeInput.value = prefill.endTime;
     }
 
+    toggleNoCalendarsCreateState(!hasCalendars);
     if (!hasCalendars) {
       showError(t("eventFormNoCalendars"));
     }
 
     dialog.showModal();
-    titleInput.focus();
+    if (hasCalendars) {
+      titleInput.focus();
+    } else {
+      focusCalendarCreateButton.focus();
+    }
   }
 
   async function openEdit(eventId) {
@@ -324,6 +366,15 @@ export function createEventModal({
     dialog.close();
   });
 
+  focusCalendarCreateButton.addEventListener("click", () => {
+    dialog.close();
+    onFocusCalendarCreate();
+  });
+
+  closeEmptyStateButton.addEventListener("click", () => {
+    dialog.close();
+  });
+
   deleteButton.addEventListener("click", async () => {
     if (!state.editingId) {
       return;
@@ -346,6 +397,11 @@ export function createEventModal({
   form.addEventListener("submit", async (submitEvent) => {
     submitEvent.preventDefault();
     clearError();
+
+    if (state.mode === "create" && getState().calendars.length === 0) {
+      showError(t("eventFormNoCalendars"));
+      return;
+    }
 
     if (!calendarSelect.value) {
       showError(t("eventFormCalendarRequired"));
