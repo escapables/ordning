@@ -42,6 +42,20 @@ function isSameWeek(left, right) {
   return isSameDate(leftWeek, rightWeek);
 }
 
+function getIsoWeekNumber(date) {
+  const target = new Date(date);
+  target.setHours(0, 0, 0, 0);
+  target.setDate(target.getDate() + 3 - ((target.getDay() + 6) % 7));
+
+  const firstThursday = new Date(target.getFullYear(), 0, 4);
+  firstThursday.setDate(
+    firstThursday.getDate() + 3 - ((firstThursday.getDay() + 6) % 7)
+  );
+
+  const millisPerWeek = 7 * 24 * 60 * 60 * 1000;
+  return 1 + Math.round((target - firstThursday) / millisPerWeek);
+}
+
 export function renderMiniMonth(options = {}) {
   const {
     currentWeekStart = getStartOfWeek(new Date(), 1),
@@ -91,6 +105,11 @@ export function renderMiniMonth(options = {}) {
 
     const daysHeader = document.createElement("div");
     daysHeader.className = "mini-month__weekdays";
+
+    const weekNumberSpacer = document.createElement("span");
+    weekNumberSpacer.className = "mini-month__week-number-spacer";
+    daysHeader.appendChild(weekNumberSpacer);
+
     for (let weekday = 1; weekday <= 7; weekday += 1) {
       const weekdayCell = document.createElement("span");
       weekdayCell.className = "mini-month__weekday";
@@ -103,31 +122,42 @@ export function renderMiniMonth(options = {}) {
 
     const today = new Date();
     const { cells, monthStart } = getMonthDays(displayedMonth);
-    cells.forEach((cellDate) => {
-      const day = document.createElement("button");
-      day.type = "button";
-      day.className = "mini-month__day";
-      day.tabIndex = 2;
-      day.textContent = String(cellDate.getDate());
+    for (let row = 0; row < 6; row += 1) {
+      const rowStartIndex = row * 7;
+      const rowStartDate = cells[rowStartIndex];
 
-      if (cellDate.getMonth() !== monthStart.getMonth()) {
-        day.classList.add("mini-month__day--outside");
+      const weekNumber = document.createElement("span");
+      weekNumber.className = "mini-month__week-number";
+      weekNumber.textContent = String(getIsoWeekNumber(rowStartDate));
+      grid.appendChild(weekNumber);
+
+      for (let column = 0; column < 7; column += 1) {
+        const cellDate = cells[rowStartIndex + column];
+        const day = document.createElement("button");
+        day.type = "button";
+        day.className = "mini-month__day";
+        day.tabIndex = 2;
+        day.textContent = String(cellDate.getDate());
+
+        if (cellDate.getMonth() !== monthStart.getMonth()) {
+          day.classList.add("mini-month__day--outside");
+        }
+
+        if (isSameDate(cellDate, today)) {
+          day.classList.add("mini-month__day--today");
+        }
+
+        if (isSameWeek(cellDate, currentWeekStart)) {
+          day.classList.add("mini-month__day--current-week");
+        }
+
+        day.addEventListener("click", () => {
+          void onSelectDay(cellDate);
+        });
+
+        grid.appendChild(day);
       }
-
-      if (isSameDate(cellDate, today)) {
-        day.classList.add("mini-month__day--today");
-      }
-
-      if (isSameWeek(cellDate, currentWeekStart)) {
-        day.classList.add("mini-month__day--current-week");
-      }
-
-      day.addEventListener("click", () => {
-        void onSelectDay(cellDate);
-      });
-
-      grid.appendChild(day);
-    });
+    }
 
     root.append(header, daysHeader, grid);
   }

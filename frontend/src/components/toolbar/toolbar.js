@@ -26,10 +26,7 @@ function formatWeekRange(startDate, endDate) {
       month: "short",
       day: "numeric"
     }).format(startDate);
-    const endLabel = new Intl.DateTimeFormat(locale, {
-      day: "numeric",
-      year: "numeric"
-    }).format(endDate);
+    const endLabel = `${endDate.getDate()}, ${endDate.getFullYear()}`;
     return `${startLabel} - ${endLabel}`;
   }
 

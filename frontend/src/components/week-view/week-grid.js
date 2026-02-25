@@ -44,6 +44,26 @@ function autoScrollToCurrentTime(body, dates, pixelsPerHour) {
   body.scrollTop = targetHour * pixelsPerHour;
 }
 
+function deferAutoScroll(body, dates, pixelsPerHour) {
+  let attempts = 0;
+
+  function tryScroll() {
+    if (body.isConnected) {
+      autoScrollToCurrentTime(body, dates, pixelsPerHour);
+      return;
+    }
+
+    if (attempts >= 5) {
+      return;
+    }
+
+    attempts += 1;
+    requestAnimationFrame(tryScroll);
+  }
+
+  requestAnimationFrame(tryScroll);
+}
+
 export function renderWeekGrid(dates, events = [], allDayEvents = [], options = {}) {
   const {
     calendarsCount = 0,
@@ -107,11 +127,11 @@ export function renderWeekGrid(dates, events = [], allDayEvents = [], options = 
   });
 
   mountTimeIndicator(body, dates, PIXELS_PER_HOUR);
-  autoScrollToCurrentTime(body, dates, PIXELS_PER_HOUR);
 
   root.appendChild(headers);
   root.appendChild(renderAllDayBar(dates, allDayEvents));
   root.appendChild(body);
+  deferAutoScroll(body, dates, PIXELS_PER_HOUR);
 
   return root;
 }

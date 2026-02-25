@@ -95,8 +95,12 @@
 .mini-month__weekdays,
 .mini-month__grid {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: 18px repeat(7, minmax(0, 1fr));
   gap: 2px;
+}
+
+.mini-month__week-number-spacer {
+  display: block;
 }
 
 .mini-month__weekday {
@@ -104,6 +108,13 @@
   font-size: 10px;
   color: var(--color-text-secondary);
   text-transform: uppercase;
+}
+
+.mini-month__week-number {
+  align-self: center;
+  justify-self: center;
+  font-size: 10px;
+  color: var(--color-text-secondary);
 }
 
 .mini-month__day {
