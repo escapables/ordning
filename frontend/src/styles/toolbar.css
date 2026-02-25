@@ -6,6 +6,8 @@
   flex-wrap: wrap;
   margin-bottom: 12px;
   padding: 2px 0;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .main-toolbar__nav {
@@ -57,4 +59,10 @@
 .main-toolbar__icon-btn:hover,
 .main-toolbar__today-btn:hover {
   background: #f6f7f9;
+}
+
+.main-toolbar input,
+.main-toolbar textarea {
+  user-select: text;
+  -webkit-user-select: text;
 }

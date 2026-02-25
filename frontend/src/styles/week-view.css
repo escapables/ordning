@@ -13,6 +13,8 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .week-grid__headers {
@@ -176,6 +178,8 @@
 .time-labels {
   border-right: 1px solid var(--color-border-muted);
   background: var(--color-bg-time-labels);
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .time-label {
@@ -303,4 +307,10 @@
   border-radius: 50%;
   transform: translate(-50%, -50%);
   background: var(--color-time-indicator);
+}
+
+.week-view input,
+.week-view textarea {
+  user-select: text;
+  -webkit-user-select: text;
 }
