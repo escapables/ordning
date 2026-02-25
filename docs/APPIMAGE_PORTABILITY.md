@@ -56,12 +56,12 @@ If either fails, release is blocked.
 Use this when a machine fails to launch.
 
 Launch methods:
-- `./Ordning_0.1.0_amd64.AppImage --diagnose`
-- `ORDNING_DIAGNOSE=1 ./Ordning_0.1.0_amd64.AppImage`
+- `./target/release/bundle/appimage/Ordning_<version>_amd64.AppImage --diagnose`
+- `ORDNING_DIAGNOSE=1 ./target/release/bundle/appimage/Ordning_<version>_amd64.AppImage`
 
 Log path:
 - next to the AppImage binary:
-  - `./appimage-diagnose.log` (same directory as `Ordning_0.1.0_amd64.AppImage`)
+  - `./appimage-diagnose.log` (same directory as `Ordning_<version>_amd64.AppImage`)
 
 What it captures:
 - startup timestamp

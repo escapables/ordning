@@ -39,6 +39,10 @@
   background: var(--color-bg-main);
 }
 
+.event-modal__hidden {
+  display: none !important;
+}
+
 .event-modal__empty-text {
   margin: 0;
   font-size: 13px;

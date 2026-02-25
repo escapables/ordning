@@ -1,7 +1,25 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APPIMAGE="${1:-target/release/bundle/appimage/Ordning_0.1.0_amd64.AppImage}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+TAURI_CONF="$SCRIPT_DIR/../src-tauri/tauri.conf.json"
+if [[ ! -f "$TAURI_CONF" ]]; then
+  echo "Error: tauri config not found: $TAURI_CONF" >&2
+  exit 1
+fi
+
+if command -v jq >/dev/null 2>&1; then
+  TAURI_VERSION="$(jq -r '.version' "$TAURI_CONF")"
+else
+  TAURI_VERSION="$(grep -Eo '"version"[[:space:]]*:[[:space:]]*"[^"]+"' "$TAURI_CONF" | head -n1 | sed -E 's/.*"([^"]+)"/\1/')"
+fi
+
+if [[ -z "${TAURI_VERSION:-}" || "$TAURI_VERSION" == "null" ]]; then
+  echo "Error: failed to read version from $TAURI_CONF" >&2
+  exit 1
+fi
+
+APPIMAGE="${1:-target/release/bundle/appimage/Ordning_${TAURI_VERSION}_amd64.AppImage}"
 if [[ ! -f "$APPIMAGE" ]]; then
   echo "Error: AppImage not found: $APPIMAGE" >&2
   exit 1

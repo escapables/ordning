@@ -51,6 +51,7 @@ export function createEventModal({
   onEnsureCalendars = async () => {},
   onFocusCalendarCreate = () => {}
 }) {
+  const FORCE_HIDDEN_CLASS = "event-modal__hidden";
   const dialog = document.createElement("dialog");
   dialog.className = "event-modal";
 
@@ -187,11 +188,13 @@ export function createEventModal({
 
   function toggleNoCalendarsCreateState(enabled) {
     noCalendarsPrompt.hidden = !enabled;
+    noCalendarsPrompt.classList.toggle(FORCE_HIDDEN_CLASS, !enabled);
     const editableSections = form.querySelectorAll(
       ".event-modal__field, .event-modal__row, .event-modal__checkbox, .event-modal__actions"
     );
     editableSections.forEach((section) => {
       section.hidden = enabled;
+      section.classList.toggle(FORCE_HIDDEN_CLASS, enabled);
     });
   }
 
