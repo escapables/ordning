@@ -11,6 +11,19 @@ const CALENDAR_COLORS = [
   "#8e8e93"
 ];
 
+function pickDefaultColor(calendars) {
+  const usedColors = new Set(
+    calendars.map((calendar) => String(calendar.color || "").trim().toLowerCase())
+  );
+  const firstUnusedColor = CALENDAR_COLORS.find((color) => !usedColors.has(color.toLowerCase()));
+  if (firstUnusedColor) {
+    return firstUnusedColor;
+  }
+
+  const randomIndex = Math.floor(Math.random() * CALENDAR_COLORS.length);
+  return CALENDAR_COLORS[randomIndex];
+}
+
 function buildGroups(calendars) {
   const groups = new Map();
   calendars.forEach((calendar) => {
@@ -100,9 +113,9 @@ export function renderCalendarList(calendars, handlers) {
 
   const colorGrid = document.createElement("div");
   colorGrid.className = "calendar-create__colors";
-  let selectedColor = CALENDAR_COLORS[0];
+  let selectedColor = pickDefaultColor(calendars);
 
-  CALENDAR_COLORS.forEach((color, index) => {
+  CALENDAR_COLORS.forEach((color) => {
     const option = document.createElement("button");
     option.type = "button";
     option.className = "calendar-create__color";
@@ -110,7 +123,7 @@ export function renderCalendarList(calendars, handlers) {
     option.style.backgroundColor = color;
     option.setAttribute("aria-label", `${t("calendarColorLabel")} ${color}`);
 
-    if (index === 0) {
+    if (color === selectedColor) {
       option.classList.add("calendar-create__color--selected");
     }
 
