@@ -15,7 +15,7 @@ use crate::commands::event_cmds::{create_event, delete_event, get_event, update_
 use crate::commands::io_cmds::{
     export_json, get_export_event_count, import_json, preview_import_json,
 };
-use crate::commands::view_cmds::get_week_events;
+use crate::commands::view_cmds::{get_week_events, search_events};
 use crate::models::Calendar;
 use crate::state::AppState;
 use crate::storage::json_store::JsonStore;
@@ -73,6 +73,7 @@ pub fn run() {
             delete_calendar,
             toggle_visibility,
             get_week_events,
+            search_events,
             create_event,
             update_event,
             delete_event,

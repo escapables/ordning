@@ -1,4 +1,5 @@
 import { getLocale, t } from "../../i18n/strings.js";
+import { createEventSearch } from "../search/search.js";
 import { getEndOfWeek } from "../../utils/date-utils.js";
 
 function getIsoWeekNumber(date) {
@@ -71,7 +72,9 @@ export function renderToolbar(options) {
     onNextWeek = () => {},
     onToday = () => {},
     onImport = () => {},
-    onExport = () => {}
+    onExport = () => {},
+    onSearch = async () => [],
+    onSearchSelect = () => {}
   } = options;
 
   const toolbar = document.createElement("header");
@@ -109,6 +112,15 @@ export function renderToolbar(options) {
   title.className = "main-toolbar__title";
   title.textContent = formatToolbarTitle(weekStart);
 
+  const search = document.createElement("div");
+  search.className = "main-toolbar__search";
+  search.appendChild(
+    createEventSearch({
+      onSearch,
+      onSelect: onSearchSelect
+    })
+  );
+
   const actions = document.createElement("div");
   actions.className = "main-toolbar__actions";
 
@@ -127,6 +139,6 @@ export function renderToolbar(options) {
   importButton.addEventListener("click", onImport);
 
   actions.append(exportButton, importButton);
-  toolbar.append(nav, title, actions);
+  toolbar.append(nav, title, search, actions);
   return toolbar;
 }

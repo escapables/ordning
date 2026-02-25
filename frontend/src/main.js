@@ -48,6 +48,11 @@ function addDays(date, days) {
   return next;
 }
 
+function parseDateKey(dateKey) {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
 function renderWeekSection(container, weekDates, options = {}) {
   const previous = container.querySelector(".week-view");
   if (previous) {
@@ -117,6 +122,26 @@ async function renderAppShell() {
 
   const refreshAndRender = async () => {
     await Promise.all([loadCalendars(), refreshCurrentWeekEvents()]);
+  };
+
+  let pendingHighlightEventId = null;
+
+  const highlightEventBlock = (eventId) => {
+    const block = weekContainer.querySelector(`.event-block[data-event-id="${eventId}"]`);
+    if (!(block instanceof HTMLElement)) {
+      return false;
+    }
+
+    block.classList.remove("event-block--highlighted");
+    // Force class re-apply when selecting the same event repeatedly.
+    void block.offsetWidth;
+    block.classList.add("event-block--highlighted");
+    window.setTimeout(() => {
+      block.classList.remove("event-block--highlighted");
+    }, 1800);
+    block.focus({ preventScroll: true });
+    block.scrollIntoView({ block: "center", behavior: "smooth", inline: "nearest" });
+    return true;
   };
 
   const goToPreviousWeek = async () => {
@@ -215,6 +240,18 @@ async function renderAppShell() {
         },
         onImport: () => {
           importDialog.open();
+        },
+        onSearch: async (query) => {
+          return invoke("search_events", { query });
+        },
+        onSearchSelect: async (result) => {
+          if (!result?.start_date || !result?.id) {
+            return;
+          }
+
+          pendingHighlightEventId = result.id;
+          setCurrentWeekStart(getStartOfWeek(parseDateKey(result.start_date), 1));
+          await refreshCurrentWeekEvents();
         }
       })
     );
@@ -227,6 +264,10 @@ async function renderAppShell() {
         eventModal.openCreate(prefill);
       }
     });
+
+    if (pendingHighlightEventId && highlightEventBlock(pendingHighlightEventId)) {
+      pendingHighlightEventId = null;
+    }
   });
 
   renderWeekSection(weekContainer, getWeekBounds(initialWeekStart).weekDates, {
