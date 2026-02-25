@@ -16,20 +16,27 @@ test("slot click opens modal and submit creates event", async ({ page }) => {
   await expect(page.locator(".event-block")).toHaveCount(beforeCount + 1);
 });
 
-test("Delete key confirm gates event deletion", async ({ page }) => {
+test("Delete key cancel keeps focused event", async ({ page }) => {
   await page.goto("/");
 
-  const event = page.locator(".event-block").first();
-  await event.focus();
-  const beforeCount = await page.locator(".event-block").count();
+  const targetEvent = page.locator(".event-block", { hasText: "Sprint Planning" });
+  await expect(targetEvent).toHaveCount(1);
+  await targetEvent.focus();
 
-  page.once("dialog", (dialog) => dialog.dismiss());
   await page.keyboard.press("Delete");
-  await expect(page.locator(".event-block")).toHaveCount(beforeCount);
+  await expect(page.locator(".confirm-dialog[open]")).toBeVisible();
+  await page.locator(".confirm-dialog__btn", { hasText: "Avbryt" }).click();
+  await expect(targetEvent).toHaveCount(1);
+});
 
-  const nextEvent = page.locator(".event-block").first();
-  await nextEvent.focus();
-  page.once("dialog", (dialog) => dialog.accept());
+test("Delete key confirm deletes focused event", async ({ page }) => {
+  await page.goto("/");
+
+  const targetEvent = page.locator(".event-block", { hasText: "Sprint Planning" });
+  await expect(targetEvent).toHaveCount(1);
+  await targetEvent.focus();
   await page.keyboard.press("Delete");
-  await expect(page.locator(".event-block")).toHaveCount(beforeCount - 1);
+  await expect(page.locator(".confirm-dialog[open]")).toBeVisible();
+  await page.locator(".confirm-dialog__btn--danger").click();
+  await expect(targetEvent).toHaveCount(0);
 });
