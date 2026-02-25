@@ -22,21 +22,14 @@
   color: var(--color-text-primary);
 }
 
-.main-toolbar__actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .main-toolbar__search {
   flex: 1 1 280px;
   max-width: 420px;
-  min-width: 220px;
+  min-width: 80px;
 }
 
 .main-toolbar__icon-btn,
-.main-toolbar__today-btn,
-.main-toolbar__btn {
+.main-toolbar__today-btn {
   min-height: 32px;
   border: 1px solid var(--color-border-muted);
   border-radius: 8px;
@@ -62,7 +55,6 @@
 }
 
 .main-toolbar__icon-btn:hover,
-.main-toolbar__today-btn:hover,
-.main-toolbar__btn:hover {
+.main-toolbar__today-btn:hover {
   background: #f6f7f9;
 }

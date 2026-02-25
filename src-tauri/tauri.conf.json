@@ -12,7 +12,9 @@
       {
         "title": "Ordning",
         "width": 1200,
-        "height": 800
+        "height": 800,
+        "minWidth": 1220,
+        "minHeight": 844
       }
     ],
     "security": {

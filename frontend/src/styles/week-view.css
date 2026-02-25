@@ -9,11 +9,15 @@
   overflow: hidden;
   background: var(--color-bg-main);
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .week-grid__headers {
   display: grid;
-  grid-template-columns: var(--time-column-width) repeat(7, minmax(120px, 1fr));
+  grid-template-columns: var(--time-column-width) repeat(7, minmax(0, 1fr));
   border-bottom: 1px solid var(--color-border-muted);
   background: var(--color-bg-header);
 }
@@ -81,7 +85,7 @@
 
 .all-day-bar {
   display: grid;
-  grid-template-columns: var(--time-column-width) repeat(7, minmax(120px, 1fr));
+  grid-template-columns: var(--time-column-width) repeat(7, minmax(0, 1fr));
   border-bottom: 1px solid var(--color-border-muted);
   background: var(--color-bg-main);
 }
@@ -116,15 +120,44 @@
   overflow: hidden;
 }
 
+.week-grid__body-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
 .week-grid__body {
   position: relative;
   display: grid;
-  grid-template-columns: var(--time-column-width) repeat(7, minmax(120px, 1fr));
-  max-height: calc(var(--hour-row-height) * 12);
+  grid-template-columns: var(--time-column-width) repeat(7, minmax(0, 1fr));
+  height: 100%;
   overflow-y: auto;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: rgb(0 0 0 / 0.15) transparent;
+}
+
+.offscreen-indicator {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 20px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-accent);
+  background: rgb(0 122 255 / 0.08);
+  border: 1px solid rgb(0 122 255 / 0.25);
+  border-radius: 14px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.offscreen-indicator--top {
+  top: 4px;
+}
+
+.offscreen-indicator--bottom {
+  bottom: 4px;
 }
 
 .week-grid__body::-webkit-scrollbar {

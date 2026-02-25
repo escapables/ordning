@@ -40,7 +40,9 @@ export function renderCalendarList(calendars, handlers) {
   const {
     onCreate = () => {},
     onDelete = () => {},
-    onToggleVisibility = () => {}
+    onToggleVisibility = () => {},
+    onImport = () => {},
+    onExport = () => {}
   } = handlers;
 
   const section = document.createElement("section");
@@ -208,7 +210,27 @@ export function renderCalendarList(calendars, handlers) {
     dialog.close();
   });
 
+  const ioRow = document.createElement("div");
+  ioRow.className = "calendar-list__io";
+
+  const exportButton = document.createElement("button");
+  exportButton.type = "button";
+  exportButton.className = "calendar-list__io-btn";
+  exportButton.tabIndex = 2;
+  exportButton.textContent = t("exportButton");
+  exportButton.addEventListener("click", onExport);
+
+  const importButton = document.createElement("button");
+  importButton.type = "button";
+  importButton.className = "calendar-list__io-btn";
+  importButton.tabIndex = 2;
+  importButton.textContent = t("importButton");
+  importButton.addEventListener("click", onImport);
+
+  ioRow.append(exportButton, importButton);
+
   section.appendChild(addButton);
+  section.appendChild(ioRow);
   section.appendChild(dialog);
   return section;
 }

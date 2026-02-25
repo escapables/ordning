@@ -75,7 +75,8 @@ const STRINGS = {
     importCancel: "Avbryt",
     importConfirm: "Importera",
     importSuccessMessage:
-      "Import klar. Nya: {new}, uppdaterade: {updated}, konflikter: {conflicts}"
+      "Import klar. Nya: {new}, uppdaterade: {updated}, konflikter: {conflicts}",
+    offscreenMore: "Fler händelser"
   },
   en: {
     appName: "Ordning",
@@ -153,7 +154,8 @@ const STRINGS = {
     importCancel: "Cancel",
     importConfirm: "Import",
     importSuccessMessage:
-      "Import complete. New: {new}, updated: {updated}, conflicts: {conflicts}"
+      "Import complete. New: {new}, updated: {updated}, conflicts: {conflicts}",
+    offscreenMore: "More events"
   }
 };
 

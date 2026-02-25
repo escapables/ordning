@@ -68,8 +68,6 @@ export function renderToolbar(options) {
     onPreviousWeek = () => {},
     onNextWeek = () => {},
     onToday = () => {},
-    onImport = () => {},
-    onExport = () => {},
     onSearch = async () => [],
     onSearchSelect = () => {}
   } = options;
@@ -118,24 +116,6 @@ export function renderToolbar(options) {
     })
   );
 
-  const actions = document.createElement("div");
-  actions.className = "main-toolbar__actions";
-
-  const exportButton = document.createElement("button");
-  exportButton.type = "button";
-  exportButton.className = "main-toolbar__btn";
-  exportButton.tabIndex = 1;
-  exportButton.innerHTML = `<span aria-hidden="true">↑</span><span>${t("exportButton")}</span>`;
-  exportButton.addEventListener("click", onExport);
-
-  const importButton = document.createElement("button");
-  importButton.type = "button";
-  importButton.className = "main-toolbar__btn";
-  importButton.tabIndex = 1;
-  importButton.innerHTML = `<span aria-hidden="true">↓</span><span>${t("importButton")}</span>`;
-  importButton.addEventListener("click", onImport);
-
-  actions.append(exportButton, importButton);
-  toolbar.append(nav, title, search, actions);
+  toolbar.append(nav, title, search);
   return toolbar;
 }

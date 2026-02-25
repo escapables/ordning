@@ -1,6 +1,7 @@
 import { renderAllDayBar } from "./all-day-bar.js";
 import { renderDayColumn, renderDayHeader } from "./day-column.js";
 import { mountTimeIndicator } from "./time-indicator.js";
+import { mountOffscreenIndicators } from "./offscreen-indicators.js";
 import { t } from "../../i18n/strings.js";
 import { formatDateKey } from "../../utils/date-utils.js";
 
@@ -133,9 +134,14 @@ export function renderWeekGrid(dates, events = [], allDayEvents = [], options = 
 
   mountTimeIndicator(body, dates, PIXELS_PER_HOUR);
 
+  const bodyWrap = document.createElement("div");
+  bodyWrap.className = "week-grid__body-wrap";
+  bodyWrap.appendChild(body);
+
   root.appendChild(headers);
   root.appendChild(renderAllDayBar(dates, allDayEvents));
-  root.appendChild(body);
+  root.appendChild(bodyWrap);
+  mountOffscreenIndicators(bodyWrap, body);
   deferAutoScroll(body, dates, PIXELS_PER_HOUR);
 
   return root;

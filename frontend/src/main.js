@@ -302,6 +302,12 @@ async function renderAppShell() {
             window.alert(t("calendarVisibilityError"));
             console.error("Failed to toggle calendar visibility", error);
           }
+        },
+        onExport: () => {
+          exportDialog.open();
+        },
+        onImport: () => {
+          importDialog.open();
         }
       })
     );
@@ -324,12 +330,6 @@ async function renderAppShell() {
         onPreviousWeek: goToPreviousWeek,
         onNextWeek: goToNextWeek,
         onToday: goToToday,
-        onExport: () => {
-          exportDialog.open();
-        },
-        onImport: () => {
-          importDialog.open();
-        },
         onSearch: async (query) => {
           return invoke("search_events", { query });
         },
