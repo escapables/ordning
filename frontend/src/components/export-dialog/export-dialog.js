@@ -9,7 +9,7 @@ function invoke(command, payload = {}) {
   return invokeFn(command, payload);
 }
 
-function createRadio(name, value, checked, labelText) {
+function createRadio(name, value, checked, labelText, subtitleText) {
   const label = document.createElement("label");
   label.className = "export-dialog__radio";
 
@@ -20,9 +20,20 @@ function createRadio(name, value, checked, labelText) {
   input.checked = checked;
   label.appendChild(input);
 
+  const textGroup = document.createElement("span");
+  textGroup.className = "export-dialog__radio-copy";
+
   const text = document.createElement("span");
+  text.className = "export-dialog__radio-label";
   text.textContent = labelText;
-  label.appendChild(text);
+  textGroup.appendChild(text);
+
+  const subtitle = document.createElement("span");
+  subtitle.className = "export-dialog__radio-subtitle";
+  subtitle.textContent = subtitleText;
+  textGroup.appendChild(subtitle);
+
+  label.appendChild(textGroup);
 
   return { label, input };
 }
@@ -52,8 +63,8 @@ export function createExportDialog() {
   modeLegend.textContent = t("exportModeLabel");
   modeSection.appendChild(modeLegend);
 
-  const fullMode = createRadio("export-mode", "full", true, t("exportModeFull"));
-  const publicMode = createRadio("export-mode", "public", false, t("exportModePublic"));
+  const fullMode = createRadio("export-mode", "full", true, t("exportModeFull"), t("exportModeFullSubtitle"));
+  const publicMode = createRadio("export-mode", "public", false, t("exportModePublic"), t("exportModePublicSubtitle"));
   modeSection.appendChild(fullMode.label);
   modeSection.appendChild(publicMode.label);
   form.appendChild(modeSection);

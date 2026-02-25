@@ -105,3 +105,23 @@
   background: var(--color-accent);
   color: #fff;
 }
+
+.export-dialog__radio {
+  align-items: flex-start;
+}
+
+.export-dialog__radio-copy {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.export-dialog__radio-label {
+  color: var(--color-text-primary);
+}
+
+.export-dialog__radio-subtitle {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--color-text-secondary, #8e8e93);
+}
