@@ -5,6 +5,7 @@ import { t } from "../../i18n/strings.js";
 import { formatDateKey } from "../../utils/date-utils.js";
 
 const HOURS_PER_DAY = 24;
+const MINUTES_PER_HOUR = 60;
 const PIXELS_PER_HOUR = 56;
 
 function renderTimeLabel(hour) {
@@ -40,8 +41,12 @@ function autoScrollToCurrentTime(body, dates, pixelsPerHour) {
   }
 
   const now = new Date();
-  const targetHour = Math.max(0, now.getHours() - 1);
-  body.scrollTop = targetHour * pixelsPerHour;
+  const minutesSinceMidnight = now.getHours() * MINUTES_PER_HOUR + now.getMinutes();
+  const indicatorTop = (minutesSinceMidnight / MINUTES_PER_HOUR) * pixelsPerHour;
+  const viewportOffset = body.clientHeight * 0.35;
+  const requestedScrollTop = Math.max(0, indicatorTop - viewportOffset);
+  const maxScrollTop = Math.max(0, body.scrollHeight - body.clientHeight);
+  body.scrollTop = Math.min(requestedScrollTop, maxScrollTop);
 }
 
 function deferAutoScroll(body, dates, pixelsPerHour) {

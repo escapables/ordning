@@ -218,16 +218,13 @@
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
   color: #fff;
   overflow: hidden;
-  transition: filter 120ms ease, box-shadow 120ms ease, transform 120ms ease;
   cursor: pointer;
   pointer-events: auto;
   z-index: 3;
 }
 
 .event-block:hover {
-  filter: saturate(1.07);
   box-shadow: 0 4px 10px rgb(0 0 0 / 0.14);
-  transform: translateY(-1px);
 }
 
 .event-block--highlighted {

@@ -24,6 +24,7 @@ TODO_SECTION_PATTERN = re.compile(r"^###\s+(DONE\s+)?(\d+)\.\s+(.+?)\s*$")
 VERSION_HEADING_PATTERN = re.compile(r"^##\s+(?:(?:DONE|NOT DONE)\s+)?v(\d+\.\d+(?:\.\d+)?)\b")
 HANDOFF_PATH = DOCS_DIR / "HANDOFF.md"
 HANDOFF_MAX_LINES = 60
+TODO_MAX_LINES = 60
 PRIMARY_TODO_MAX_LINES = 70
 STRICT_FRONT_MATTER = os.environ.get("STRICT_DOCS_FRONT_MATTER", "0") == "1"
 DONE_VERSION_HEADING = re.compile(r"^##\s+DONE\s+v")
@@ -313,6 +314,14 @@ def _validate_roadmap_format(path: Path, label: str, heading: str) -> list[str]:
     return errors
 
 
+def _validate_todo_loc(path: Path) -> list[str]:
+    content = path.read_text(encoding="utf-8")
+    line_count = len(content.splitlines())
+    if line_count > TODO_MAX_LINES:
+        return [f"TODO.md exceeds {TODO_MAX_LINES} lines ({line_count}); remove finished milestones"]
+    return []
+
+
 def _validate_handoff_loc(path: Path) -> list[str]:
     content = path.read_text(encoding="utf-8")
     line_count = len(content.splitlines())
@@ -363,6 +372,7 @@ def main() -> int:
         errors, warnings = _validate_doc(path)
         if path == TODO_PATH:
             errors.extend(_validate_todo_format(path))
+            errors.extend(_validate_todo_loc(path))
         if path == HANDOFF_PATH:
             errors.extend(_validate_handoff_loc(path))
         if path == PRIMARY_TODO_PATH:
