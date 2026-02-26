@@ -1,7 +1,7 @@
 .import-dialog {
   width: min(460px, calc(100vw - 32px));
   border: 0;
-  border-radius: 12px;
+  border-radius: var(--radius-dialog);
   padding: 0;
   background: #fff;
   box-shadow: 0 22px 48px rgb(0 0 0 / 0.22);
@@ -33,7 +33,7 @@
 .import-dialog__fieldset {
   margin: 0;
   border: 1px solid var(--color-border-muted);
-  border-radius: 8px;
+  border-radius: var(--radius-btn);
   padding: 10px;
   display: grid;
   gap: 8px;
@@ -54,7 +54,7 @@
 
 .import-dialog__preview {
   border: 1px solid var(--color-border-muted);
-  border-radius: 8px;
+  border-radius: var(--radius-btn);
   padding: 10px;
   display: grid;
   gap: 8px;
@@ -85,7 +85,7 @@
   min-height: 34px;
   padding: 0 14px;
   border: 1px solid var(--color-border-muted);
-  border-radius: 8px;
+  border-radius: var(--radius-btn);
   background: #fff;
   color: var(--color-text-primary);
   font: inherit;

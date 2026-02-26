@@ -7,7 +7,7 @@
   width: 100%;
   min-height: 32px;
   border: 1px solid var(--color-border-muted);
-  border-radius: 8px;
+  border-radius: var(--radius-btn);
   padding: 0 10px;
   background: #fff;
   color: var(--color-text-primary);
@@ -22,7 +22,7 @@
   left: 0;
   right: 0;
   border: 1px solid var(--color-border-muted);
-  border-radius: 10px;
+  border-radius: var(--radius-popover);
   background: #fff;
   box-shadow: 0 10px 24px rgb(0 0 0 / 0.12);
   z-index: 20;

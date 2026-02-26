@@ -15,5 +15,12 @@
   --color-time-indicator: #ff3b30;
 
   --sidebar-width: 276px;
-  --radius-sm: 4px;
+  --radius-xs: 2px;
+  --radius-sm: 2px;
+  --radius-chip: 3px;
+  --radius-soft: 4px;
+  --radius-btn: 4px;
+  --radius-popover: 6px;
+  --radius-dialog: 6px;
+  --radius-pill: 999px;
 }

@@ -34,7 +34,7 @@
 .main-toolbar__today-btn {
   min-height: 32px;
   border: 1px solid var(--color-border-muted);
-  border-radius: 8px;
+  border-radius: var(--radius-btn);
   background: #fff;
   color: var(--color-text-primary);
   font: inherit;

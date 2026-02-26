@@ -20,7 +20,7 @@ textarea:focus-visible,
 .confirm-dialog {
   width: min(360px, calc(100vw - 32px));
   border: 0;
-  border-radius: 12px;
+  border-radius: var(--radius-dialog);
   padding: 0;
   background: #fff;
   box-shadow: 0 18px 42px rgb(0 0 0 / 0.22);
@@ -56,7 +56,7 @@ textarea:focus-visible,
 .confirm-dialog__btn {
   min-height: 32px;
   border: 1px solid var(--color-border-muted);
-  border-radius: 8px;
+  border-radius: var(--radius-btn);
   padding: 0 12px;
   background: #fff;
   color: var(--color-text-primary);
@@ -83,7 +83,7 @@ textarea:focus-visible,
   gap: 2px;
   padding: 6px;
   border: 1px solid var(--color-border-muted);
-  border-radius: 10px;
+  border-radius: var(--radius-popover);
   background: #fff;
   box-shadow: 0 12px 24px rgb(0 0 0 / 0.16);
   z-index: 30;
@@ -92,7 +92,7 @@ textarea:focus-visible,
 .context-menu__item {
   min-height: 30px;
   border: 0;
-  border-radius: 7px;
+  border-radius: var(--radius-soft);
   padding: 0 10px;
   text-align: left;
   background: #fff;
