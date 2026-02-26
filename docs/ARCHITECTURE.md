@@ -79,6 +79,7 @@ Swedish default, English toggle. Two-language only.
 │           ├── dom-utils.js
 │           ├── ui-actions.js
 │           ├── keyboard-handler.js
+│           ├── event-segments.js
 │           └── print-week.js
 └── src-tauri/
     ├── Cargo.toml

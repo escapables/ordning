@@ -217,6 +217,20 @@
         updated_at: ts
       },
       {
+        id: "evt-night",
+        calendarId: "cal-work",
+        title: "Night Deploy",
+        startDate: mon,
+        endDate: mon,
+        startTime: "22:00",
+        endTime: "02:00",
+        allDay: false,
+        location: "",
+        descriptionPrivate: "",
+        descriptionPublic: "",
+        updated_at: ts
+      },
+      {
         id: "evt-6",
         calendarId: "cal-personal",
         title: "Parallel Sync",

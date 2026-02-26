@@ -162,6 +162,18 @@ test("overlapping Monday events are rendered in equal-width columns", async ({ p
   expect(parallelBox.x).toBeLessThan(opsBox.x);
 });
 
+test("cross-midnight event renders continuation segment on next day", async ({ page }) => {
+  await page.goto("/");
+
+  const mondaySegment = page.locator(".day-column").nth(0).locator(".event-block", { hasText: "Night Deploy" });
+  const tuesdaySegment = page.locator(".day-column").nth(1).locator(".event-block", { hasText: "Night Deploy" });
+
+  await expect(mondaySegment).toHaveCount(1);
+  await expect(tuesdaySegment).toHaveCount(1);
+  await expect(mondaySegment.locator(".event-block__time")).toHaveText("22:00 - 02:00");
+  await expect(tuesdaySegment.locator(".event-block__time")).toHaveText("22:00 - 02:00");
+});
+
 test("single click selects event, dblclick opens modal, and clear selection works", async ({ page }) => {
   await page.goto("/");
 

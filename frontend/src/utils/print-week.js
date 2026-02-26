@@ -1,4 +1,5 @@
 import { getLocale, t, tDayShort } from "../i18n/strings.js";
+import { buildDayTimedSegments } from "./event-segments.js";
 
 const PAGE_WIDTH_MM = 210;
 const PAGE_HEIGHT_MM = 297;
@@ -40,10 +41,12 @@ function normalizeEvents(events) {
     .map((event) => {
       const startMinutes = parseMinutes(event.startTime);
       const endMinutes = Math.max(startMinutes + MIN_EVENT_DURATION, parseMinutes(event.endTime));
+      const computedStart = Number.isFinite(event.startMinutes) ? event.startMinutes : startMinutes;
+      const computedEnd = Number.isFinite(event.endMinutes) ? event.endMinutes : endMinutes;
       return {
         ...event,
-        startMinutes,
-        endMinutes
+        startMinutes: computedStart,
+        endMinutes: Math.max(computedEnd, computedStart + MIN_EVENT_DURATION)
       };
     })
     .sort((left, right) => left.startMinutes - right.startMinutes || left.endMinutes - right.endMinutes);
@@ -145,13 +148,7 @@ export function printWeek({ weekDates = [], events = [], allDayEvents = [] } = {
   const timedGridHeight = SAFE_CONTENT_HEIGHT_MM - timedGridTop - PAGE_PADDING_MM - PAGE_BOTTOM_SAFETY_MM;
   const pixelsPerHour = timedGridHeight / HOURS_PER_DAY;
 
-  const eventsByDate = new Map(weekDates.map((date) => [formatDateKey(date), []]));
-  events.forEach((event) => {
-    const dayEvents = eventsByDate.get(event.date);
-    if (dayEvents) {
-      dayEvents.push(event);
-    }
-  });
+  const eventsByDate = buildDayTimedSegments(weekDates, events);
   const allDayByDate = new Map(weekDates.map((date) => [formatDateKey(date), []]));
   allDayEvents.forEach((event) => {
     const dayEvents = allDayByDate.get(event.date);
@@ -262,7 +259,9 @@ export function printWeek({ weekDates = [], events = [], allDayEvents = [] } = {
       eventNode.style.padding = "1mm";
       eventNode.style.overflow = "hidden";
       eventNode.style.lineHeight = "1.1";
-      eventNode.textContent = `${event.title} ${event.startTime}-${event.endTime}`;
+      const displayStart = event.displayStartTime ?? event.startTime;
+      const displayEnd = event.displayEndTime ?? event.endTime;
+      eventNode.textContent = `${event.title} ${displayStart}-${displayEnd}`;
       dayCell.appendChild(eventNode);
     });
   });

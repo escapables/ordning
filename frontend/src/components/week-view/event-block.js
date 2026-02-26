@@ -3,7 +3,7 @@ const MINUTES_PER_DAY = 24 * MINUTES_PER_HOUR;
 const MIN_EVENT_HEIGHT = 18;
 
 function parseTimeToMinutes(time) {
-  const [hours, minutes] = time.split(":").map(Number);
+  const [hours, minutes] = String(time ?? "00:00").split(":").map(Number);
   return hours * MINUTES_PER_HOUR + minutes;
 }
 
@@ -12,11 +12,15 @@ function normalizeEvents(events) {
     .map((event) => {
       const startMinutes = parseTimeToMinutes(event.startTime);
       const endMinutes = parseTimeToMinutes(event.endTime);
+      const computedStart = Number.isFinite(event.startMinutes) ? event.startMinutes : startMinutes;
+      const computedEnd = Number.isFinite(event.endMinutes) ? event.endMinutes : endMinutes;
 
       return {
         ...event,
-        startMinutes,
-        endMinutes: Math.max(endMinutes, startMinutes + 15)
+        startMinutes: computedStart,
+        endMinutes: Math.max(computedEnd, computedStart + 15),
+        displayStartTime: event.displayStartTime ?? event.startTime,
+        displayEndTime: event.displayEndTime ?? event.endTime
       };
     })
     .sort((a, b) => a.startMinutes - b.startMinutes || a.endMinutes - b.endMinutes);
@@ -113,7 +117,7 @@ function createEventElement(event, pixelsPerMinute, handlers) {
 
   const time = document.createElement("div");
   time.className = "event-block__time";
-  time.textContent = `${event.startTime} - ${event.endTime}`;
+  time.textContent = `${event.displayStartTime ?? event.startTime} - ${event.displayEndTime ?? event.endTime}`;
 
   element.appendChild(title);
   element.appendChild(time);

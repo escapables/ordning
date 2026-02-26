@@ -4,6 +4,7 @@ import { mountTimeIndicator } from "./time-indicator.js";
 import { mountOffscreenIndicators } from "./offscreen-indicators.js";
 import { t } from "../../i18n/strings.js";
 import { formatDateKey } from "../../utils/date-utils.js";
+import { buildDayTimedSegments } from "../../utils/event-segments.js";
 
 const HOURS_PER_DAY = 24;
 const MINUTES_PER_HOUR = 60;
@@ -86,13 +87,7 @@ export function renderWeekGrid(dates, events = [], allDayEvents = [], options = 
   const root = document.createElement("section");
   root.className = "week-view";
 
-  const eventsByDate = new Map(
-    dates.map((date) => {
-      const dateKey = formatDateKey(date);
-      const dayEvents = events.filter((event) => event.date === dateKey);
-      return [dateKey, dayEvents];
-    })
-  );
+  const eventsByDate = buildDayTimedSegments(dates, events);
 
   const headers = document.createElement("div");
   headers.className = "week-grid__headers";
