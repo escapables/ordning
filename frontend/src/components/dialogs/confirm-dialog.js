@@ -29,8 +29,10 @@ export function createConfirmDialog() {
   dialog.appendChild(form);
 
   let resolver = null;
+  let closedByButton = false;
 
   const closeWith = (value) => {
+    closedByButton = true;
     if (resolver) {
       resolver(value);
       resolver = null;
@@ -52,6 +54,10 @@ export function createConfirmDialog() {
   });
 
   dialog.addEventListener("close", () => {
+    if (closedByButton) {
+      closedByButton = false;
+      return;
+    }
     if (resolver) {
       resolver(false);
       resolver = null;

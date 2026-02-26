@@ -22,8 +22,7 @@ export async function purgePastEventsFlow({ invoke, confirm, refresh, t }) {
     return;
   }
 
-  const previewText = t("purgePastPreview");
-  const stepOneConfirmed = await confirm(previewText);
+  const stepOneConfirmed = await confirm(t("purgePastPreview"));
   if (!stepOneConfirmed) {
     return;
   }
@@ -36,7 +35,6 @@ export async function purgePastEventsFlow({ invoke, confirm, refresh, t }) {
     return;
   }
 
-  const purged = await invoke("purge_past_events", { beforeDate });
-  window.alert(t("purgePastSuccess").replace("{count}", String(purged)));
+  await invoke("purge_past_events", { beforeDate });
   await refresh();
 }
