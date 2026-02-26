@@ -49,7 +49,11 @@ function createInput(type, name) {
 export function createEventModal({
   onPersist,
   onEnsureCalendars = async () => {},
-  onFocusCalendarCreate = () => {}
+  onFocusCalendarCreate = () => {},
+  onDelete = async (eventId) => {
+    await invoke("delete_event", { id: eventId });
+    return true;
+  }
 }) {
   const FORCE_HIDDEN_CLASS = "event-modal__hidden";
   const dialog = document.createElement("dialog");
@@ -380,15 +384,13 @@ export function createEventModal({
       return;
     }
 
-    const confirmed = window.confirm(t("eventFormDeleteConfirm"));
-    if (!confirmed) {
-      return;
-    }
-
     try {
-      await invoke("delete_event", { id: state.editingId });
+      const deleted = await onDelete(state.editingId);
+      if (!deleted) {
+        return;
+      }
+
       dialog.close();
-      await onPersist();
     } catch (invokeError) {
       showError(String(invokeError));
     }

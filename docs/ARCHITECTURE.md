@@ -69,6 +69,7 @@ Swedish default, English toggle. Two-language only.
 │       │   │   ├── event-modal.js
 │       │   │   └── recurrence-picker.js
 │       │   └── dialogs/
+│       │       ├── confirm-dialog.js
 │       │       ├── import-dialog.js
 │       │       └── export-dialog.js
 │       └── utils/

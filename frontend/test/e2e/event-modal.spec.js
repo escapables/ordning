@@ -40,3 +40,18 @@ test("Delete key confirm deletes focused event", async ({ page }) => {
   await page.locator(".confirm-dialog__btn--danger").click();
   await expect(targetEvent).toHaveCount(0);
 });
+
+test("modal delete cancel keeps event", async ({ page }) => {
+  await page.goto("/");
+
+  const targetEvent = page.locator(".event-block", { hasText: "Sprint Planning" });
+  await expect(targetEvent).toHaveCount(1);
+  await targetEvent.dblclick();
+  await expect(page.locator(".event-modal[open]")).toBeVisible();
+  await page.locator(".event-modal__btn--danger").click();
+  await expect(page.locator(".confirm-dialog[open]")).toBeVisible();
+  await page.locator(".confirm-dialog__btn", { hasText: "Avbryt" }).click();
+  await expect(page.locator(".confirm-dialog[open]")).toHaveCount(0);
+  await expect(page.locator(".event-modal[open]")).toBeVisible();
+  await expect(targetEvent).toHaveCount(1);
+});
