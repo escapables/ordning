@@ -21,11 +21,10 @@ import {
 } from "./utils/week-view-events.js";
 import { copyEventToClipboard, getCopiedEventData, pasteCopiedEventAtSlot, purgePastEventsFlow } from "./utils/ui-actions.js";
 import { getState, loadCalendars, loadWeekEvents, setCurrentWeekStart, subscribe } from "./state.js";
-
 let unsubscribeState = null;
 let keydownHandler = null;
 let currentTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? "UTC";
-
+let pendingWeekViewRenderOptions = null;
 function invoke(command, payload = {}) {
   const invokeFn = window.__TAURI__?.core?.invoke;
   if (typeof invokeFn !== "function") {
@@ -33,7 +32,6 @@ function invoke(command, payload = {}) {
   }
   return invokeFn(command, payload);
 }
-
 function renderWeekSection(container, weekDates, options = {}) {
   const previous = container.querySelector(".week-view");
   if (previous) {
@@ -48,7 +46,6 @@ function renderWeekSection(container, weekDates, options = {}) {
     })
   );
 }
-
 async function initializeSettings() {
   try {
     const settings = await invoke("get_settings");
@@ -78,7 +75,6 @@ async function renderAppShell() {
     document.removeEventListener("keydown", keydownHandler);
     keydownHandler = null;
   }
-
   const app = document.querySelector("#app");
   if (!app) {
     return;
@@ -86,7 +82,6 @@ async function renderAppShell() {
   const now = new Date();
   const initialWeekStart = getState().currentWeekStart ?? getStartOfWeek(now, 1);
   setCurrentWeekStart(initialWeekStart);
-
   app.innerHTML = `
     <div class="app-shell">
       <aside class="sidebar">
@@ -101,7 +96,6 @@ async function renderAppShell() {
       </main>
     </div>
   `;
-
   document.title = t("appName");
   const sidebarList = app.querySelector(".sidebar__calendar-list");
   const sidebarMiniMonth = app.querySelector(".sidebar__mini-month");
@@ -111,17 +105,15 @@ async function renderAppShell() {
   if (!sidebarList || !sidebarMiniMonth || !settingsButton || !toolbarContainer || !weekContainer) {
     return;
   }
-
   const refreshCurrentWeekEvents = async () => {
     const weekStart = getState().currentWeekStart ?? getStartOfWeek(new Date(), 1);
     const { startDate, endDate } = getWeekBounds(weekStart);
     await loadWeekEvents(startDate, endDate);
   };
-
   const refreshAndRender = async () => {
     await Promise.all([loadCalendars(), refreshCurrentWeekEvents()]);
   };
-  let pendingHighlightEventId = null;
+  let pendingHighlightEvent = null;
   let activeHighlight = null;
   const clearEventSelection = ({ blurFocusedEvent = false } = {}) => {
     const activeElement = document.activeElement;
@@ -136,20 +128,22 @@ async function renderAppShell() {
       block.classList.remove("event-block--selected");
     });
   };
-
-  const highlightEventBlock = (eventId) => {
+  const highlightEventBlock = ({ eventId, skipScroll = false } = {}) => {
+    if (!eventId) {
+      return false;
+    }
     const block = weekContainer.querySelector(
       `.event-block[data-event-id="${eventId}"], .all-day-event[data-event-id="${eventId}"]`
     );
     if (!(block instanceof HTMLElement)) {
       return false;
     }
-
     const stateSnapshot = getState();
     const targetEvent = stateSnapshot.events.find((event) => event.id === eventId)
       ?? stateSnapshot.allDayEvents.find((event) => event.id === eventId);
-    scrollWeekBodyToEventStart(weekContainer, targetEvent);
-
+    if (!skipScroll) {
+      scrollWeekBodyToEventStart(weekContainer, targetEvent);
+    }
     block.classList.remove("event-block--highlighted");
     // Force class re-apply when selecting the same event repeatedly.
     void block.offsetWidth;
@@ -158,38 +152,34 @@ async function renderAppShell() {
       block.classList.remove("event-block--highlighted");
     }, 1800);
     block.focus({ preventScroll: true });
-    block.scrollIntoView({ block: "center", behavior: "smooth", inline: "nearest" });
+    if (!skipScroll) {
+      block.scrollIntoView({ block: "center", behavior: "smooth", inline: "nearest" });
+    }
     return true;
   };
-
   const goToPreviousWeek = async () => {
     const weekStart = getState().currentWeekStart ?? getStartOfWeek(new Date(), 1);
     setCurrentWeekStart(addDays(weekStart, -7));
     await refreshCurrentWeekEvents();
   };
-
   const goToNextWeek = async () => {
     const weekStart = getState().currentWeekStart ?? getStartOfWeek(new Date(), 1);
     setCurrentWeekStart(addDays(weekStart, 7));
     await refreshCurrentWeekEvents();
   };
-
   const goToToday = async () => {
     setCurrentWeekStart(getStartOfWeek(new Date(), 1));
     await refreshCurrentWeekEvents();
   };
-
   const deleteEventById = async (eventId) => {
     const confirmed = await confirmDialog.confirm(t("eventFormDeleteConfirm"));
     if (!confirmed) {
       return false;
     }
-
     await invoke("delete_event", { id: eventId });
     await refreshAndRender();
     return true;
   };
-
   const eventModal = createEventModal({
     onPersist: refreshAndRender,
     onEnsureCalendars: loadCalendars,
@@ -202,7 +192,6 @@ async function renderAppShell() {
     }
   });
   app.appendChild(eventModal.element);
-
   const exportDialog = createExportDialog();
   app.appendChild(exportDialog.element);
   const importDialog = createImportDialog({
@@ -219,7 +208,6 @@ async function renderAppShell() {
   settingsButton.addEventListener("click", () => {
     settingsDialog.open();
   });
-
   const weekViewHandlers = {
     onEventSelect: (_eventId, element) => {
       clearEventSelection();
@@ -241,8 +229,15 @@ async function renderAppShell() {
     },
     onEventMove: async ({ eventId, date, startTime, endTime }) => {
       try {
+        const weekBody = weekContainer.querySelector(".week-grid__body");
+        pendingWeekViewRenderOptions = {
+          preserveScrollTop: weekBody instanceof HTMLElement ? weekBody.scrollTop : null,
+          skipAutoScroll: true,
+          remainingRenders: 2
+        };
         const existing = await invoke("get_event", { id: eventId });
         if (!existing?.calendarId) {
+          pendingWeekViewRenderOptions = null;
           return;
         }
         await invoke("update_event", {
@@ -260,9 +255,10 @@ async function renderAppShell() {
             location: existing.location ?? ""
           }
         });
-        pendingHighlightEventId = eventId;
+        pendingHighlightEvent = { eventId, skipScroll: true };
         await refreshCurrentWeekEvents();
       } catch (error) {
+        pendingWeekViewRenderOptions = null;
         window.alert(String(error));
         console.error("Failed to move event", error);
       }
@@ -322,7 +318,6 @@ async function renderAppShell() {
     },
     true
   );
-
   const newEventButton = app.querySelector(".sidebar__new-event-btn");
   if (newEventButton) {
     newEventButton.tabIndex = 2;
@@ -330,12 +325,10 @@ async function renderAppShell() {
       eventModal.openCreate();
     });
   }
-
   unsubscribeState = subscribe(() => {
     const calendars = getState().calendars;
     const weekStart = getState().currentWeekStart ?? getStartOfWeek(new Date(), 1);
     const { weekDates } = getWeekBounds(weekStart);
-
     sidebarList.innerHTML = "";
     sidebarList.appendChild(
       renderCalendarList(calendars, {
@@ -343,7 +336,6 @@ async function renderAppShell() {
           if (!name) {
             return;
           }
-
           await invoke("create_calendar", {
             name,
             color
@@ -389,7 +381,6 @@ async function renderAppShell() {
         }
       })
     );
-
     sidebarMiniMonth.innerHTML = "";
     sidebarMiniMonth.appendChild(
       renderMiniMonth({
@@ -400,7 +391,6 @@ async function renderAppShell() {
         }
       })
     );
-
     toolbarContainer.innerHTML = "";
     toolbarContainer.appendChild(
       renderToolbar({
@@ -422,29 +412,34 @@ async function renderAppShell() {
           if (!result?.start_date || !result?.id) {
             return;
           }
-
-          pendingHighlightEventId = result.id;
+          pendingHighlightEvent = { eventId: result.id, skipScroll: false };
           setCurrentWeekStart(getStartOfWeek(parseDateKey(result.start_date), 1));
           await refreshCurrentWeekEvents();
         }
       })
     );
-
+    const weekViewRenderOptions = pendingWeekViewRenderOptions;
+    if (pendingWeekViewRenderOptions?.remainingRenders > 1) {
+      pendingWeekViewRenderOptions.remainingRenders -= 1;
+    } else {
+      pendingWeekViewRenderOptions = null;
+    }
     renderWeekSection(weekContainer, weekDates, {
       ...weekViewHandlers,
-      timezone: currentTimezone
+      timezone: currentTimezone,
+      preserveScrollTop: weekViewRenderOptions?.preserveScrollTop,
+      skipAutoScroll: Boolean(weekViewRenderOptions?.skipAutoScroll)
     });
-
-    if (pendingHighlightEventId && highlightEventBlock(pendingHighlightEventId)) {
+    if (pendingHighlightEvent && highlightEventBlock(pendingHighlightEvent)) {
       activeHighlight = {
-        eventId: pendingHighlightEventId,
+        eventId: pendingHighlightEvent.eventId,
+        skipScroll: pendingHighlightEvent.skipScroll,
         expiresAt: Date.now() + 1800
       };
-      pendingHighlightEventId = null;
+      pendingHighlightEvent = null;
     }
-
     if (activeHighlight && Date.now() < activeHighlight.expiresAt) {
-      highlightEventBlock(activeHighlight.eventId);
+      highlightEventBlock(activeHighlight);
     } else {
       activeHighlight = null;
     }
@@ -453,7 +448,6 @@ async function renderAppShell() {
     ...weekViewHandlers,
     timezone: currentTimezone
   });
-
   keydownHandler = setupKeyboardHandler({
     closeOpenDialogs: () => {
       document.querySelectorAll("dialog[open]").forEach((dialogElement) => {
@@ -495,5 +489,4 @@ async function bootstrap() {
   await initializeSettings();
   await renderAppShell();
 }
-
 bootstrap();

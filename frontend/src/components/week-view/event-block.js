@@ -147,11 +147,8 @@ function createEventElement(event, pixelsPerMinute, handlers) {
     if (pointerEvent.button !== 0) {
       return;
     }
-    const wasSelected = element.classList.contains("event-block--selected");
     select(pointerEvent);
-    if (wasSelected) {
-      onEventPointerDown(pointerEvent, event, element);
-    }
+    onEventPointerDown(pointerEvent, event, element);
   });
   element.addEventListener("click", (clickEvent) => {
     select(clickEvent);

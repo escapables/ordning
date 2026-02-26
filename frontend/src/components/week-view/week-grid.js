@@ -51,6 +51,11 @@ function autoScrollToCurrentTime(body, dates, pixelsPerHour) {
   body.scrollTop = Math.min(requestedScrollTop, maxScrollTop);
 }
 
+function restoreScrollTop(body, scrollTop) {
+  const maxScrollTop = Math.max(0, body.scrollHeight - body.clientHeight);
+  body.scrollTop = Math.max(0, Math.min(scrollTop, maxScrollTop));
+}
+
 function deferAutoScroll(body, dates, pixelsPerHour) {
   let attempts = 0;
 
@@ -71,6 +76,26 @@ function deferAutoScroll(body, dates, pixelsPerHour) {
   requestAnimationFrame(tryScroll);
 }
 
+function deferRestoreScrollTop(body, scrollTop) {
+  let attempts = 0;
+
+  function tryRestore() {
+    if (body.isConnected) {
+      restoreScrollTop(body, scrollTop);
+      return;
+    }
+
+    if (attempts >= 5) {
+      return;
+    }
+
+    attempts += 1;
+    requestAnimationFrame(tryRestore);
+  }
+
+  requestAnimationFrame(tryRestore);
+}
+
 export function renderWeekGrid(dates, events = [], allDayEvents = [], options = {}) {
   const {
     calendarsCount = 0,
@@ -83,7 +108,9 @@ export function renderWeekGrid(dates, events = [], allDayEvents = [], options = 
     onCreateFromContextMenu = () => {},
     onPasteFromContextMenu = () => {},
     canPasteFromContextMenu = () => false,
-    timezone = "UTC"
+    timezone = "UTC",
+    preserveScrollTop = null,
+    skipAutoScroll = false
   } = options;
   const root = document.createElement("section");
   root.className = "week-view";
@@ -159,7 +186,11 @@ export function renderWeekGrid(dates, events = [], allDayEvents = [], options = 
   );
   root.appendChild(bodyWrap);
   mountOffscreenIndicators(bodyWrap, body);
-  deferAutoScroll(body, dates, PIXELS_PER_HOUR);
+  if (Number.isFinite(preserveScrollTop)) {
+    deferRestoreScrollTop(body, preserveScrollTop);
+  } else if (!skipAutoScroll) {
+    deferAutoScroll(body, dates, PIXELS_PER_HOUR);
+  }
 
   return root;
 }

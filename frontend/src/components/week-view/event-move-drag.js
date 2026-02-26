@@ -1,7 +1,7 @@
 const MINUTES_PER_HOUR = 60;
 const MINUTES_PER_DAY = 24 * MINUTES_PER_HOUR;
 const MIN_SELECTION_MINUTES = 15;
-const DRAG_THRESHOLD_PX = 6;
+const DRAG_THRESHOLD_PX = 3;
 const TIME_STEP_MINUTES = 15;
 
 function clamp(value, min, max) {

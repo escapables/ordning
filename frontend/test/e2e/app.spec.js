@@ -220,13 +220,12 @@ test("all-day events support select open context menu and keyboard delete", asyn
   await expect(allDayEvent).toHaveCount(1);
 });
 
-test("dragging selected event moves it to a different day/time with preview", async ({ page }) => {
+test("dragging event moves it to a different day/time with preview", async ({ page }) => {
   await page.goto("/");
 
   const sourceEvent = page.locator(".day-column").nth(0).locator(".event-block", { hasText: "Sprint Planning" });
   await expect(sourceEvent).toHaveCount(1);
-  await sourceEvent.click();
-  await expect(sourceEvent).toHaveClass(/event-block--selected/);
+  await sourceEvent.scrollIntoViewIfNeeded();
 
   const sourceBox = await sourceEvent.boundingBox();
   const targetHour = page.locator(".day-column").nth(2).locator(".day-column__hour").nth(12);
@@ -236,6 +235,7 @@ test("dragging selected event moves it to a different day/time with preview", as
 
   await page.mouse.move(sourceBox.x + 12, sourceBox.y + 10);
   await page.mouse.down();
+  await page.mouse.move(sourceBox.x + 18, sourceBox.y + 14, { steps: 4 });
   await page.mouse.move(targetBox.x + 20, targetBox.y + 8, { steps: 8 });
   await expect(page.locator(".day-column__move-preview")).toHaveCount(1);
   await page.mouse.up();
@@ -244,6 +244,38 @@ test("dragging selected event moves it to a different day/time with preview", as
   const movedEvent = page.locator(".day-column").nth(2).locator(".event-block", { hasText: "Sprint Planning" });
   await expect(movedEvent).toHaveCount(1);
   await expect(movedEvent.locator(".event-block__time")).toContainText("12:");
+});
+
+test("drag-move preserves week scroll position after refresh", async ({ page }) => {
+  await page.goto("/");
+
+  const body = page.locator(".week-grid__body");
+  await body.evaluate((node) => {
+    node.scrollTop = 980;
+  });
+
+  const sourceEvent = page.locator(".day-column").nth(0).locator(".event-block", { hasText: "Night Deploy" });
+  await expect(sourceEvent).toHaveCount(1);
+  await sourceEvent.scrollIntoViewIfNeeded();
+  const sourceBox = await sourceEvent.boundingBox();
+  const targetHour = page.locator(".day-column").nth(2).locator(".day-column__hour").nth(20);
+  await targetHour.scrollIntoViewIfNeeded();
+  const targetBox = await targetHour.boundingBox();
+  expect(sourceBox).not.toBeNull();
+  expect(targetBox).not.toBeNull();
+
+  await page.mouse.move(sourceBox.x + 12, sourceBox.y + 10);
+  await page.mouse.down();
+  await page.mouse.move(sourceBox.x + 18, sourceBox.y + 14, { steps: 4 });
+  await page.mouse.move(targetBox.x + 24, targetBox.y + 8, { steps: 10 });
+  await expect(page.locator(".day-column__move-preview")).toHaveCount(1);
+  const dropScrollTop = await body.evaluate((node) => node.scrollTop);
+  await page.mouse.up();
+
+  const movedEvent = page.locator(".day-column").nth(2).locator(".event-block", { hasText: "Night Deploy" });
+  await expect(movedEvent).toHaveCount(1);
+  const endScrollTop = await page.locator(".week-grid__body").evaluate((node) => node.scrollTop);
+  expect(Math.abs(endScrollTop - dropScrollTop)).toBeLessThanOrEqual(1);
 });
 
 test("drag ghost reflows width with overlap changes while dragging", async ({ page }) => {
