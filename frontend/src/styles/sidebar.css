@@ -273,6 +273,25 @@
   color: var(--color-text-primary);
 }
 
+.calendar-list__purge {
+  width: 100%;
+  min-height: 30px;
+  margin-top: 8px;
+  border: 1px solid #fda29b;
+  border-radius: 7px;
+  background: #fff;
+  color: #b42318;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.calendar-list__purge:hover {
+  background: rgb(180 35 24 / 0.06);
+}
+
 .calendar-create-dialog {
   width: min(360px, calc(100vw - 32px));
   border: 0;

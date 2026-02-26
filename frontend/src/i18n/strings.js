@@ -76,7 +76,19 @@ const STRINGS = {
     importConfirm: "Importera",
     importSuccessMessage:
       "Import klar. Nya: {new}, uppdaterade: {updated}, konflikter: {conflicts}",
-    offscreenMore: "Fler händelser"
+    offscreenMore: "Fler händelser",
+    contextMenuOpen: "Öppna",
+    contextMenuDelete: "Ta bort",
+    contextMenuCopy: "Kopiera",
+    contextMenuCopyError: "Kunde inte kopiera händelsen.",
+    purgePastButton: "Rensa gamla händelser",
+    purgePastPreview: "Raderar alla händelser i kalendern innan dagens datum.",
+    purgePastFinalConfirm: "Detta kan inte ångras. Fortsätt?",
+    purgePastFinalCancel: "Jag vill hålla fast vid det förflutna",
+    purgePastFinalProceed: "Framhärda",
+    purgePastSuccess: "{count} gamla händelser togs bort.",
+    purgePastNone: "Inga gamla händelser att rensa.",
+    purgePastError: "Kunde inte rensa gamla händelser."
   },
   en: {
     appName: "Ordning",
@@ -155,7 +167,19 @@ const STRINGS = {
     importConfirm: "Import",
     importSuccessMessage:
       "Import complete. New: {new}, updated: {updated}, conflicts: {conflicts}",
-    offscreenMore: "More events"
+    offscreenMore: "More events",
+    contextMenuOpen: "Open",
+    contextMenuDelete: "Delete",
+    contextMenuCopy: "Copy",
+    contextMenuCopyError: "Could not copy event.",
+    purgePastButton: "Purge past events",
+    purgePastPreview: "Delete all events in the calendar before today.",
+    purgePastFinalConfirm: "This cannot be undone. Continue?",
+    purgePastFinalCancel: "Keep the past",
+    purgePastFinalProceed: "Proceed",
+    purgePastSuccess: "{count} past events were deleted.",
+    purgePastNone: "No past events to purge.",
+    purgePastError: "Could not purge past events."
   }
 };
 

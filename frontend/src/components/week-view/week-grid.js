@@ -74,6 +74,8 @@ export function renderWeekGrid(dates, events = [], allDayEvents = [], options = 
   const {
     calendarsCount = 0,
     onEventClick = () => {},
+    onEventDelete = () => {},
+    onEventCopy = () => {},
     onCreateSlot = () => {}
   } = options;
   const root = document.createElement("section");
@@ -127,6 +129,8 @@ export function renderWeekGrid(dates, events = [], allDayEvents = [], options = 
     body.appendChild(
       renderDayColumn(date, dayEvents, PIXELS_PER_HOUR, {
         onEventClick,
+        onEventDelete,
+        onEventCopy,
         onCreateSlot
       })
     );

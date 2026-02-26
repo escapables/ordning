@@ -42,7 +42,8 @@ export function renderCalendarList(calendars, handlers) {
     onDelete = () => {},
     onToggleVisibility = () => {},
     onImport = () => {},
-    onExport = () => {}
+    onExport = () => {},
+    onPurgePast = () => {}
   } = handlers;
 
   const section = document.createElement("section");
@@ -229,8 +230,16 @@ export function renderCalendarList(calendars, handlers) {
 
   ioRow.append(exportButton, importButton);
 
+  const purgeButton = document.createElement("button");
+  purgeButton.type = "button";
+  purgeButton.className = "calendar-list__purge";
+  purgeButton.tabIndex = 2;
+  purgeButton.textContent = t("purgePastButton");
+  purgeButton.addEventListener("click", onPurgePast);
+
   section.appendChild(addButton);
   section.appendChild(ioRow);
+  section.appendChild(purgeButton);
   section.appendChild(dialog);
   return section;
 }

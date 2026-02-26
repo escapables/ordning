@@ -1,4 +1,4 @@
-use chrono::{NaiveDate, NaiveTime, Utc};
+use chrono::{Local, NaiveDate, NaiveTime, Utc};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
@@ -159,6 +159,44 @@ pub fn get_event(id: String, state: State<'_, AppState>) -> Result<EventDto, Str
     Ok(EventDto::from(event))
 }
 
+#[tauri::command]
+pub fn get_past_events_count(
+    before_date: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<usize, String> {
+    let today = resolve_cutoff_date(before_date)?;
+    let app_data = state
+        .data
+        .lock()
+        .map_err(|err| format!("failed to lock app state: {err}"))?;
+    Ok(count_past_events(&app_data.events, today))
+}
+
+#[tauri::command]
+pub fn purge_past_events(
+    before_date: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<usize, String> {
+    let today = resolve_cutoff_date(before_date)?;
+    let purged = {
+        let mut app_data = state
+            .data
+            .lock()
+            .map_err(|err| format!("failed to lock app state: {err}"))?;
+
+        let before = app_data.events.len();
+        app_data.events.retain(|event| event.start_date >= today);
+        before.saturating_sub(app_data.events.len())
+    };
+
+    if purged == 0 {
+        return Ok(0);
+    }
+
+    persist_snapshot(&state)?;
+    Ok(purged)
+}
+
 fn parse_uuid(value: &str) -> Result<Uuid, String> {
     Uuid::parse_str(value).map_err(|err| format!("invalid id '{value}': {err}"))
 }
@@ -233,6 +271,20 @@ fn sanitize_optional(value: Option<String>) -> Option<String> {
             Some(trimmed.to_owned())
         }
     })
+}
+
+fn count_past_events(events: &[Event], today: NaiveDate) -> usize {
+    events
+        .iter()
+        .filter(|event| event.start_date < today)
+        .count()
+}
+
+fn resolve_cutoff_date(before_date: Option<String>) -> Result<NaiveDate, String> {
+    let Some(raw_date) = before_date else {
+        return Ok(Local::now().date_naive());
+    };
+    parse_date(&raw_date, "before_date")
 }
 
 fn ensure_calendar_exists(
@@ -330,5 +382,38 @@ mod tests {
 
         assert!(ensure_calendar_exists(&calendars, calendar_id).is_ok());
         assert!(ensure_calendar_exists(&calendars, Uuid::new_v4()).is_err());
+    }
+
+    #[test]
+    fn count_past_events_filters_by_start_date() {
+        let calendar_id = Uuid::new_v4();
+        let today = NaiveDate::from_ymd_opt(2026, 2, 26).unwrap();
+
+        let mut past = sample_input(calendar_id);
+        past.start_date = "2026-02-20".to_owned();
+        past.end_date = "2026-02-20".to_owned();
+
+        let mut current_day = sample_input(calendar_id);
+        current_day.start_date = "2026-02-26".to_owned();
+        current_day.end_date = "2026-02-26".to_owned();
+
+        let mut spanning = sample_input(calendar_id);
+        spanning.start_date = "2026-02-24".to_owned();
+        spanning.end_date = "2026-02-27".to_owned();
+
+        let events = vec![
+            build_event(Uuid::new_v4(), &past, "c".to_owned(), "u".to_owned()).unwrap(),
+            build_event(Uuid::new_v4(), &current_day, "c".to_owned(), "u".to_owned()).unwrap(),
+            build_event(Uuid::new_v4(), &spanning, "c".to_owned(), "u".to_owned()).unwrap(),
+        ];
+
+        assert_eq!(count_past_events(&events, today), 2);
+    }
+
+    #[test]
+    fn resolve_cutoff_date_uses_payload_date() {
+        let resolved =
+            resolve_cutoff_date(Some("2026-03-01".to_owned())).expect("payload date should parse");
+        assert_eq!(resolved, NaiveDate::from_ymd_opt(2026, 3, 1).unwrap());
     }
 }

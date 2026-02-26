@@ -11,7 +11,9 @@ use uuid::Uuid;
 use crate::commands::calendar_cmds::{
     create_calendar, delete_calendar, list_calendars, toggle_visibility, update_calendar,
 };
-use crate::commands::event_cmds::{create_event, delete_event, get_event, update_event};
+use crate::commands::event_cmds::{
+    create_event, delete_event, get_event, get_past_events_count, purge_past_events, update_event,
+};
 use crate::commands::io_cmds::{
     export_json, get_export_event_count, import_json, preview_import_json,
 };
@@ -78,6 +80,8 @@ pub fn run() {
             update_event,
             delete_event,
             get_event,
+            get_past_events_count,
+            purge_past_events,
             export_json,
             get_export_event_count,
             preview_import_json,

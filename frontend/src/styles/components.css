@@ -70,3 +70,38 @@ textarea:focus-visible {
 .confirm-dialog__btn:hover {
   filter: brightness(0.97);
 }
+
+.context-menu {
+  position: fixed;
+  min-width: 160px;
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  border: 1px solid var(--color-border-muted);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 12px 24px rgb(0 0 0 / 0.16);
+  z-index: 30;
+}
+
+.context-menu__item {
+  min-height: 30px;
+  border: 0;
+  border-radius: 7px;
+  padding: 0 10px;
+  text-align: left;
+  background: #fff;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.context-menu__item:hover {
+  background: rgb(0 122 255 / 0.08);
+}
+
+.context-menu__item--danger {
+  color: #b42318;
+}

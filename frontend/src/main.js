@@ -7,6 +7,7 @@ import { renderMiniMonth } from "./components/sidebar/mini-month.js";
 import { renderToolbar } from "./components/toolbar/toolbar.js";
 import { renderWeekGrid } from "./components/week-view/week-grid.js";
 import { formatDateKey, getEndOfWeek, getStartOfWeek, getWeekDates } from "./utils/date-utils.js";
+import { copyEventToClipboard, purgePastEventsFlow } from "./utils/ui-actions.js";
 import {
   getState,
   loadCalendars,
@@ -140,10 +141,14 @@ function createConfirmDialog() {
     }
   });
 
-  const confirm = (text) =>
+  const defaultCancelLabel = t("eventFormCancel"), defaultConfirmLabel = t("eventFormDelete");
+
+  const confirm = (text, options = {}) =>
     new Promise((resolve) => {
       resolver = resolve;
       message.textContent = text;
+      cancelButton.textContent = options.cancelLabel ?? defaultCancelLabel;
+      confirmButton.textContent = options.confirmLabel ?? defaultConfirmLabel;
       dialog.showModal();
     });
 
@@ -237,6 +242,17 @@ async function renderAppShell() {
     await refreshCurrentWeekEvents();
   };
 
+  const deleteEventById = async (eventId) => {
+    const confirmed = await confirmDialog.confirm(t("eventFormDeleteConfirm"));
+    if (!confirmed) {
+      return false;
+    }
+
+    await invoke("delete_event", { id: eventId });
+    await refreshAndRender();
+    return true;
+  };
+
   const eventModal = createEventModal({
     onPersist: refreshAndRender,
     onEnsureCalendars: loadCalendars,
@@ -257,6 +273,26 @@ async function renderAppShell() {
   app.appendChild(importDialog.element);
   const confirmDialog = createConfirmDialog();
   app.appendChild(confirmDialog.element);
+
+  const weekViewHandlers = {
+    onEventClick: (eventId) => {
+      eventModal.openEdit(eventId);
+    },
+    onEventDelete: async (eventId) => {
+      try {
+        await deleteEventById(eventId);
+      } catch (error) {
+        window.alert(String(error));
+        console.error("Failed to delete event via context menu", error);
+      }
+    },
+    onEventCopy: async (eventData) => {
+      await copyEventToClipboard(eventData, t);
+    },
+    onCreateSlot: (prefill) => {
+      eventModal.openCreate(prefill);
+    }
+  };
 
   const newEventButton = app.querySelector(".sidebar__new-event-btn");
   if (newEventButton) {
@@ -308,6 +344,19 @@ async function renderAppShell() {
         },
         onImport: () => {
           importDialog.open();
+        },
+        onPurgePast: async () => {
+          try {
+            await purgePastEventsFlow({
+              invoke,
+              confirm: confirmDialog.confirm,
+              refresh: refreshAndRender,
+              t
+            });
+          } catch (error) {
+            window.alert(t("purgePastError"));
+            console.error("Failed to purge past events", error);
+          }
         }
       })
     );
@@ -345,14 +394,7 @@ async function renderAppShell() {
       })
     );
 
-    renderWeekSection(weekContainer, weekDates, {
-      onEventClick: (eventId) => {
-        eventModal.openEdit(eventId);
-      },
-      onCreateSlot: (prefill) => {
-        eventModal.openCreate(prefill);
-      }
-    });
+    renderWeekSection(weekContainer, weekDates, weekViewHandlers);
 
     if (pendingHighlightEventId && highlightEventBlock(pendingHighlightEventId)) {
       activeHighlight = {
@@ -369,14 +411,7 @@ async function renderAppShell() {
     }
   });
 
-  renderWeekSection(weekContainer, getWeekBounds(initialWeekStart).weekDates, {
-    onEventClick: (eventId) => {
-      eventModal.openEdit(eventId);
-    },
-    onCreateSlot: (prefill) => {
-      eventModal.openCreate(prefill);
-    }
-  });
+  renderWeekSection(weekContainer, getWeekBounds(initialWeekStart).weekDates, weekViewHandlers);
 
   document.addEventListener("keydown", async (keyboardEvent) => {
     if (keyboardEvent.altKey || keyboardEvent.ctrlKey || keyboardEvent.metaKey) {
@@ -448,15 +483,9 @@ async function renderAppShell() {
     }
 
     keyboardEvent.preventDefault();
-    const confirmed = await confirmDialog.confirm(t("eventFormDeleteConfirm"));
-    if (!confirmed) {
-      return;
-    }
-
     isDeletingFromKeyboard = true;
     try {
-      await invoke("delete_event", { id: eventId });
-      await refreshAndRender();
+      await deleteEventById(eventId);
     } catch (error) {
       window.alert(String(error));
       console.error("Failed to delete event via keyboard shortcut", error);

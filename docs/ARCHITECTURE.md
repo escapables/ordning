@@ -62,6 +62,7 @@ Swedish default, English toggle. Two-language only.
 │       │   │   ├── week-grid.js
 │       │   │   ├── day-column.js
 │       │   │   ├── event-block.js
+│       │   │   ├── context-menu.js
 │       │   │   ├── all-day-bar.js
 │       │   │   └── time-indicator.js
 │       │   ├── event-form/
@@ -73,7 +74,8 @@ Swedish default, English toggle. Two-language only.
 │       └── utils/
 │           ├── date-utils.js
 │           ├── color-utils.js
-│           └── dom-utils.js
+│           ├── dom-utils.js
+│           └── ui-actions.js
 └── src-tauri/
     ├── Cargo.toml
     ├── tauri.conf.json

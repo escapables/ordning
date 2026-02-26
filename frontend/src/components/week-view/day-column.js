@@ -1,5 +1,6 @@
 import { tDayShort } from "../../i18n/strings.js";
 import { formatDateKey, formatMonthDay } from "../../utils/date-utils.js";
+import { openEventContextMenu } from "./context-menu.js";
 import { renderEventBlocks } from "./event-block.js";
 
 const HOURS_PER_DAY = 24;
@@ -87,6 +88,8 @@ export function renderDayHeader(date) {
 export function renderDayColumn(date, events, pixelsPerHour, options = {}) {
   const {
     onEventClick = () => {},
+    onEventDelete = () => {},
+    onEventCopy = () => {},
     onCreateSlot = () => {}
   } = options;
   const column = document.createElement("div");
@@ -103,9 +106,56 @@ export function renderDayColumn(date, events, pixelsPerHour, options = {}) {
   }
 
   column.appendChild(renderEventBlocks(events, pixelsPerHour, onEventClick));
+  wireEventContextMenu(column, {
+    onEventClick,
+    onEventDelete,
+    onEventCopy
+  });
   wireCreateInteractions(column, pixelsPerHour, onCreateSlot);
 
   return column;
+}
+
+function wireEventContextMenu(column, handlers) {
+  const {
+    onEventClick = () => {},
+    onEventDelete = () => {},
+    onEventCopy = () => {}
+  } = handlers;
+
+  column.addEventListener("contextmenu", (contextMenuEvent) => {
+    const target = contextMenuEvent.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+
+    const eventBlock = target.closest(".event-block");
+    if (!(eventBlock instanceof HTMLElement)) {
+      return;
+    }
+
+    const eventId = eventBlock.dataset.eventId;
+    if (!eventId) {
+      return;
+    }
+
+    const title = eventBlock.querySelector(".event-block__title")?.textContent ?? "";
+    const time = eventBlock.querySelector(".event-block__time")?.textContent ?? "";
+
+    openEventContextMenu(
+      contextMenuEvent,
+      {
+        id: eventId,
+        title,
+        time
+      },
+      {
+        onOpen: onEventClick,
+        onDelete: onEventDelete,
+        onCopy: onEventCopy
+      }
+    );
+  });
 }
 
 function wireCreateInteractions(column, pixelsPerHour, onCreateSlot) {

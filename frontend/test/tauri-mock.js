@@ -160,6 +160,7 @@
   var wed = dateKey(addDays(monday, 2));
   var fri = dateKey(addDays(monday, 4));
   var today = dateKey(now);
+  var past = dateKey(addDays(monday, -14));
 
   var state = {
     calendars: [
@@ -262,6 +263,20 @@
         startTime: null,
         endTime: null,
         allDay: true,
+        location: "",
+        descriptionPrivate: "",
+        descriptionPublic: "",
+        updated_at: ts
+      },
+      {
+        id: "evt-past-1",
+        calendarId: "cal-work",
+        title: "Archived Planning",
+        startDate: past,
+        endDate: past,
+        startTime: "08:00",
+        endTime: "09:00",
+        allDay: false,
         location: "",
         descriptionPrivate: "",
         descriptionPublic: "",
@@ -374,6 +389,26 @@
           return Promise.reject("Event not found: " + id);
         }
         return Promise.resolve(null);
+      }
+
+      case "get_past_events_count": {
+        var todayKey = (payload && payload.beforeDate) || dateKey(new Date());
+        var count = state.events.filter(function (event) {
+          return String(event.startDate) < todayKey;
+        }).length;
+        return Promise.resolve(count);
+      }
+
+      case "purge_past_events": {
+        var todayKey = (payload && payload.beforeDate) || dateKey(new Date());
+        var count = state.events.filter(function (event) {
+          return String(event.startDate) < todayKey;
+        }).length;
+
+        state.events = state.events.filter(function (event) {
+          return String(event.startDate) >= todayKey;
+        });
+        return Promise.resolve(count);
       }
 
       case "get_export_event_count": {

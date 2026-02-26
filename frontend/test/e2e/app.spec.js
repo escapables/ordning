@@ -44,3 +44,35 @@ test("mini-month day click navigates week and month arrows work", async ({ page 
   await page.locator(".mini-month__nav").last().click();
   await expect(monthTitle).not.toHaveText(beforeMonthText || "");
 });
+
+test("event block context menu supports delete action", async ({ page }) => {
+  await page.goto("/");
+
+  const targetEvent = page.locator(".event-block", { hasText: "Sprint Planning" });
+  await expect(targetEvent).toHaveCount(1);
+
+  await targetEvent.click({ button: "right" });
+  await expect(page.locator(".context-menu")).toBeVisible();
+  await expect(page.locator(".context-menu__item", { hasText: "Öppna" })).toBeVisible();
+  await expect(page.locator(".context-menu__item", { hasText: "Ta bort" })).toBeVisible();
+  await expect(page.locator(".context-menu__item", { hasText: "Kopiera" })).toBeVisible();
+
+  await page.locator(".context-menu__item--danger").click();
+  await expect(page.locator(".confirm-dialog[open]")).toBeVisible();
+  await page.locator(".confirm-dialog__btn--danger").click();
+  await expect(targetEvent).toHaveCount(0);
+});
+
+test("purge past events flow removes archived items after two-step confirm", async ({ page }) => {
+  await page.goto("/");
+
+  await page.locator(".calendar-list__purge").click();
+  await expect(page.locator(".confirm-dialog__message")).toContainText(
+    "Raderar alla händelser i kalendern innan dagens datum."
+  );
+  await page.locator(".confirm-dialog__btn--danger").click();
+  await expect(page.locator(".confirm-dialog[open]")).toBeVisible();
+  await expect(page.locator(".confirm-dialog__message")).toContainText("kan inte ångras");
+  await page.locator(".confirm-dialog__btn--danger").click();
+  await expect(page.locator(".confirm-dialog[open]")).toHaveCount(0);
+});
