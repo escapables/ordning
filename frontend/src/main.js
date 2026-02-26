@@ -84,10 +84,12 @@ async function renderAppShell() {
   app.innerHTML = `
     <div class="app-shell">
       <aside class="sidebar">
-        <button type="button" class="sidebar__new-event-btn">${t("newEventButton")}</button>
+        <div class="sidebar__header">
+          <button type="button" class="sidebar__new-event-btn">${t("newEventButton")}</button>
+          <button type="button" class="sidebar__settings-btn" aria-label="${t("settingsButtonAria")}">&#9881;</button>
+        </div>
         <div class="sidebar__mini-month"></div>
         <div class="sidebar__calendar-list"></div>
-        <button type="button" class="sidebar__settings-btn" aria-label="${t("settingsButtonAria")}">&#9881;</button>
       </aside>
       <main class="main-content">
         <div class="main-toolbar-container"></div>
@@ -180,7 +182,16 @@ async function renderAppShell() {
     }
   });
   app.appendChild(eventModal.element);
-  const exportDialog = createExportDialog();
+  const exportDialog = createExportDialog({
+    onPrint: () => {
+      const { weekDates } = getWeekBounds(currentWeekStartOrDefault());
+      printWeek({
+        weekDates,
+        events: mapBackendEvents(getState().events),
+        allDayEvents: mapAllDayEvents(getState().allDayEvents)
+      });
+    }
+  });
   app.appendChild(exportDialog.element);
   const importDialog = createImportDialog({
     onImported: refreshAndRender
@@ -397,13 +408,6 @@ async function renderAppShell() {
         onPreviousWeek: goToPreviousWeek,
         onNextWeek: goToNextWeek,
         onToday: goToToday,
-        onPrint: () => {
-          printWeek({
-            weekDates,
-            events: mapBackendEvents(getState().events),
-            allDayEvents: mapAllDayEvents(getState().allDayEvents)
-          });
-        },
         onSearch: async (query) => {
           return invoke("search_events", { query });
         },

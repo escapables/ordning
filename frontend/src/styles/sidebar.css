@@ -4,12 +4,21 @@
   padding: 14px 11px;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
   user-select: none;
   -webkit-user-select: none;
 }
 
+.sidebar__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
 .sidebar__new-event-btn {
-  width: 100%;
+  flex: 1;
   min-height: 32px;
   border: 1px solid var(--color-accent);
   border-radius: var(--radius-btn);
@@ -19,7 +28,6 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  margin-bottom: 8px;
   transition: filter 120ms ease;
 }
 
@@ -47,6 +55,8 @@
   border: 1px solid rgb(0 0 0 / 0.06);
   border-radius: var(--radius-dialog);
   background: rgb(255 255 255 / 0.62);
+  min-height: 0;
+  flex: 1 1 auto;
 }
 
 .sidebar__mini-month {
@@ -54,9 +64,9 @@
 }
 
 .sidebar__settings-btn {
+  flex: 0 0 auto;
   width: 32px;
   height: 32px;
-  margin-top: auto;
   border: 1px solid var(--color-border-muted);
   border-radius: var(--radius-btn);
   background: #fff;
@@ -161,6 +171,16 @@
 }
 
 .calendar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+.calendar-list__groups {
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   gap: 10px;

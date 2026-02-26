@@ -370,6 +370,9 @@ export function createEventModal({
   }
 
   allDayInput.addEventListener("change", applyAllDayState);
+  [startDateInput, endDateInput, startTimeInput, endTimeInput].forEach(input => {
+    input.addEventListener("change", () => input.blur());
+  });
   titleInput.addEventListener("input", () => {
     if (titleInput.value.trim().length > 0) {
       setTitleValidationError(false);

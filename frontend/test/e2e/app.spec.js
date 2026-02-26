@@ -190,7 +190,7 @@ test("settings timezone selection persists", async ({ page }) => {
   expect(nextTimezone).not.toBe(selectedTimezone);
 });
 
-test("toolbar print button uses iframe print trigger", async ({ page }) => {
+test("export dialog print button uses iframe print trigger", async ({ page }) => {
   await page.addInitScript(() => {
     window.__printContexts = [];
     window.print = function mockPrint() {
@@ -199,7 +199,8 @@ test("toolbar print button uses iframe print trigger", async ({ page }) => {
   });
   await page.goto("/");
 
-  await page.locator(".main-toolbar__print-btn").click();
+  await page.locator(".calendar-list__io-btn", { hasText: /export/i }).click();
+  await page.locator(".export-dialog__btn--secondary").click();
   const printContexts = await page.evaluate(() => window.__printContexts);
   expect(printContexts).toHaveLength(1);
   expect(printContexts[0]).toBe("iframe");

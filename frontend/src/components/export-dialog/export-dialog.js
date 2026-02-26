@@ -38,7 +38,7 @@ function createRadio(name, value, checked, labelText, subtitleText) {
   return { label, input };
 }
 
-export function createExportDialog() {
+export function createExportDialog({ onPrint } = {}) {
   const dialog = document.createElement("dialog");
   dialog.className = "export-dialog";
 
@@ -87,6 +87,18 @@ export function createExportDialog() {
 
   const actions = document.createElement("div");
   actions.className = "export-dialog__actions";
+
+  if (typeof onPrint === "function") {
+    const printButton = document.createElement("button");
+    printButton.type = "button";
+    printButton.className = "export-dialog__btn export-dialog__btn--secondary";
+    printButton.textContent = t("printWeekButton");
+    printButton.addEventListener("click", () => {
+      onPrint();
+      dialog.close();
+    });
+    actions.appendChild(printButton);
+  }
 
   const cancelButton = document.createElement("button");
   cancelButton.type = "button";

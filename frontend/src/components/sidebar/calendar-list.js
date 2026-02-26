@@ -3,8 +3,8 @@ import { t } from "../../i18n/strings.js";
 const CALENDAR_COLORS = [
   "#007aff",
   "#34c759",
-  "#ff3b30",
-  "#ff9500",
+  "#d92d20",
+  "#ef6820",
   "#af52de",
   "#5ac8fa",
   "#ff2d55",
@@ -48,6 +48,9 @@ export function renderCalendarList(calendars, handlers) {
 
   const section = document.createElement("section");
   section.className = "calendar-list";
+
+  const groupsContainer = document.createElement("div");
+  groupsContainer.className = "calendar-list__groups";
 
   const groups = buildGroups(calendars);
   groups.forEach((groupCalendars, groupName) => {
@@ -100,8 +103,10 @@ export function renderCalendarList(calendars, handlers) {
       group.appendChild(row);
     });
 
-    section.appendChild(group);
+    groupsContainer.appendChild(group);
   });
+
+  section.appendChild(groupsContainer);
 
   const addButton = document.createElement("button");
   addButton.type = "button";
@@ -228,7 +233,7 @@ export function renderCalendarList(calendars, handlers) {
   importButton.textContent = t("importButton");
   importButton.addEventListener("click", onImport);
 
-  ioRow.append(exportButton, importButton);
+  ioRow.append(importButton, exportButton);
 
   const purgeButton = document.createElement("button");
   purgeButton.type = "button";
