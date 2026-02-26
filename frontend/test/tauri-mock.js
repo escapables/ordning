@@ -216,6 +216,34 @@
         updated_at: ts
       },
       {
+        id: "evt-6",
+        calendarId: "cal-personal",
+        title: "Parallel Sync",
+        startDate: mon,
+        endDate: mon,
+        startTime: "09:15",
+        endTime: "10:00",
+        allDay: false,
+        location: "",
+        descriptionPrivate: "",
+        descriptionPublic: "",
+        updated_at: ts
+      },
+      {
+        id: "evt-7",
+        calendarId: "cal-work",
+        title: "Ops Check-in",
+        startDate: mon,
+        endDate: mon,
+        startTime: "09:30",
+        endTime: "10:15",
+        allDay: false,
+        location: "",
+        descriptionPrivate: "",
+        descriptionPublic: "",
+        updated_at: ts
+      },
+      {
         id: "evt-3",
         calendarId: "cal-work",
         title: "Team Standup",

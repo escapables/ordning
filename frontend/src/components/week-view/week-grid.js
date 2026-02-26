@@ -73,6 +73,7 @@ function deferAutoScroll(body, dates, pixelsPerHour) {
 export function renderWeekGrid(dates, events = [], allDayEvents = [], options = {}) {
   const {
     calendarsCount = 0,
+    onEventSelect = () => {},
     onEventClick = () => {},
     onEventDelete = () => {},
     onEventCopy = () => {},
@@ -127,10 +128,11 @@ export function renderWeekGrid(dates, events = [], allDayEvents = [], options = 
     const dateKey = formatDateKey(date);
     const dayEvents = eventsByDate.get(dateKey) ?? [];
     body.appendChild(
-      renderDayColumn(date, dayEvents, PIXELS_PER_HOUR, {
-        onEventClick,
-        onEventDelete,
-        onEventCopy,
+        renderDayColumn(date, dayEvents, PIXELS_PER_HOUR, {
+          onEventSelect,
+          onEventClick,
+          onEventDelete,
+          onEventCopy,
         onCreateSlot
       })
     );

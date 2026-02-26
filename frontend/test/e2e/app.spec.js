@@ -85,3 +85,66 @@ test("settings language switch updates UI text", async ({ page }) => {
   await page.locator(".settings-dialog__select").selectOption("en");
   await expect(page.locator(".sidebar__new-event-btn")).toHaveText("New event");
 });
+
+test("overlapping Monday events are rendered in equal-width columns", async ({ page }) => {
+  await page.goto("/");
+
+  const sprint = page.locator(".event-block", { hasText: "Sprint Planning" });
+  const parallel = page.locator(".event-block", { hasText: "Parallel Sync" });
+  const ops = page.locator(".event-block", { hasText: "Ops Check-in" });
+  const designReview = page.locator(".event-block", { hasText: "Design Review" });
+
+  await expect(sprint).toHaveCount(1);
+  await expect(parallel).toHaveCount(1);
+  await expect(ops).toHaveCount(1);
+
+  const [sprintBox, parallelBox, opsBox, designReviewBox] = await Promise.all([
+    sprint.evaluate((node) => {
+      const rect = node.getBoundingClientRect();
+      return { x: rect.x, width: rect.width };
+    }),
+    parallel.evaluate((node) => {
+      const rect = node.getBoundingClientRect();
+      return { x: rect.x, width: rect.width };
+    }),
+    ops.evaluate((node) => {
+      const rect = node.getBoundingClientRect();
+      return { x: rect.x, width: rect.width };
+    }),
+    designReview.evaluate((node) => {
+      const rect = node.getBoundingClientRect();
+      return { x: rect.x, width: rect.width };
+    })
+  ]);
+
+  const overlapWidths = [sprintBox.width, parallelBox.width, opsBox.width];
+  const minWidth = Math.min(...overlapWidths);
+  const maxWidth = Math.max(...overlapWidths);
+  expect(maxWidth - minWidth).toBeLessThan(2);
+
+  expect(designReviewBox.width).toBeGreaterThan(maxWidth * 2.5);
+  expect(sprintBox.x).toBeLessThan(parallelBox.x);
+  expect(parallelBox.x).toBeLessThan(opsBox.x);
+});
+
+test("single click selects event, dblclick opens modal, and clear selection works", async ({ page }) => {
+  await page.goto("/");
+
+  const targetEvent = page.locator(".event-block", { hasText: "Sprint Planning" });
+  await expect(targetEvent).toHaveCount(1);
+
+  await targetEvent.click();
+  await expect(page.locator(".event-block--selected")).toHaveCount(1);
+  await expect(targetEvent).toHaveClass(/event-block--selected/);
+
+  await targetEvent.dblclick();
+  await expect(page.locator(".event-modal[open]")).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".event-block--selected")).toHaveCount(0);
+
+  await targetEvent.click();
+  await expect(page.locator(".event-block--selected")).toHaveCount(1);
+  await page.locator(".day-column").nth(2).dispatchEvent("click");
+  await expect(page.locator(".event-block--selected")).toHaveCount(0);
+});

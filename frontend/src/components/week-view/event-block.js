@@ -87,7 +87,11 @@ function layoutEvents(events) {
   return normalized;
 }
 
-function createEventElement(event, pixelsPerMinute, onEventClick) {
+function createEventElement(event, pixelsPerMinute, handlers) {
+  const {
+    onEventSelect = () => {},
+    onEventOpen = () => {}
+  } = handlers;
   const element = document.createElement("article");
   element.className = "event-block";
   element.style.top = `${event.startMinutes * pixelsPerMinute}px`;
@@ -113,9 +117,23 @@ function createEventElement(event, pixelsPerMinute, onEventClick) {
 
   element.appendChild(title);
   element.appendChild(time);
+  const select = (uiEvent) => {
+    uiEvent.stopPropagation();
+    onEventSelect(event.id, element);
+  };
+
+  element.addEventListener("pointerdown", (pointerEvent) => {
+    if (pointerEvent.button !== 0) {
+      return;
+    }
+    select(pointerEvent);
+  });
   element.addEventListener("click", (clickEvent) => {
-    clickEvent.stopPropagation();
-    onEventClick(event.id);
+    select(clickEvent);
+  });
+  element.addEventListener("dblclick", (doubleClickEvent) => {
+    doubleClickEvent.stopPropagation();
+    onEventOpen(event.id);
   });
   element.addEventListener("keydown", (keyboardEvent) => {
     if (keyboardEvent.key !== "Enter" && keyboardEvent.key !== " ") {
@@ -124,13 +142,13 @@ function createEventElement(event, pixelsPerMinute, onEventClick) {
 
     keyboardEvent.preventDefault();
     keyboardEvent.stopPropagation();
-    onEventClick(event.id);
+    onEventOpen(event.id);
   });
 
   return element;
 }
 
-export function renderEventBlocks(events, pixelsPerHour, onEventClick = () => {}) {
+export function renderEventBlocks(events, pixelsPerHour, handlers = {}) {
   const layer = document.createElement("div");
   layer.className = "event-layer";
 
@@ -140,7 +158,7 @@ export function renderEventBlocks(events, pixelsPerHour, onEventClick = () => {}
   );
 
   laidOutEvents.forEach((event) => {
-    layer.appendChild(createEventElement(event, pixelsPerMinute, onEventClick));
+    layer.appendChild(createEventElement(event, pixelsPerMinute, handlers));
   });
 
   return layer;

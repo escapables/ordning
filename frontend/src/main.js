@@ -167,6 +167,11 @@ async function renderAppShell() {
   let pendingHighlightEventId = null;
   let activeHighlight = null;
   let isDeletingFromKeyboard = false;
+  const clearEventSelection = () => {
+    weekContainer.querySelectorAll(".event-block--selected").forEach((block) => {
+      block.classList.remove("event-block--selected");
+    });
+  };
 
   const highlightEventBlock = (eventId) => {
     const block = weekContainer.querySelector(`.event-block[data-event-id="${eventId}"]`);
@@ -244,6 +249,10 @@ async function renderAppShell() {
   });
 
   const weekViewHandlers = {
+    onEventSelect: (_eventId, element) => {
+      clearEventSelection();
+      element.classList.add("event-block--selected");
+    },
     onEventClick: (eventId) => {
       eventModal.openEdit(eventId);
     },
@@ -262,6 +271,19 @@ async function renderAppShell() {
       eventModal.openCreate(prefill);
     }
   };
+
+  weekContainer.addEventListener("click", (clickEvent) => {
+    const target = clickEvent.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+    if (target.closest(".event-block")) {
+      return;
+    }
+    if (target.closest(".day-column")) {
+      clearEventSelection();
+    }
+  });
 
   const newEventButton = app.querySelector(".sidebar__new-event-btn");
   if (newEventButton) {
@@ -402,6 +424,7 @@ async function renderAppShell() {
     if (keyboardEvent.key === "Escape") {
       keyboardEvent.preventDefault();
       closeOpenDialogs();
+      clearEventSelection();
       return;
     }
 

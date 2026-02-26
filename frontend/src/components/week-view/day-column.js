@@ -87,6 +87,7 @@ export function renderDayHeader(date) {
 
 export function renderDayColumn(date, events, pixelsPerHour, options = {}) {
   const {
+    onEventSelect = () => {},
     onEventClick = () => {},
     onEventDelete = () => {},
     onEventCopy = () => {},
@@ -105,7 +106,12 @@ export function renderDayColumn(date, events, pixelsPerHour, options = {}) {
     column.appendChild(cell);
   }
 
-  column.appendChild(renderEventBlocks(events, pixelsPerHour, onEventClick));
+  column.appendChild(
+    renderEventBlocks(events, pixelsPerHour, {
+      onEventSelect,
+      onEventOpen: onEventClick
+    })
+  );
   wireEventContextMenu(column, {
     onEventClick,
     onEventDelete,
