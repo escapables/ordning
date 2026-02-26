@@ -239,6 +239,34 @@ async function renderAppShell() {
     onEventCopy: async (eventData) => {
       await copyEventToClipboard(eventData, t);
     },
+    onEventMove: async ({ eventId, date, startTime, endTime }) => {
+      try {
+        const existing = await invoke("get_event", { id: eventId });
+        if (!existing?.calendarId) {
+          return;
+        }
+        await invoke("update_event", {
+          id: eventId,
+          event: {
+            calendarId: existing.calendarId,
+            title: existing.title ?? "",
+            startDate: date,
+            endDate: date,
+            startTime,
+            endTime,
+            allDay: false,
+            descriptionPrivate: existing.descriptionPrivate ?? "",
+            descriptionPublic: existing.descriptionPublic ?? "",
+            location: existing.location ?? ""
+          }
+        });
+        pendingHighlightEventId = eventId;
+        await refreshCurrentWeekEvents();
+      } catch (error) {
+        window.alert(String(error));
+        console.error("Failed to move event", error);
+      }
+    },
     onCreateSlot: (prefill) => {
       eventModal.openCreate(prefill);
     },
@@ -262,7 +290,6 @@ async function renderAppShell() {
       return Boolean(getCopiedEventData()?.id);
     }
   };
-
   weekContainer.addEventListener("click", (clickEvent) => {
     const target = clickEvent.target;
     if (!(target instanceof Element)) {
@@ -275,7 +302,6 @@ async function renderAppShell() {
       clearEventSelection();
     }
   });
-
   app.addEventListener(
     "contextmenu",
     (contextMenuEvent) => {

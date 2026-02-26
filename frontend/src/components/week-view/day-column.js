@@ -1,6 +1,7 @@
 import { tDayShort } from "../../i18n/strings.js";
 import { formatDateKey, formatMonthDay } from "../../utils/date-utils.js";
 import { openEventContextMenu, openSlotContextMenu } from "./context-menu.js";
+import { createEventMovePointerDownHandler } from "./event-move-drag.js";
 import { renderEventBlocks } from "./event-block.js";
 
 const HOURS_PER_DAY = 24;
@@ -72,7 +73,6 @@ function isToday(date) {
     && date.getMonth() === now.getMonth()
     && date.getDate() === now.getDate();
 }
-
 export function renderDayHeader(date) {
   const header = document.createElement("div");
   header.className = "day-header";
@@ -100,6 +100,7 @@ export function renderDayColumn(date, events, pixelsPerHour, options = {}) {
     onEventClick = () => {},
     onEventDelete = () => {},
     onEventCopy = () => {},
+    onEventMove = async () => {},
     onCreateSlot = () => {},
     onCreateFromContextMenu = () => {},
     onPasteFromContextMenu = () => {},
@@ -118,10 +119,12 @@ export function renderDayColumn(date, events, pixelsPerHour, options = {}) {
     column.appendChild(cell);
   }
 
+  const onEventPointerDown = createEventMovePointerDownHandler(column, pixelsPerHour, { onEventMove });
   column.appendChild(
     renderEventBlocks(events, pixelsPerHour, {
       onEventSelect,
-      onEventOpen: onEventClick
+      onEventOpen: onEventClick,
+      onEventPointerDown
     })
   );
   wireEventContextMenu(column, {
@@ -137,7 +140,6 @@ export function renderDayColumn(date, events, pixelsPerHour, options = {}) {
 
   return column;
 }
-
 function wireEventContextMenu(column, handlers) {
   const {
     onEventClick = () => {},
@@ -229,7 +231,6 @@ function wireCreateInteractions(column, pixelsPerHour, onCreateSlot) {
     selection.startY = 0;
     selection.currentY = 0;
   }
-
   function ensurePreview() {
     if (selection.preview) {
       return selection.preview;
@@ -241,7 +242,6 @@ function wireCreateInteractions(column, pixelsPerHour, onCreateSlot) {
     selection.preview = preview;
     return preview;
   }
-
   function updatePreview() {
     const preview = ensurePreview();
     const rect = column.getBoundingClientRect();

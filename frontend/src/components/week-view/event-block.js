@@ -94,7 +94,8 @@ function layoutEvents(events) {
 function createEventElement(event, pixelsPerMinute, handlers) {
   const {
     onEventSelect = () => {},
-    onEventOpen = () => {}
+    onEventOpen = () => {},
+    onEventPointerDown = () => {}
   } = handlers;
   const element = document.createElement("article");
   element.className = "event-block";
@@ -108,6 +109,8 @@ function createEventElement(event, pixelsPerMinute, handlers) {
   element.style.left = `calc(${event.column * widthPercent}% + 2px)`;
   element.style.setProperty("--event-color", event.color);
   element.dataset.eventId = event.id;
+  element.dataset.startMinutes = String(event.startMinutes);
+  element.dataset.endMinutes = String(event.endMinutes);
   element.tabIndex = 3;
 
   const title = document.createElement("div");
@@ -129,7 +132,11 @@ function createEventElement(event, pixelsPerMinute, handlers) {
     if (pointerEvent.button !== 0) {
       return;
     }
+    const wasSelected = element.classList.contains("event-block--selected");
     select(pointerEvent);
+    if (wasSelected) {
+      onEventPointerDown(pointerEvent, event, element);
+    }
   });
   element.addEventListener("click", (clickEvent) => {
     select(clickEvent);

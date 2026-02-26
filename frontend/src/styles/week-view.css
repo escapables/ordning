@@ -247,6 +247,17 @@
   pointer-events: none;
 }
 
+.day-column__move-preview {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  border: 1px dashed color-mix(in srgb, var(--event-color) 55%, transparent);
+  background: color-mix(in srgb, var(--event-color) 20%, #fff);
+  border-radius: var(--radius-sm);
+  pointer-events: none;
+  z-index: 4;
+}
+
 .event-block {
   position: absolute;
   padding: 4px 6px;

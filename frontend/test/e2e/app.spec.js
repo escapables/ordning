@@ -202,6 +202,59 @@ test("all-day events support select open context menu and keyboard delete", asyn
   await expect(allDayEvent).toHaveCount(1);
 });
 
+test("dragging selected event moves it to a different day/time with preview", async ({ page }) => {
+  await page.goto("/");
+
+  const sourceEvent = page.locator(".day-column").nth(0).locator(".event-block", { hasText: "Sprint Planning" });
+  await expect(sourceEvent).toHaveCount(1);
+  await sourceEvent.click();
+  await expect(sourceEvent).toHaveClass(/event-block--selected/);
+
+  const sourceBox = await sourceEvent.boundingBox();
+  const targetHour = page.locator(".day-column").nth(2).locator(".day-column__hour").nth(12);
+  const targetBox = await targetHour.boundingBox();
+  expect(sourceBox).not.toBeNull();
+  expect(targetBox).not.toBeNull();
+
+  await page.mouse.move(sourceBox.x + 12, sourceBox.y + 10);
+  await page.mouse.down();
+  await page.mouse.move(targetBox.x + 20, targetBox.y + 8, { steps: 8 });
+  await expect(page.locator(".day-column__move-preview")).toHaveCount(1);
+  await page.mouse.up();
+
+  await expect(page.locator(".day-column").nth(0).locator(".event-block", { hasText: "Sprint Planning" })).toHaveCount(0);
+  const movedEvent = page.locator(".day-column").nth(2).locator(".event-block", { hasText: "Sprint Planning" });
+  await expect(movedEvent).toHaveCount(1);
+  await expect(movedEvent.locator(".event-block__time")).toContainText("12:");
+});
+
+test("drag ghost reflows width with overlap changes while dragging", async ({ page }) => {
+  await page.goto("/");
+
+  const sourceEvent = page.locator(".day-column").nth(0).locator(".event-block", { hasText: "Sprint Planning" });
+  await sourceEvent.click();
+  const sourceBox = await sourceEvent.boundingBox();
+  expect(sourceBox).not.toBeNull();
+
+  await page.mouse.move(sourceBox.x + 12, sourceBox.y + 10);
+  await page.mouse.down();
+  await page.mouse.move(sourceBox.x + 20, sourceBox.y + 14, { steps: 6 });
+
+  const overlapPreviewBox = await page.locator(".day-column__move-preview").boundingBox();
+  expect(overlapPreviewBox).not.toBeNull();
+
+  const nonOverlapHour = page.locator(".day-column").nth(0).locator(".day-column__hour").nth(12);
+  const nonOverlapBox = await nonOverlapHour.boundingBox();
+  expect(nonOverlapBox).not.toBeNull();
+
+  await page.mouse.move(nonOverlapBox.x + 24, nonOverlapBox.y + 10, { steps: 10 });
+  const expandedPreviewBox = await page.locator(".day-column__move-preview").boundingBox();
+  expect(expandedPreviewBox).not.toBeNull();
+  expect(expandedPreviewBox.width).toBeGreaterThan(overlapPreviewBox.width + 20);
+
+  await page.mouse.up();
+});
+
 test("single click selects event, dblclick opens modal, and clear selection works", async ({ page }) => {
   await page.goto("/");
 
