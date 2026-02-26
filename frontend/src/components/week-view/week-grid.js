@@ -77,7 +77,10 @@ export function renderWeekGrid(dates, events = [], allDayEvents = [], options = 
     onEventClick = () => {},
     onEventDelete = () => {},
     onEventCopy = () => {},
-    onCreateSlot = () => {}
+    onCreateSlot = () => {},
+    onCreateFromContextMenu = () => {},
+    onPasteFromContextMenu = () => {},
+    canPasteFromContextMenu = () => false
   } = options;
   const root = document.createElement("section");
   root.className = "week-view";
@@ -128,12 +131,15 @@ export function renderWeekGrid(dates, events = [], allDayEvents = [], options = 
     const dateKey = formatDateKey(date);
     const dayEvents = eventsByDate.get(dateKey) ?? [];
     body.appendChild(
-        renderDayColumn(date, dayEvents, PIXELS_PER_HOUR, {
-          onEventSelect,
-          onEventClick,
-          onEventDelete,
-          onEventCopy,
-        onCreateSlot
+      renderDayColumn(date, dayEvents, PIXELS_PER_HOUR, {
+        onEventSelect,
+        onEventClick,
+        onEventDelete,
+        onEventCopy,
+        onCreateSlot,
+        onCreateFromContextMenu,
+        onPasteFromContextMenu,
+        canPasteFromContextMenu
       })
     );
   });

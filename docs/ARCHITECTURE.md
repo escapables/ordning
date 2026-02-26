@@ -77,7 +77,8 @@ Swedish default, English toggle. Two-language only.
 │           ├── date-utils.js
 │           ├── color-utils.js
 │           ├── dom-utils.js
-│           └── ui-actions.js
+│           ├── ui-actions.js
+│           └── keyboard-handler.js
 └── src-tauri/
     ├── Cargo.toml
     ├── tauri.conf.json

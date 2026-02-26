@@ -1,24 +1,12 @@
 import { t } from "../../i18n/strings.js";
 
-export function openEventContextMenu(event, detail, handlers = {}) {
+function openContextMenu(event, items) {
   event.preventDefault();
   event.stopPropagation();
-
-  const {
-    onOpen = () => {},
-    onDelete = () => {},
-    onCopy = () => {}
-  } = handlers;
 
   const menu = document.createElement("div");
   menu.className = "context-menu";
   menu.role = "menu";
-
-  const items = [
-    { label: t("contextMenuOpen"), action: () => onOpen(detail.id) },
-    { label: t("contextMenuDelete"), danger: true, action: () => onDelete(detail.id) },
-    { label: t("contextMenuCopy"), action: () => onCopy(detail) }
-  ];
 
   items.forEach((item) => {
     const button = document.createElement("button");
@@ -74,4 +62,32 @@ export function openEventContextMenu(event, detail, handlers = {}) {
   document.addEventListener("keydown", onKeyDown, true);
   window.addEventListener("scroll", onScroll, true);
   window.addEventListener("resize", close);
+}
+
+export function openEventContextMenu(event, detail, handlers = {}) {
+  const {
+    onOpen = () => {},
+    onDelete = () => {},
+    onCopy = () => {}
+  } = handlers;
+
+  openContextMenu(event, [
+    { label: t("contextMenuOpen"), action: () => onOpen(detail.id) },
+    { label: t("contextMenuDelete"), danger: true, action: () => onDelete(detail.id) },
+    { label: t("contextMenuCopy"), action: () => onCopy(detail) }
+  ]);
+}
+
+export function openSlotContextMenu(event, detail, handlers = {}) {
+  const {
+    onCreate = () => {},
+    onPaste = () => {},
+    canPaste = () => false
+  } = handlers;
+  const items = [{ label: t("contextMenuNewEvent"), action: () => onCreate(detail) }];
+  if (canPaste()) {
+    items.push({ label: t("contextMenuPaste"), action: () => onPaste(detail) });
+  }
+
+  openContextMenu(event, items);
 }

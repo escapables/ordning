@@ -149,3 +149,51 @@ test("single click selects event, dblclick opens modal, and clear selection work
   await page.locator(".day-column").nth(2).dispatchEvent("click");
   await expect(page.locator(".event-block--selected")).toHaveCount(0);
 });
+
+test("empty day-column context menu opens New event with 30-minute snap", async ({ page }) => {
+  await page.goto("/");
+
+  const firstColumn = page.locator(".day-column").first();
+  await firstColumn.click({ button: "right", position: { x: 24, y: 112 } });
+  await expect(page.locator(".context-menu")).toBeVisible();
+  await page.locator(".context-menu__item", { hasText: "Nytt event" }).click();
+
+  await expect(page.locator(".event-modal[open]")).toBeVisible();
+  await expect(page.locator(".event-modal__input[name='startTime']")).toHaveValue("02:00");
+  await expect(page.locator(".event-modal__input[name='endTime']")).toHaveValue("02:30");
+});
+
+test("empty day-column context menu shows Paste after copy and creates event at snapped time", async ({
+  page
+}) => {
+  await page.goto("/");
+
+  const sourceEvent = page.locator(".event-block", { hasText: "Sprint Planning" });
+  await expect(sourceEvent).toHaveCount(1);
+  await sourceEvent.click({ button: "right" });
+  await page.locator(".context-menu__item", { hasText: "Kopiera" }).click();
+
+  const firstColumn = page.locator(".day-column").first();
+  await firstColumn.click({ button: "right", position: { x: 28, y: 420 } });
+  await expect(page.locator(".context-menu__item", { hasText: "Klistra in" })).toBeVisible();
+  await page.locator(".context-menu__item", { hasText: "Klistra in" }).click();
+
+  await expect(page.locator(".event-block", { hasText: "Sprint Planning" })).toHaveCount(2);
+  await expect(page.locator(".event-block", { hasText: "07:30 - 09:00" })).toHaveCount(1);
+});
+
+test("context menu is suppressed on non-column non-interactive areas", async ({ page }) => {
+  await page.goto("/");
+
+  await page.locator(".week-grid__headers").click({ button: "right", position: { x: 20, y: 20 } });
+  await expect(page.locator(".context-menu")).toHaveCount(0);
+
+  await page.locator(".time-labels").click({ button: "right", position: { x: 20, y: 20 } });
+  await expect(page.locator(".context-menu")).toHaveCount(0);
+
+  await page.locator(".main-toolbar__title").click({ button: "right", position: { x: 10, y: 10 } });
+  await expect(page.locator(".context-menu")).toHaveCount(0);
+
+  await page.locator(".sidebar").click({ button: "right", position: { x: 8, y: 8 } });
+  await expect(page.locator(".context-menu")).toHaveCount(0);
+});

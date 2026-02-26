@@ -1,6 +1,6 @@
 import { tDayShort } from "../../i18n/strings.js";
 import { formatDateKey, formatMonthDay } from "../../utils/date-utils.js";
-import { openEventContextMenu } from "./context-menu.js";
+import { openEventContextMenu, openSlotContextMenu } from "./context-menu.js";
 import { renderEventBlocks } from "./event-block.js";
 
 const HOURS_PER_DAY = 24;
@@ -9,6 +9,7 @@ const MINUTES_PER_DAY = HOURS_PER_DAY * MINUTES_PER_HOUR;
 const MIN_SELECTION_MINUTES = 15;
 const DRAG_THRESHOLD_PX = 6;
 const TIME_STEP_MINUTES = 15;
+const CONTEXT_MENU_STEP_MINUTES = 30;
 
 function clampMinutes(value) {
   return Math.max(0, Math.min(MINUTES_PER_DAY, value));
@@ -22,11 +23,25 @@ function roundUp(value, step) {
   return Math.ceil(value / step) * step;
 }
 
+function roundNearest(value, step) {
+  return Math.round(value / step) * step;
+}
+
 function formatTimeFromMinutes(value) {
   const minutes = Math.max(0, Math.min(MINUTES_PER_DAY - MIN_SELECTION_MINUTES, value));
   const hoursPart = Math.floor(minutes / MINUTES_PER_HOUR);
   const minutesPart = minutes % MINUTES_PER_HOUR;
   return `${String(hoursPart).padStart(2, "0")}:${String(minutesPart).padStart(2, "0")}`;
+}
+
+function toPrefillFromPoint(clientY, rect, pixelsPerHour) {
+  const roundedStart = roundNearest(pointerToMinutes(clientY, rect, pixelsPerHour), CONTEXT_MENU_STEP_MINUTES);
+  const safeStart = Math.max(0, Math.min(MINUTES_PER_DAY - CONTEXT_MENU_STEP_MINUTES, roundedStart));
+  const safeEnd = Math.min(MINUTES_PER_DAY, safeStart + CONTEXT_MENU_STEP_MINUTES);
+  return {
+    startTime: formatTimeFromMinutes(safeStart),
+    endTime: safeEnd >= MINUTES_PER_DAY ? "23:59" : formatTimeFromMinutes(safeEnd)
+  };
 }
 
 function pointerToMinutes(clientY, rect, pixelsPerHour) {
@@ -85,7 +100,10 @@ export function renderDayColumn(date, events, pixelsPerHour, options = {}) {
     onEventClick = () => {},
     onEventDelete = () => {},
     onEventCopy = () => {},
-    onCreateSlot = () => {}
+    onCreateSlot = () => {},
+    onCreateFromContextMenu = () => {},
+    onPasteFromContextMenu = () => {},
+    canPasteFromContextMenu = () => false
   } = options;
   const column = document.createElement("div");
   column.className = "day-column";
@@ -109,7 +127,11 @@ export function renderDayColumn(date, events, pixelsPerHour, options = {}) {
   wireEventContextMenu(column, {
     onEventClick,
     onEventDelete,
-    onEventCopy
+    onEventCopy,
+    onCreateFromContextMenu,
+    onPasteFromContextMenu,
+    canPasteFromContextMenu,
+    pixelsPerHour
   });
   wireCreateInteractions(column, pixelsPerHour, onCreateSlot);
 
@@ -120,7 +142,11 @@ function wireEventContextMenu(column, handlers) {
   const {
     onEventClick = () => {},
     onEventDelete = () => {},
-    onEventCopy = () => {}
+    onEventCopy = () => {},
+    onCreateFromContextMenu = () => {},
+    onPasteFromContextMenu = () => {},
+    canPasteFromContextMenu = () => false,
+    pixelsPerHour = 56
   } = handlers;
 
   column.addEventListener("contextmenu", (contextMenuEvent) => {
@@ -131,6 +157,23 @@ function wireEventContextMenu(column, handlers) {
 
     const eventBlock = target.closest(".event-block");
     if (!(eventBlock instanceof HTMLElement)) {
+      const date = column.dataset.date;
+      if (!date) {
+        return;
+      }
+      const rect = column.getBoundingClientRect();
+      openSlotContextMenu(
+        contextMenuEvent,
+        {
+          date,
+          ...toPrefillFromPoint(contextMenuEvent.clientY, rect, pixelsPerHour)
+        },
+        {
+          onCreate: onCreateFromContextMenu,
+          onPaste: onPasteFromContextMenu,
+          canPaste: canPasteFromContextMenu
+        }
+      );
       return;
     }
 

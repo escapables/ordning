@@ -9,14 +9,9 @@ import { renderMiniMonth } from "./components/sidebar/mini-month.js";
 import { renderToolbar } from "./components/toolbar/toolbar.js";
 import { renderWeekGrid } from "./components/week-view/week-grid.js";
 import { formatDateKey, getEndOfWeek, getStartOfWeek, getWeekDates } from "./utils/date-utils.js";
-import { copyEventToClipboard, purgePastEventsFlow } from "./utils/ui-actions.js";
-import {
-  getState,
-  loadCalendars,
-  loadWeekEvents,
-  setCurrentWeekStart,
-  subscribe
-} from "./state.js";
+import { setupKeyboardHandler } from "./utils/keyboard-handler.js";
+import { copyEventToClipboard, getCopiedEventData, pasteCopiedEventAtSlot, purgePastEventsFlow } from "./utils/ui-actions.js";
+import { getState, loadCalendars, loadWeekEvents, setCurrentWeekStart, subscribe } from "./state.js";
 
 let unsubscribeState = null;
 let keydownHandler = null;
@@ -166,7 +161,6 @@ async function renderAppShell() {
 
   let pendingHighlightEventId = null;
   let activeHighlight = null;
-  let isDeletingFromKeyboard = false;
   const clearEventSelection = ({ blurFocusedEvent = false } = {}) => {
     const activeElement = document.activeElement;
     if (
@@ -278,6 +272,25 @@ async function renderAppShell() {
     },
     onCreateSlot: (prefill) => {
       eventModal.openCreate(prefill);
+    },
+    onCreateFromContextMenu: (prefill) => {
+      eventModal.openCreate(prefill);
+    },
+    onPasteFromContextMenu: async (prefill) => {
+      try {
+        await pasteCopiedEventAtSlot({
+          invoke,
+          refresh: refreshAndRender,
+          date: prefill.date,
+          startTime: prefill.startTime
+        });
+      } catch (error) {
+        window.alert(String(error));
+        console.error("Failed to paste event from context menu", error);
+      }
+    },
+    canPasteFromContextMenu: () => {
+      return Boolean(getCopiedEventData()?.id);
     }
   };
 
@@ -293,6 +306,31 @@ async function renderAppShell() {
       clearEventSelection();
     }
   });
+
+  app.addEventListener(
+    "contextmenu",
+    (contextMenuEvent) => {
+      const target = contextMenuEvent.target;
+      if (!(target instanceof Element)) {
+        return;
+      }
+
+      if (target.closest(".context-menu")) {
+        return;
+      }
+
+      if (target.closest("input, textarea, select, [contenteditable='true']")) {
+        return;
+      }
+
+      if (target.closest(".day-column")) {
+        return;
+      }
+
+      contextMenuEvent.preventDefault();
+    },
+    true
+  );
 
   const newEventButton = app.querySelector(".sidebar__new-event-btn");
   if (newEventButton) {
@@ -413,94 +451,39 @@ async function renderAppShell() {
 
   renderWeekSection(weekContainer, getWeekBounds(initialWeekStart).weekDates, weekViewHandlers);
 
-  keydownHandler = async (keyboardEvent) => {
-    if (keyboardEvent.altKey || keyboardEvent.ctrlKey || keyboardEvent.metaKey) {
-      return;
-    }
-
-    const closeOpenDialogs = () => {
-      const openDialogs = document.querySelectorAll("dialog[open]");
-      openDialogs.forEach((dialogElement) => {
+  keydownHandler = setupKeyboardHandler({
+    closeOpenDialogs: () => {
+      document.querySelectorAll("dialog[open]").forEach((dialogElement) => {
         dialogElement.close();
       });
-    };
-
-    if (keyboardEvent.key === "Escape") {
-      keyboardEvent.preventDefault();
-      closeOpenDialogs();
+    },
+    clearEventSelection: () => {
       clearEventSelection({ blurFocusedEvent: true });
-      return;
-    }
-
-    const targetTagName = keyboardEvent.target?.tagName?.toUpperCase();
-    if (targetTagName === "INPUT" || targetTagName === "TEXTAREA" || targetTagName === "SELECT") {
-      return;
-    }
-
-    if (keyboardEvent.key === "ArrowLeft") {
-      keyboardEvent.preventDefault();
-      void goToPreviousWeek();
-      return;
-    }
-
-    if (keyboardEvent.key === "ArrowRight") {
-      keyboardEvent.preventDefault();
-      void goToNextWeek();
-      return;
-    }
-
-    if (keyboardEvent.key.toLowerCase() === "t") {
-      keyboardEvent.preventDefault();
-      void goToToday();
-      return;
-    }
-
-    if (keyboardEvent.key.toLowerCase() === "n") {
-      keyboardEvent.preventDefault();
+    },
+    goToPreviousWeek,
+    goToNextWeek,
+    goToToday,
+    openCreateEvent: () => {
       eventModal.openCreate();
-      return;
-    }
-
-    if (keyboardEvent.key !== "Delete") {
-      return;
-    }
-
-    if (keyboardEvent.repeat || isDeletingFromKeyboard) {
-      return;
-    }
-
-    if (document.querySelector("dialog[open]")) {
-      return;
-    }
-
-    const focusedEvent = document.activeElement;
-    const selectedEvent = weekContainer.querySelector(".event-block--selected");
-    const targetEvent =
-      focusedEvent instanceof HTMLElement && focusedEvent.classList.contains("event-block")
-        ? focusedEvent
-        : selectedEvent instanceof HTMLElement
-          ? selectedEvent
-          : null;
-    if (!targetEvent) {
-      return;
-    }
-
-    const eventId = targetEvent.dataset.eventId;
-    if (!eventId) {
-      return;
-    }
-
-    keyboardEvent.preventDefault();
-    isDeletingFromKeyboard = true;
-    try {
-      await deleteEventById(eventId);
-    } catch (error) {
+    },
+    hasOpenDialog: () => Boolean(document.querySelector("dialog[open]")),
+    getDeleteEventId: () => {
+      const focusedEvent = document.activeElement;
+      const selectedEvent = weekContainer.querySelector(".event-block--selected");
+      const targetEvent =
+        focusedEvent instanceof HTMLElement && focusedEvent.classList.contains("event-block")
+          ? focusedEvent
+          : selectedEvent instanceof HTMLElement
+            ? selectedEvent
+            : null;
+      return targetEvent?.dataset.eventId ?? null;
+    },
+    deleteEventById,
+    onDeleteError: (error) => {
       window.alert(String(error));
       console.error("Failed to delete event via keyboard shortcut", error);
-    } finally {
-      isDeletingFromKeyboard = false;
     }
-  };
+  });
   document.addEventListener("keydown", keydownHandler);
 
   await refreshAndRender();
