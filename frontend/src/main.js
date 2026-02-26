@@ -8,6 +8,7 @@ import { renderCalendarList } from "./components/sidebar/calendar-list.js";
 import { renderMiniMonth } from "./components/sidebar/mini-month.js";
 import { renderToolbar } from "./components/toolbar/toolbar.js";
 import { renderWeekGrid } from "./components/week-view/week-grid.js";
+import { DEFAULT_PIXELS_PER_HOUR, installPinchZoom, installZoomGuards } from "./components/week-view/week-zoom.js";
 import { getStartOfWeek } from "./utils/date-utils.js";
 import { setupKeyboardHandler } from "./utils/keyboard-handler.js";
 import { printWeek } from "./utils/print-week.js";
@@ -16,6 +17,8 @@ import { copyEventToClipboard, getCopiedEventData, pasteCopiedEventAtSlot, purge
 import { getState, loadCalendars, loadWeekEvents, setCurrentWeekStart, subscribe } from "./state.js";
 let unsubscribeState = null;
 let keydownHandler = null;
+let teardownZoomGuards = null;
+let teardownPinchZoom = null;
 let currentTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? "UTC";
 let pendingWeekViewRenderOptions = null;
 function invoke(command, payload = {}) {
@@ -32,12 +35,7 @@ function renderWeekSection(container, weekDates, options = {}) {
   }
   const mappedEvents = mapBackendEvents(getState().events);
   const mappedAllDayEvents = mapAllDayEvents(getState().allDayEvents);
-  container.appendChild(
-    renderWeekGrid(weekDates, mappedEvents, mappedAllDayEvents, {
-      calendarsCount: getState().calendars.length,
-      ...options
-    })
-  );
+  container.appendChild(renderWeekGrid(weekDates, mappedEvents, mappedAllDayEvents, { calendarsCount: getState().calendars.length, ...options }));
 }
 async function initializeSettings() {
   try {
@@ -67,6 +65,14 @@ async function renderAppShell() {
   if (keydownHandler) {
     document.removeEventListener("keydown", keydownHandler);
     keydownHandler = null;
+  }
+  if (teardownPinchZoom) {
+    teardownPinchZoom();
+    teardownPinchZoom = null;
+  }
+  if (teardownZoomGuards) {
+    teardownZoomGuards();
+    teardownZoomGuards = null;
   }
   const app = document.querySelector("#app");
   if (!app) {
@@ -99,15 +105,13 @@ async function renderAppShell() {
     return;
   }
   const refreshCurrentWeekEvents = async () => {
-    const weekStart = getState().currentWeekStart ?? getStartOfWeek(new Date(), 1);
-    const { startDate, endDate } = getWeekBounds(weekStart);
+    const { startDate, endDate } = getWeekBounds(getState().currentWeekStart ?? getStartOfWeek(new Date(), 1));
     await loadWeekEvents(startDate, endDate);
   };
-  const refreshAndRender = async () => {
-    await Promise.all([loadCalendars(), refreshCurrentWeekEvents()]);
-  };
+  const refreshAndRender = async () => { await Promise.all([loadCalendars(), refreshCurrentWeekEvents()]); };
   let pendingHighlightEvent = null;
   let activeHighlight = null;
+  let currentPixelsPerHour = DEFAULT_PIXELS_PER_HOUR;
   const clearEventSelection = ({ blurFocusedEvent = false } = {}) => {
     const activeElement = document.activeElement;
     if (
@@ -150,20 +154,11 @@ async function renderAppShell() {
     }
     return true;
   };
-  const goToPreviousWeek = async () => {
-    const weekStart = getState().currentWeekStart ?? getStartOfWeek(new Date(), 1);
-    setCurrentWeekStart(addDays(weekStart, -7));
-    await refreshCurrentWeekEvents();
-  };
-  const goToNextWeek = async () => {
-    const weekStart = getState().currentWeekStart ?? getStartOfWeek(new Date(), 1);
-    setCurrentWeekStart(addDays(weekStart, 7));
-    await refreshCurrentWeekEvents();
-  };
-  const goToToday = async () => {
-    setCurrentWeekStart(getStartOfWeek(new Date(), 1));
-    await refreshCurrentWeekEvents();
-  };
+  const currentWeekStartOrDefault = () => getState().currentWeekStart ?? getStartOfWeek(new Date(), 1);
+  const navigateWeek = async (start) => { setCurrentWeekStart(start); await refreshCurrentWeekEvents(); };
+  const goToPreviousWeek = () => navigateWeek(addDays(currentWeekStartOrDefault(), -7));
+  const goToNextWeek = () => navigateWeek(addDays(currentWeekStartOrDefault(), 7));
+  const goToToday = () => navigateWeek(getStartOfWeek(new Date(), 1));
   const deleteEventById = async (eventId) => {
     const confirmed = await confirmDialog.confirm(t("eventFormDeleteConfirm"));
     if (!confirmed) {
@@ -276,21 +271,20 @@ async function renderAppShell() {
     },
     onPasteFromContextMenu: async (prefill) => {
       try {
-        await pasteCopiedEventAtSlot({
-          invoke,
-          refresh: refreshAndRender,
-          date: prefill.date,
-          startTime: prefill.startTime
-        });
+        await pasteCopiedEventAtSlot({ invoke, refresh: refreshAndRender, date: prefill.date, startTime: prefill.startTime });
       } catch (error) {
         window.alert(String(error));
         console.error("Failed to paste event from context menu", error);
       }
     },
-    canPasteFromContextMenu: () => {
-      return Boolean(getCopiedEventData()?.id);
-    }
+    canPasteFromContextMenu: () => Boolean(getCopiedEventData()?.id),
+    onZoomChange: handleZoomChange
   };
+  function handleZoomChange({ pixelsPerHour, preserveScrollTop }) {
+    currentPixelsPerHour = pixelsPerHour;
+    renderWeekSection(weekContainer, getWeekBounds(currentWeekStartOrDefault()).weekDates, { ...weekViewHandlers,
+      timezone: currentTimezone, pixelsPerHour: currentPixelsPerHour, preserveScrollTop, skipAutoScroll: true });
+  }
   weekContainer.addEventListener("click", (clickEvent) => {
     const target = clickEvent.target;
     if (!(target instanceof Element)) {
@@ -431,7 +425,7 @@ async function renderAppShell() {
     }
     renderWeekSection(weekContainer, weekDates, {
       ...weekViewHandlers,
-      timezone: currentTimezone,
+      timezone: currentTimezone, pixelsPerHour: currentPixelsPerHour,
       preserveScrollTop: weekViewRenderOptions?.preserveScrollTop,
       skipAutoScroll: Boolean(weekViewRenderOptions?.skipAutoScroll)
     });
@@ -449,10 +443,11 @@ async function renderAppShell() {
       activeHighlight = null;
     }
   });
-  renderWeekSection(weekContainer, getWeekBounds(initialWeekStart).weekDates, {
-    ...weekViewHandlers,
-    timezone: currentTimezone
-  });
+  renderWeekSection(
+    weekContainer,
+    getWeekBounds(initialWeekStart).weekDates,
+    { ...weekViewHandlers, timezone: currentTimezone, pixelsPerHour: currentPixelsPerHour }
+  );
   keydownHandler = setupKeyboardHandler({
     closeOpenDialogs: () => {
       document.querySelectorAll("dialog[open]").forEach((dialogElement) => {
@@ -488,6 +483,12 @@ async function renderAppShell() {
     }
   });
   document.addEventListener("keydown", keydownHandler);
+  teardownZoomGuards = installZoomGuards();
+  teardownPinchZoom = installPinchZoom({
+    getBody: () => weekContainer.querySelector(".week-grid__body"),
+    getPixelsPerHour: () => currentPixelsPerHour,
+    onZoomChange: handleZoomChange
+  });
   await refreshAndRender();
 }
 async function bootstrap() {

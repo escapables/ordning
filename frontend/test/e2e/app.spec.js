@@ -45,6 +45,90 @@ test("mini-month day click navigates week and month arrows work", async ({ page 
   await expect(monthTitle).not.toHaveText(beforeMonthText || "");
 });
 
+test("ctrl+wheel zoom adjusts hour height and enforces clamp range", async ({ page }) => {
+  await page.goto("/");
+
+  const body = page.locator(".week-grid__body");
+  const firstHour = page.locator(".day-column").first().locator(".day-column__hour").first();
+  const beforeBox = await firstHour.boundingBox();
+  expect(beforeBox).not.toBeNull();
+
+  const bodyBox = await body.boundingBox();
+  expect(bodyBox).not.toBeNull();
+  await page.mouse.move(bodyBox.x + (bodyBox.width / 2), bodyBox.y + (bodyBox.height / 2));
+  await page.keyboard.down("Control");
+  await page.mouse.wheel(0, -420);
+  await page.keyboard.up("Control");
+
+  await expect.poll(async () => {
+    const box = await firstHour.boundingBox();
+    return box?.height ?? 0;
+  }).toBeGreaterThan(beforeBox.height);
+
+  for (let step = 0; step < 24; step += 1) {
+    await page.keyboard.down("Control");
+    await page.mouse.wheel(0, 600);
+    await page.keyboard.up("Control");
+  }
+  await expect.poll(async () => {
+    const box = await firstHour.boundingBox();
+    return Math.round(box?.height ?? 0);
+  }).toBe(42);
+
+  for (let step = 0; step < 24; step += 1) {
+    await page.keyboard.down("Control");
+    await page.mouse.wheel(0, -600);
+    await page.keyboard.up("Control");
+  }
+  await expect.poll(async () => {
+    const box = await firstHour.boundingBox();
+    return Math.round(box?.height ?? 0);
+  }).toBe(168);
+});
+
+test("ctrl+wheel zoom-in keeps week scroll anchored instead of jumping to top", async ({ page }) => {
+  await page.goto("/");
+
+  const body = page.locator(".week-grid__body");
+  await body.evaluate((node) => {
+    node.scrollTop = 1200;
+  });
+  const beforeScrollTop = await body.evaluate((node) => node.scrollTop);
+
+  const bodyBox = await body.boundingBox();
+  expect(bodyBox).not.toBeNull();
+  await page.mouse.move(bodyBox.x + (bodyBox.width / 2), bodyBox.y + (bodyBox.height / 2));
+  await page.keyboard.down("Control");
+  await page.mouse.wheel(0, -420);
+  await page.keyboard.up("Control");
+
+  await expect.poll(async () => {
+    return body.evaluate((node) => node.scrollTop);
+  }).toBeGreaterThan(beforeScrollTop * 0.7);
+});
+
+test("rapid ctrl+wheel zoom-in keeps scroll away from top", async ({ page }) => {
+  await page.goto("/");
+
+  const body = page.locator(".week-grid__body");
+  await body.evaluate((node) => {
+    node.scrollTop = 1200;
+  });
+  const bodyBox = await body.boundingBox();
+  expect(bodyBox).not.toBeNull();
+
+  await page.mouse.move(bodyBox.x + (bodyBox.width * 0.6), bodyBox.y + (bodyBox.height * 0.55));
+  await page.keyboard.down("Control");
+  await page.mouse.wheel(0, -420);
+  await page.mouse.wheel(0, -420);
+  await page.mouse.wheel(0, -420);
+  await page.keyboard.up("Control");
+
+  await expect.poll(async () => {
+    return body.evaluate((node) => node.scrollTop);
+  }).toBeGreaterThan(500);
+});
+
 test("event block context menu supports delete action", async ({ page }) => {
   await page.goto("/");
 

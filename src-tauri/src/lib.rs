@@ -6,6 +6,7 @@ mod storage;
 
 use chrono::Utc;
 use std::sync::Mutex;
+use tauri::Manager;
 use uuid::Uuid;
 
 use crate::commands::calendar_cmds::{
@@ -70,6 +71,74 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(state)
+        .setup(|app| {
+            #[cfg(target_os = "linux")]
+            if let Some(main_webview) = app.get_webview_window("main") {
+                let _ = main_webview.with_webview(|webview| {
+                    use gtk::prelude::WidgetExt;
+                    use webkit2gtk::WebViewExt;
+
+                    let view = webview.inner();
+
+                    // Disable WebKitGTK's built-in pinch-to-zoom which drives
+                    // pageScaleFactor (visual magnification of the whole page).
+                    // The private GtkGestureZoom stored under "wk-view-zoom-gesture"
+                    // is separate from zoom_level. (see wry #544, tauri #13115)
+                    unsafe {
+                        use webkit2gtk::glib::object::ObjectType;
+                        let obj_ptr = view.as_ptr() as *mut webkit2gtk::glib::gobject_ffi::GObject;
+                        let data = webkit2gtk::glib::gobject_ffi::g_object_get_data(
+                            obj_ptr,
+                            c"wk-view-zoom-gesture".as_ptr(),
+                        );
+                        if !data.is_null() {
+                            webkit2gtk::glib::gobject_ffi::g_signal_handlers_destroy(
+                                data as *mut webkit2gtk::glib::gobject_ffi::GObject,
+                            );
+                        }
+                    }
+
+                    // Forward touchpad pinch events to JS as custom events so the
+                    // calendar grid can use them for its own zoom.  Intercept at the
+                    // widget event level (before GTK gesture processing) and suppress
+                    // so the destroyed gesture cannot reclaim the sequence.
+                    let view_for_pinch = view.clone();
+                    view.connect_event(move |_widget, event| {
+                        use gtk::gdk;
+                        if event.event_type() != gdk::EventType::TouchpadPinch {
+                            return webkit2gtk::glib::Propagation::Proceed;
+                        }
+                        let pinch = event
+                            .downcast_ref::<gdk::EventTouchpadPinch>()
+                            .expect("TouchpadPinch downcast");
+                        let phase = pinch.as_ref().phase;
+                        let scale = pinch.scale();
+                        let (x, y) = pinch.position();
+                        let js = format!(
+                            "document.dispatchEvent(new CustomEvent('__pinch',\
+                             {{detail:{{phase:{phase},scale:{scale},x:{x},y:{y}}}}}))"
+                        );
+                        view_for_pinch.evaluate_javascript(
+                            &js,
+                            None,
+                            None,
+                            webkit2gtk::gio::Cancellable::NONE,
+                            |_| {},
+                        );
+                        webkit2gtk::glib::Propagation::Stop
+                    });
+
+                    // Guard Ctrl+scroll page zoom (separate from pinch).
+                    view.set_zoom_level(1.0);
+                    view.connect_zoom_level_notify(|zoom_view: &webkit2gtk::WebView| {
+                        if (zoom_view.zoom_level() - 1.0).abs() > f64::EPSILON {
+                            zoom_view.set_zoom_level(1.0);
+                        }
+                    });
+                });
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             list_calendars,
             create_calendar,

@@ -2064,12 +2064,14 @@ version = "0.6.0"
 dependencies = [
  "anyhow",
  "chrono",
+ "gtk",
  "serde",
  "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
  "uuid",
+ "webkit2gtk",
 ]
 
 [[package]]

@@ -2,13 +2,13 @@ import { renderAllDayBar } from "./all-day-bar.js";
 import { renderDayColumn, renderDayHeader } from "./day-column.js";
 import { mountTimeIndicator } from "./time-indicator.js";
 import { mountOffscreenIndicators } from "./offscreen-indicators.js";
+import { attachWeekZoom, clampPixelsPerHour, DEFAULT_PIXELS_PER_HOUR } from "./week-zoom.js";
 import { t } from "../../i18n/strings.js";
 import { formatDateKey } from "../../utils/date-utils.js";
 import { buildDayTimedSegments } from "../../utils/event-segments.js";
 
 const HOURS_PER_DAY = 24;
 const MINUTES_PER_HOUR = 60;
-const PIXELS_PER_HOUR = 42;
 
 function renderTimeLabel(hour) {
   const label = document.createElement("div");
@@ -53,7 +53,9 @@ function autoScrollToCurrentTime(body, dates, pixelsPerHour) {
 
 function restoreScrollTop(body, scrollTop) {
   const maxScrollTop = Math.max(0, body.scrollHeight - body.clientHeight);
-  body.scrollTop = Math.max(0, Math.min(scrollTop, maxScrollTop));
+  const nextScrollTop = Math.max(0, Math.min(scrollTop, maxScrollTop));
+  body.scrollTop = nextScrollTop;
+  body.dataset.requestedScrollTop = String(nextScrollTop);
 }
 
 function deferAutoScroll(body, dates, pixelsPerHour) {
@@ -78,10 +80,19 @@ function deferAutoScroll(body, dates, pixelsPerHour) {
 
 function deferRestoreScrollTop(body, scrollTop) {
   let attempts = 0;
+  let previousMaxScrollTop = -1;
 
   function tryRestore() {
     if (body.isConnected) {
+      const maxScrollTop = Math.max(0, body.scrollHeight - body.clientHeight);
       restoreScrollTop(body, scrollTop);
+      const wasClamped = scrollTop > maxScrollTop + 1;
+      const maxScrollTopGrowing = maxScrollTop > previousMaxScrollTop + 1;
+      previousMaxScrollTop = maxScrollTop;
+      if (wasClamped && maxScrollTopGrowing && attempts < 5) {
+        attempts += 1;
+        requestAnimationFrame(tryRestore);
+      }
       return;
     }
 
@@ -111,10 +122,14 @@ export function renderWeekGrid(dates, events = [], allDayEvents = [], options = 
     canPasteFromContextMenu = () => false,
     timezone = "UTC",
     preserveScrollTop = null,
-    skipAutoScroll = false
+    skipAutoScroll = false,
+    pixelsPerHour: requestedPixelsPerHour = DEFAULT_PIXELS_PER_HOUR,
+    onZoomChange = () => {}
   } = options;
+  const pixelsPerHour = clampPixelsPerHour(requestedPixelsPerHour);
   const root = document.createElement("section");
   root.className = "week-view";
+  root.style.setProperty("--hour-row-height", `${pixelsPerHour}px`);
 
   const eventsByDate = buildDayTimedSegments(dates, events);
 
@@ -150,13 +165,16 @@ export function renderWeekGrid(dates, events = [], allDayEvents = [], options = 
 
   const body = document.createElement("div");
   body.className = "week-grid__body";
+  if (Number.isFinite(preserveScrollTop)) {
+    body.dataset.requestedScrollTop = String(preserveScrollTop);
+  }
   body.appendChild(renderTimeLabels());
 
   dates.forEach((date) => {
     const dateKey = formatDateKey(date);
     const dayEvents = eventsByDate.get(dateKey) ?? [];
     body.appendChild(
-      renderDayColumn(date, dayEvents, PIXELS_PER_HOUR, {
+      renderDayColumn(date, dayEvents, pixelsPerHour, {
         onEventSelect,
         onEventClick,
         onEventDelete,
@@ -171,7 +189,7 @@ export function renderWeekGrid(dates, events = [], allDayEvents = [], options = 
     );
   });
 
-  mountTimeIndicator(body, dates, PIXELS_PER_HOUR, timezone);
+  mountTimeIndicator(body, dates, pixelsPerHour, timezone);
 
   const bodyWrap = document.createElement("div");
   bodyWrap.className = "week-grid__body-wrap";
@@ -190,10 +208,13 @@ export function renderWeekGrid(dates, events = [], allDayEvents = [], options = 
   }
   root.appendChild(bodyWrap);
   mountOffscreenIndicators(bodyWrap, body);
+
+  attachWeekZoom(body, pixelsPerHour, onZoomChange);
+
   if (Number.isFinite(preserveScrollTop)) {
     deferRestoreScrollTop(body, preserveScrollTop);
   } else if (!skipAutoScroll) {
-    deferAutoScroll(body, dates, PIXELS_PER_HOUR);
+    deferAutoScroll(body, dates, pixelsPerHour);
   }
 
   return root;

@@ -60,6 +60,7 @@ Swedish default, English toggle. Two-language only.
 │       │   │   └── search.js
 │       │   ├── week-view/
 │       │   │   ├── week-grid.js
+│       │   │   ├── week-zoom.js
 │       │   │   ├── day-column.js
 │       │   │   ├── event-block.js
 │       │   │   ├── context-menu.js
