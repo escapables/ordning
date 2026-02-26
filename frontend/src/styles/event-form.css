@@ -82,6 +82,10 @@
   background: #fff;
 }
 
+.event-modal__input--error {
+  border-color: #d92f24;
+}
+
 .event-modal__textarea {
   min-height: 56px;
   resize: vertical;

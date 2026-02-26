@@ -18,6 +18,27 @@ test("slot drag opens modal and submit creates event", async ({ page }) => {
   await expect(page.locator(".event-block")).toHaveCount(beforeCount + 1);
 });
 
+test("empty title submit shows inline error and keeps modal open", async ({ page }) => {
+  await page.goto("/");
+
+  const sourceHour = page.locator(".day-column").first().locator(".day-column__hour").nth(1);
+  const targetHour = page.locator(".day-column").first().locator(".day-column__hour").nth(3);
+  await sourceHour.dragTo(targetHour);
+
+  const modal = page.locator(".event-modal[open]");
+  const titleInput = page.locator(".event-modal__input[name='title']");
+  await expect(modal).toBeVisible();
+  await titleInput.fill("");
+  await page.locator(".event-modal__actions button[type='submit']").click();
+
+  await expect(modal).toBeVisible();
+  await expect(titleInput).toHaveClass(/event-modal__input--error/);
+  await expect(titleInput).toBeFocused();
+
+  await titleInput.fill("Valid title");
+  await expect(titleInput).not.toHaveClass(/event-modal__input--error/);
+});
+
 test("single click on empty slot does not open modal", async ({ page }) => {
   await page.goto("/");
 

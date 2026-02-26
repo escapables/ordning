@@ -72,8 +72,17 @@ export function createImportDialog({ onImported = async () => {} } = {}) {
 
   const previewPath = document.createElement("p");
   previewPath.className = "import-dialog__path";
+  const previewHeader = document.createElement("div");
+  previewHeader.className = "import-dialog__preview-header";
   previewPath.textContent = t("importNoFileSelected");
-  previewBox.appendChild(previewPath);
+  previewHeader.appendChild(previewPath);
+
+  const pickButton = document.createElement("button");
+  pickButton.type = "button";
+  pickButton.className = "import-dialog__btn import-dialog__btn--pick";
+  pickButton.textContent = t("importPickFile");
+  previewHeader.appendChild(pickButton);
+  previewBox.appendChild(previewHeader);
 
   const previewSummary = document.createElement("ul");
   previewSummary.className = "import-dialog__summary";
@@ -84,15 +93,9 @@ export function createImportDialog({ onImported = async () => {} } = {}) {
   const actions = document.createElement("div");
   actions.className = "import-dialog__actions";
 
-  const pickButton = document.createElement("button");
-  pickButton.type = "button";
-  pickButton.className = "import-dialog__btn";
-  pickButton.textContent = t("importPickFile");
-  actions.appendChild(pickButton);
-
   const cancelButton = document.createElement("button");
   cancelButton.type = "button";
-  cancelButton.className = "import-dialog__btn";
+  cancelButton.className = "import-dialog__btn import-dialog__btn--cancel";
   cancelButton.textContent = t("importCancel");
   actions.appendChild(cancelButton);
 

@@ -98,7 +98,6 @@ export function createEventModal({
   form.appendChild(noCalendarsPrompt);
 
   const titleInput = createInput("text", "title");
-  titleInput.required = true;
   titleInput.maxLength = 200;
   form.appendChild(createField(t("eventFormTitle"), titleInput));
 
@@ -212,6 +211,10 @@ export function createEventModal({
     error.textContent = "";
   }
 
+  function setTitleValidationError(active) {
+    titleInput.classList.toggle("event-modal__input--error", active);
+  }
+
   function applyAllDayState() {
     const disabled = allDayInput.checked;
     startTimeInput.disabled = disabled;
@@ -270,6 +273,7 @@ export function createEventModal({
     privateDescriptionInput.value = "";
     publicDescriptionInput.value = "";
     applyAllDayState();
+    setTitleValidationError(false);
   }
 
   function setModeCreate() {
@@ -355,6 +359,7 @@ export function createEventModal({
       privateDescriptionInput.value = event.descriptionPrivate ?? "";
       publicDescriptionInput.value = event.descriptionPublic ?? "";
       applyAllDayState();
+      setTitleValidationError(false);
 
       dialog.showModal();
       titleInput.focus();
@@ -365,6 +370,16 @@ export function createEventModal({
   }
 
   allDayInput.addEventListener("change", applyAllDayState);
+  titleInput.addEventListener("input", () => {
+    if (titleInput.value.trim().length > 0) {
+      setTitleValidationError(false);
+    }
+  });
+  titleInput.addEventListener("focus", () => {
+    if (titleInput.value.trim().length > 0) {
+      setTitleValidationError(false);
+    }
+  });
 
   cancelButton.addEventListener("click", () => {
     dialog.close();
@@ -407,6 +422,12 @@ export function createEventModal({
 
     if (!calendarSelect.value) {
       showError(t("eventFormCalendarRequired"));
+      return;
+    }
+
+    if (titleInput.value.trim().length === 0) {
+      setTitleValidationError(true);
+      titleInput.focus();
       return;
     }
 
