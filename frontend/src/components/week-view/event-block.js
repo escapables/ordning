@@ -1,6 +1,7 @@
 const MINUTES_PER_HOUR = 60;
 const MINUTES_PER_DAY = 24 * MINUTES_PER_HOUR;
 const MIN_EVENT_HEIGHT = 18;
+const RESIZE_EDGE_PX = 6;
 
 function parseTimeToMinutes(time) {
   const [hours, minutes] = String(time ?? "00:00").split(":").map(Number);
@@ -143,12 +144,25 @@ function createEventElement(event, pixelsPerMinute, handlers) {
     onEventSelect(event.id, element);
   };
 
+  const updateCursor = (clientY) => {
+    const rect = element.getBoundingClientRect();
+    const nearTop = clientY - rect.top <= RESIZE_EDGE_PX;
+    const nearBottom = rect.bottom - clientY <= RESIZE_EDGE_PX;
+    element.style.cursor = nearTop || nearBottom ? "ns-resize" : "pointer";
+  };
+
   element.addEventListener("pointerdown", (pointerEvent) => {
     if (pointerEvent.button !== 0) {
       return;
     }
     select(pointerEvent);
     onEventPointerDown(pointerEvent, event, element);
+  });
+  element.addEventListener("pointermove", (pointerEvent) => {
+    updateCursor(pointerEvent.clientY);
+  });
+  element.addEventListener("pointerleave", () => {
+    element.style.cursor = "pointer";
   });
   element.addEventListener("click", (clickEvent) => {
     select(clickEvent);

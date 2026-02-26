@@ -101,6 +101,7 @@ export function renderDayColumn(date, events, pixelsPerHour, options = {}) {
     onEventDelete = () => {},
     onEventCopy = () => {},
     onEventMove = async () => {},
+    onEventResize = async () => {},
     onCreateSlot = () => {},
     onCreateFromContextMenu = () => {},
     onPasteFromContextMenu = () => {},
@@ -119,7 +120,10 @@ export function renderDayColumn(date, events, pixelsPerHour, options = {}) {
     column.appendChild(cell);
   }
 
-  const onEventPointerDown = createEventMovePointerDownHandler(column, pixelsPerHour, { onEventMove });
+  const onEventPointerDown = createEventMovePointerDownHandler(column, pixelsPerHour, {
+    onEventMove,
+    onEventResize
+  });
   column.appendChild(
     renderEventBlocks(events, pixelsPerHour, {
       onEventSelect,

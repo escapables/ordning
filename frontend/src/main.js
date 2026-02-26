@@ -208,6 +208,42 @@ async function renderAppShell() {
   settingsButton.addEventListener("click", () => {
     settingsDialog.open();
   });
+  async function updateTimedEventPosition({ eventId, date, startTime, endTime }, actionName) {
+    try {
+      const weekBody = weekContainer.querySelector(".week-grid__body");
+      pendingWeekViewRenderOptions = {
+        preserveScrollTop: weekBody instanceof HTMLElement ? weekBody.scrollTop : null,
+        skipAutoScroll: true,
+        remainingRenders: 2
+      };
+      const existing = await invoke("get_event", { id: eventId });
+      if (!existing?.calendarId) {
+        pendingWeekViewRenderOptions = null;
+        return;
+      }
+      await invoke("update_event", {
+        id: eventId,
+        event: {
+          calendarId: existing.calendarId,
+          title: existing.title ?? "",
+          startDate: date,
+          endDate: date,
+          startTime,
+          endTime,
+          allDay: false,
+          descriptionPrivate: existing.descriptionPrivate ?? "",
+          descriptionPublic: existing.descriptionPublic ?? "",
+          location: existing.location ?? ""
+        }
+      });
+      pendingHighlightEvent = { eventId, skipScroll: true };
+      await refreshCurrentWeekEvents();
+    } catch (error) {
+      pendingWeekViewRenderOptions = null;
+      window.alert(String(error));
+      console.error(`Failed to ${actionName} event`, error);
+    }
+  }
   const weekViewHandlers = {
     onEventSelect: (_eventId, element) => {
       clearEventSelection();
@@ -228,40 +264,10 @@ async function renderAppShell() {
       await copyEventToClipboard(eventData, t);
     },
     onEventMove: async ({ eventId, date, startTime, endTime }) => {
-      try {
-        const weekBody = weekContainer.querySelector(".week-grid__body");
-        pendingWeekViewRenderOptions = {
-          preserveScrollTop: weekBody instanceof HTMLElement ? weekBody.scrollTop : null,
-          skipAutoScroll: true,
-          remainingRenders: 2
-        };
-        const existing = await invoke("get_event", { id: eventId });
-        if (!existing?.calendarId) {
-          pendingWeekViewRenderOptions = null;
-          return;
-        }
-        await invoke("update_event", {
-          id: eventId,
-          event: {
-            calendarId: existing.calendarId,
-            title: existing.title ?? "",
-            startDate: date,
-            endDate: date,
-            startTime,
-            endTime,
-            allDay: false,
-            descriptionPrivate: existing.descriptionPrivate ?? "",
-            descriptionPublic: existing.descriptionPublic ?? "",
-            location: existing.location ?? ""
-          }
-        });
-        pendingHighlightEvent = { eventId, skipScroll: true };
-        await refreshCurrentWeekEvents();
-      } catch (error) {
-        pendingWeekViewRenderOptions = null;
-        window.alert(String(error));
-        console.error("Failed to move event", error);
-      }
+      await updateTimedEventPosition({ eventId, date, startTime, endTime }, "move");
+    },
+    onEventResize: async ({ eventId, date, startTime, endTime }) => {
+      await updateTimedEventPosition({ eventId, date, startTime, endTime }, "resize");
     },
     onCreateSlot: (prefill) => {
       eventModal.openCreate(prefill);

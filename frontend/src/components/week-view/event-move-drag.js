@@ -134,10 +134,11 @@ function resolveColumnFromPoint(clientX, clientY) {
 }
 
 export function createEventMovePointerDownHandler(column, pixelsPerHour, handlers = {}) {
-  const { onEventMove = async () => {} } = handlers;
+  const { onEventMove = async () => {}, onEventResize = async () => {} } = handlers;
   const dragState = {
     pointerId: null,
     dragging: false,
+    mode: "move",
     startX: 0,
     startY: 0,
     eventId: null,
@@ -147,10 +148,42 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     targetColumn: null,
     targetDate: null,
     targetStartMinutes: 0,
+    targetEndMinutes: MIN_SELECTION_MINUTES,
     draggedElement: null,
     preview: null,
     originalStyles: new Map()
   };
+
+  function isResizeTop(pointerEvent, element) {
+    return pointerEvent.clientY - element.getBoundingClientRect().top <= 6;
+  }
+
+  function isResizeBottom(pointerEvent, element) {
+    return element.getBoundingClientRect().bottom - pointerEvent.clientY <= 6;
+  }
+
+  function resolveDragMode(pointerEvent, element) {
+    if (isResizeTop(pointerEvent, element)) {
+      return "resize-top";
+    }
+    if (isResizeBottom(pointerEvent, element)) {
+      return "resize-bottom";
+    }
+    return "move";
+  }
+
+  function previewRange() {
+    if (dragState.mode === "move") {
+      return {
+        startMinutes: dragState.targetStartMinutes,
+        endMinutes: Math.min(MINUTES_PER_DAY, dragState.targetStartMinutes + dragState.durationMinutes)
+      };
+    }
+    return {
+      startMinutes: dragState.targetStartMinutes,
+      endMinutes: dragState.targetEndMinutes
+    };
+  }
 
   function rememberOriginalStyle(element) {
     if (dragState.originalStyles.has(element)) {
@@ -215,17 +248,18 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     });
 
     if (includeGhost && dragState.preview instanceof HTMLElement) {
+      const ghost = previewRange();
       items.push({
         element: dragState.preview,
-        startMinutes: dragState.targetStartMinutes,
-        endMinutes: Math.min(MINUTES_PER_DAY, dragState.targetStartMinutes + dragState.durationMinutes)
+        startMinutes: ghost.startMinutes,
+        endMinutes: ghost.endMinutes
       });
     }
 
     layoutItems(items).forEach(applyItemPosition);
   }
 
-  function renderDraggingLayout(clientX, clientY) {
+  function renderMovingLayout(clientX, clientY) {
     const targetColumn = resolveColumnFromPoint(clientX, clientY) ?? dragState.sourceColumn;
     if (!(targetColumn instanceof HTMLElement)) {
       return;
@@ -266,6 +300,41 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     }
   }
 
+  function renderResizingLayout(clientY) {
+    const targetColumn = dragState.sourceColumn;
+    if (!(targetColumn instanceof HTMLElement)) {
+      return;
+    }
+
+    const targetDate = targetColumn.dataset.date;
+    if (!targetDate) {
+      return;
+    }
+
+    dragState.targetColumn = targetColumn;
+    dragState.targetDate = targetDate;
+
+    const rect = targetColumn.getBoundingClientRect();
+    const rawMinutes = roundNearest(pointerToMinutes(clientY, rect, pixelsPerHour), TIME_STEP_MINUTES);
+    if (dragState.mode === "resize-top") {
+      dragState.targetStartMinutes = clamp(rawMinutes, 0, dragState.targetEndMinutes - MIN_SELECTION_MINUTES);
+    } else {
+      dragState.targetEndMinutes = clamp(rawMinutes, dragState.targetStartMinutes + MIN_SELECTION_MINUTES, MINUTES_PER_DAY);
+    }
+
+    const preview = ensurePreview(targetColumn);
+    const range = previewRange();
+    preview.style.top = `${(range.startMinutes / MINUTES_PER_HOUR) * pixelsPerHour}px`;
+    preview.style.height = `${Math.max(((range.endMinutes - range.startMinutes) / MINUTES_PER_HOUR) * pixelsPerHour, 18)}px`;
+
+    restoreTemporaryStyles();
+    if (dragState.draggedElement instanceof HTMLElement) {
+      rememberOriginalStyle(dragState.draggedElement);
+      dragState.draggedElement.style.visibility = "hidden";
+    }
+    layoutColumnItems(targetColumn, { includeGhost: true });
+  }
+
   function stopDrag() {
     window.removeEventListener("pointermove", handlePointerMove, true);
     window.removeEventListener("pointerup", handlePointerUp, true);
@@ -276,11 +345,13 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
 
     dragState.pointerId = null;
     dragState.dragging = false;
+    dragState.mode = "move";
     dragState.eventId = null;
     dragState.sourceColumn = null;
     dragState.targetColumn = null;
     dragState.targetDate = null;
     dragState.targetStartMinutes = 0;
+    dragState.targetEndMinutes = MIN_SELECTION_MINUTES;
     dragState.durationMinutes = MIN_SELECTION_MINUTES;
     dragState.eventColor = "#007aff";
     dragState.draggedElement = null;
@@ -300,7 +371,11 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
       dragState.dragging = true;
     }
 
-    renderDraggingLayout(pointerEvent.clientX, pointerEvent.clientY);
+    if (dragState.mode === "move") {
+      renderMovingLayout(pointerEvent.clientX, pointerEvent.clientY);
+      return;
+    }
+    renderResizingLayout(pointerEvent.clientY);
   }
 
   async function handlePointerUp(pointerEvent) {
@@ -312,13 +387,21 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
       && Boolean(dragState.eventId)
       && Boolean(dragState.targetDate);
 
-    if (didDrag) {
+    if (didDrag && dragState.mode === "move") {
       const endMinutes = Math.min(MINUTES_PER_DAY, dragState.targetStartMinutes + dragState.durationMinutes);
       await onEventMove({
         eventId: dragState.eventId,
         date: dragState.targetDate,
         startTime: formatTimeFromMinutes(dragState.targetStartMinutes),
         endTime: endMinutes >= MINUTES_PER_DAY ? "23:59" : formatTimeFromMinutes(endMinutes)
+      });
+    }
+    if (didDrag && dragState.mode !== "move") {
+      await onEventResize({
+        eventId: dragState.eventId,
+        date: dragState.targetDate,
+        startTime: formatTimeFromMinutes(dragState.targetStartMinutes),
+        endTime: dragState.targetEndMinutes >= MINUTES_PER_DAY ? "23:59" : formatTimeFromMinutes(dragState.targetEndMinutes)
       });
     }
 
@@ -331,15 +414,20 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     }
 
     dragState.pointerId = pointerEvent.pointerId;
+    dragState.mode = resolveDragMode(pointerEvent, element);
     dragState.startX = pointerEvent.clientX;
     dragState.startY = pointerEvent.clientY;
     dragState.eventId = event.id;
     dragState.eventColor = event.color ?? "#007aff";
-    dragState.durationMinutes = eventDurationMinutes(event);
+    const range = readEventBlockRange(element);
+    const startMinutes = range?.startMinutes ?? roundNearest(event.startMinutes ?? 0, TIME_STEP_MINUTES);
+    const endMinutes = range?.endMinutes ?? Math.min(MINUTES_PER_DAY, startMinutes + eventDurationMinutes(event));
+    dragState.durationMinutes = Math.max(MIN_SELECTION_MINUTES, endMinutes - startMinutes);
     dragState.sourceColumn = column;
     dragState.targetColumn = column;
     dragState.targetDate = column.dataset.date ?? null;
-    dragState.targetStartMinutes = roundNearest(event.startMinutes ?? 0, TIME_STEP_MINUTES);
+    dragState.targetStartMinutes = startMinutes;
+    dragState.targetEndMinutes = endMinutes;
     dragState.draggedElement = element;
 
     window.addEventListener("pointermove", handlePointerMove, true);
