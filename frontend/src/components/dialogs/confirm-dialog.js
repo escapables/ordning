@@ -23,6 +23,7 @@ export function createConfirmDialog() {
   confirmButton.type = "button";
   confirmButton.className = "confirm-dialog__btn confirm-dialog__btn--danger";
   confirmButton.textContent = t("eventFormDelete");
+  confirmButton.autofocus = true;
 
   actions.append(cancelButton, confirmButton);
   form.append(message, actions);
@@ -53,6 +54,19 @@ export function createConfirmDialog() {
     closeWith(false);
   });
 
+  dialog.addEventListener("keydown", (keyboardEvent) => {
+    if (keyboardEvent.key === "Escape") {
+      keyboardEvent.preventDefault();
+      closeWith(false);
+      return;
+    }
+
+    if (keyboardEvent.key === "Enter") {
+      keyboardEvent.preventDefault();
+      closeWith(true);
+    }
+  });
+
   dialog.addEventListener("close", () => {
     if (closedByButton) {
       closedByButton = false;
@@ -74,6 +88,7 @@ export function createConfirmDialog() {
       cancelButton.textContent = options.cancelLabel ?? defaultCancelLabel;
       confirmButton.textContent = options.confirmLabel ?? defaultConfirmLabel;
       dialog.showModal();
+      confirmButton.focus();
     });
 
   return {

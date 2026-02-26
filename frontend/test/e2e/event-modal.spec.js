@@ -55,3 +55,30 @@ test("modal delete cancel keeps event", async ({ page }) => {
   await expect(page.locator(".event-modal[open]")).toBeVisible();
   await expect(targetEvent).toHaveCount(1);
 });
+
+test("confirm dialog autofocuses confirm button and Enter confirms", async ({ page }) => {
+  await page.goto("/");
+
+  const targetEvent = page.locator(".event-block", { hasText: "Sprint Planning" });
+  await expect(targetEvent).toHaveCount(1);
+  await targetEvent.focus();
+  await page.keyboard.press("Delete");
+  await expect(page.locator(".confirm-dialog[open]")).toBeVisible();
+  await expect(page.locator(".confirm-dialog__btn--danger")).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".confirm-dialog[open]")).toHaveCount(0);
+  await expect(targetEvent).toHaveCount(0);
+});
+
+test("confirm dialog Escape cancels action", async ({ page }) => {
+  await page.goto("/");
+
+  const targetEvent = page.locator(".event-block", { hasText: "Sprint Planning" });
+  await expect(targetEvent).toHaveCount(1);
+  await targetEvent.focus();
+  await page.keyboard.press("Delete");
+  await expect(page.locator(".confirm-dialog[open]")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".confirm-dialog[open]")).toHaveCount(0);
+  await expect(targetEvent).toHaveCount(1);
+});
