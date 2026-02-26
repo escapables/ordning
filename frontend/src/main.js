@@ -167,7 +167,16 @@ async function renderAppShell() {
   let pendingHighlightEventId = null;
   let activeHighlight = null;
   let isDeletingFromKeyboard = false;
-  const clearEventSelection = () => {
+  const clearEventSelection = ({ blurFocusedEvent = false } = {}) => {
+    const activeElement = document.activeElement;
+    if (
+      activeElement instanceof HTMLElement &&
+      activeElement.classList.contains("event-block") &&
+      (blurFocusedEvent || activeElement.classList.contains("event-block--selected"))
+    ) {
+      activeElement.blur();
+    }
+
     weekContainer.querySelectorAll(".event-block--selected").forEach((block) => {
       block.classList.remove("event-block--selected");
     });
@@ -409,11 +418,6 @@ async function renderAppShell() {
       return;
     }
 
-    const targetTagName = keyboardEvent.target?.tagName?.toUpperCase();
-    if (targetTagName === "INPUT" || targetTagName === "TEXTAREA" || targetTagName === "SELECT") {
-      return;
-    }
-
     const closeOpenDialogs = () => {
       const openDialogs = document.querySelectorAll("dialog[open]");
       openDialogs.forEach((dialogElement) => {
@@ -424,7 +428,12 @@ async function renderAppShell() {
     if (keyboardEvent.key === "Escape") {
       keyboardEvent.preventDefault();
       closeOpenDialogs();
-      clearEventSelection();
+      clearEventSelection({ blurFocusedEvent: true });
+      return;
+    }
+
+    const targetTagName = keyboardEvent.target?.tagName?.toUpperCase();
+    if (targetTagName === "INPUT" || targetTagName === "TEXTAREA" || targetTagName === "SELECT") {
       return;
     }
 
@@ -465,11 +474,18 @@ async function renderAppShell() {
     }
 
     const focusedEvent = document.activeElement;
-    if (!(focusedEvent instanceof HTMLElement) || !focusedEvent.classList.contains("event-block")) {
+    const selectedEvent = weekContainer.querySelector(".event-block--selected");
+    const targetEvent =
+      focusedEvent instanceof HTMLElement && focusedEvent.classList.contains("event-block")
+        ? focusedEvent
+        : selectedEvent instanceof HTMLElement
+          ? selectedEvent
+          : null;
+    if (!targetEvent) {
       return;
     }
 
-    const eventId = focusedEvent.dataset.eventId;
+    const eventId = targetEvent.dataset.eventId;
     if (!eventId) {
       return;
     }

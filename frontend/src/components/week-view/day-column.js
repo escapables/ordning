@@ -51,12 +51,6 @@ function toPrefillFromRange(startMinutes, endMinutes) {
   };
 }
 
-function toPrefillFromClick(minutes) {
-  const hourStart = Math.floor(minutes / MINUTES_PER_HOUR) * MINUTES_PER_HOUR;
-  const hourEnd = Math.min(MINUTES_PER_DAY, hourStart + MINUTES_PER_HOUR);
-  return toPrefillFromRange(hourStart, hourEnd);
-}
-
 function isToday(date) {
   const now = new Date();
   return date.getFullYear() === now.getFullYear()
@@ -274,9 +268,6 @@ function wireCreateInteractions(column, pixelsPerHour, onCreateSlot) {
         Math.min(startMinutes, endMinutes),
         Math.max(startMinutes, endMinutes)
       );
-      onCreateSlot({ date, ...prefill });
-    } else {
-      const prefill = toPrefillFromClick(startMinutes);
       onCreateSlot({ date, ...prefill });
     }
 

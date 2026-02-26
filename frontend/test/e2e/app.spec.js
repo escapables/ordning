@@ -142,6 +142,7 @@ test("single click selects event, dblclick opens modal, and clear selection work
 
   await page.keyboard.press("Escape");
   await expect(page.locator(".event-block--selected")).toHaveCount(0);
+  await expect(page.locator(".event-block:focus")).toHaveCount(0);
 
   await targetEvent.click();
   await expect(page.locator(".event-block--selected")).toHaveCount(1);
