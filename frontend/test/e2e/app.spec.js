@@ -174,6 +174,24 @@ test("cross-midnight event renders continuation segment on next day", async ({ p
   await expect(tuesdaySegment.locator(".event-block__time")).toHaveText("22:00 - 02:00");
 });
 
+test("hovering cross-midnight segment highlights all segments with same event id", async ({ page }) => {
+  await page.goto("/");
+
+  const mondaySegment = page.locator(".day-column").nth(0).locator(".event-block", { hasText: "Night Deploy" });
+  const tuesdaySegment = page.locator(".day-column").nth(1).locator(".event-block", { hasText: "Night Deploy" });
+
+  await expect(mondaySegment).toHaveCount(1);
+  await expect(tuesdaySegment).toHaveCount(1);
+
+  await mondaySegment.hover();
+  await expect(mondaySegment).toHaveClass(/event-block--hover-synced/);
+  await expect(tuesdaySegment).toHaveClass(/event-block--hover-synced/);
+
+  await page.locator(".main-toolbar__title").hover();
+  await expect(mondaySegment).not.toHaveClass(/event-block--hover-synced/);
+  await expect(tuesdaySegment).not.toHaveClass(/event-block--hover-synced/);
+});
+
 test("all-day events support select open context menu and keyboard delete", async ({ page }) => {
   await page.goto("/");
 

@@ -273,7 +273,8 @@
   transition: background-color 0.12s ease, border-color 0.12s ease;
 }
 
-.event-block:hover {
+.event-block:hover,
+.event-block--hover-synced {
   background-color: color-mix(in srgb, var(--event-color) 35%, #fff);
   border-color: color-mix(in srgb, var(--event-color) 35%, transparent);
 }

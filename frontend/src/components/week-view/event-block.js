@@ -91,6 +91,21 @@ function layoutEvents(events) {
   return normalized;
 }
 
+function toggleSyncedHover(element, active) {
+  const eventId = element.dataset.eventId;
+  if (!eventId) {
+    return;
+  }
+
+  const scope = element.closest(".week-grid") ?? document;
+  const matchingBlocks = scope.querySelectorAll(".event-block[data-event-id]");
+  matchingBlocks.forEach((block) => {
+    if (block instanceof HTMLElement && block.dataset.eventId === eventId) {
+      block.classList.toggle("event-block--hover-synced", active);
+    }
+  });
+}
+
 function createEventElement(event, pixelsPerMinute, handlers) {
   const {
     onEventSelect = () => {},
@@ -144,6 +159,12 @@ function createEventElement(event, pixelsPerMinute, handlers) {
   element.addEventListener("dblclick", (doubleClickEvent) => {
     doubleClickEvent.stopPropagation();
     onEventOpen(event.id);
+  });
+  element.addEventListener("mouseenter", () => {
+    toggleSyncedHover(element, true);
+  });
+  element.addEventListener("mouseleave", () => {
+    toggleSyncedHover(element, false);
   });
   element.addEventListener("keydown", (keyboardEvent) => {
     if (keyboardEvent.key !== "Enter" && keyboardEvent.key !== " ") {
