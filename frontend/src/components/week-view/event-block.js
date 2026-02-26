@@ -24,7 +24,17 @@ function normalizeEvents(events) {
         displayEndTime: event.displayEndTime ?? event.endTime
       };
     })
-    .sort((a, b) => a.startMinutes - b.startMinutes || a.endMinutes - b.endMinutes);
+    .sort((a, b) => {
+      const startDiff = a.startMinutes - b.startMinutes;
+      if (startDiff !== 0) {
+        return startDiff;
+      }
+      const endDiff = a.endMinutes - b.endMinutes;
+      if (endDiff !== 0) {
+        return endDiff;
+      }
+      return String(a.id).localeCompare(String(b.id));
+    });
 }
 
 function splitIntoOverlapGroups(events) {
@@ -125,8 +135,11 @@ function createEventElement(event, pixelsPerMinute, handlers) {
   element.style.left = `calc(${event.column * widthPercent}% + 2px)`;
   element.style.setProperty("--event-color", event.color);
   element.dataset.eventId = event.id;
+  element.dataset.eventDate = event.date ?? "";
   element.dataset.startMinutes = String(event.startMinutes);
   element.dataset.endMinutes = String(event.endMinutes);
+  element.dataset.clockStart = event.startTime ?? "";
+  element.dataset.clockEnd = event.endTime ?? "";
   element.tabIndex = 3;
 
   const title = document.createElement("div");

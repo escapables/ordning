@@ -11,14 +11,7 @@ import { renderWeekGrid } from "./components/week-view/week-grid.js";
 import { getStartOfWeek } from "./utils/date-utils.js";
 import { setupKeyboardHandler } from "./utils/keyboard-handler.js";
 import { printWeek } from "./utils/print-week.js";
-import {
-  addDays,
-  getWeekBounds,
-  mapAllDayEvents,
-  mapBackendEvents,
-  parseDateKey,
-  scrollWeekBodyToEventStart
-} from "./utils/week-view-events.js";
+import { addDays, getWeekBounds, mapAllDayEvents, mapBackendEvents, parseDateKey, scrollWeekBodyToEventStart } from "./utils/week-view-events.js";
 import { copyEventToClipboard, getCopiedEventData, pasteCopiedEventAtSlot, purgePastEventsFlow } from "./utils/ui-actions.js";
 import { getState, loadCalendars, loadWeekEvents, setCurrentWeekStart, subscribe } from "./state.js";
 let unsubscribeState = null;
@@ -208,7 +201,7 @@ async function renderAppShell() {
   settingsButton.addEventListener("click", () => {
     settingsDialog.open();
   });
-  async function updateTimedEventPosition({ eventId, date, startTime, endTime }, actionName) {
+  async function updateTimedEventPosition({ eventId, date, startDate, endDate, startTime, endTime, linkedNeighbor }, actionName) {
     try {
       const weekBody = weekContainer.querySelector(".week-grid__body");
       pendingWeekViewRenderOptions = {
@@ -216,26 +209,32 @@ async function renderAppShell() {
         skipAutoScroll: true,
         remainingRenders: 2
       };
-      const existing = await invoke("get_event", { id: eventId });
-      if (!existing?.calendarId) {
-        pendingWeekViewRenderOptions = null;
-        return;
+      const updates = [{ eventId, date, startDate, endDate, startTime, endTime }];
+      if (linkedNeighbor?.eventId) {
+        updates.push(linkedNeighbor);
       }
-      await invoke("update_event", {
-        id: eventId,
-        event: {
-          calendarId: existing.calendarId,
-          title: existing.title ?? "",
-          startDate: date,
-          endDate: date,
-          startTime,
-          endTime,
-          allDay: false,
-          descriptionPrivate: existing.descriptionPrivate ?? "",
-          descriptionPublic: existing.descriptionPublic ?? "",
-          location: existing.location ?? ""
+      for (const update of updates) {
+        const existing = await invoke("get_event", { id: update.eventId });
+        if (!existing?.calendarId) {
+          pendingWeekViewRenderOptions = null;
+          return;
         }
-      });
+        await invoke("update_event", {
+          id: update.eventId,
+          event: {
+            calendarId: existing.calendarId,
+            title: existing.title ?? "",
+            startDate: update.startDate ?? update.date,
+            endDate: update.endDate ?? update.date,
+            startTime: update.startTime,
+            endTime: update.endTime,
+            allDay: false,
+            descriptionPrivate: existing.descriptionPrivate ?? "",
+            descriptionPublic: existing.descriptionPublic ?? "",
+            location: existing.location ?? ""
+          }
+        });
+      }
       pendingHighlightEvent = { eventId, skipScroll: true };
       await refreshCurrentWeekEvents();
     } catch (error) {
@@ -263,11 +262,11 @@ async function renderAppShell() {
     onEventCopy: async (eventData) => {
       await copyEventToClipboard(eventData, t);
     },
-    onEventMove: async ({ eventId, date, startTime, endTime }) => {
-      await updateTimedEventPosition({ eventId, date, startTime, endTime }, "move");
+    onEventMove: async ({ eventId, date, startDate, endDate, startTime, endTime }) => {
+      await updateTimedEventPosition({ eventId, date, startDate, endDate, startTime, endTime }, "move");
     },
-    onEventResize: async ({ eventId, date, startTime, endTime }) => {
-      await updateTimedEventPosition({ eventId, date, startTime, endTime }, "resize");
+    onEventResize: async ({ eventId, date, startDate, endDate, startTime, endTime, linkedNeighbor = null }) => {
+      await updateTimedEventPosition({ eventId, date, startDate, endDate, startTime, endTime, linkedNeighbor }, "resize");
     },
     onCreateSlot: (prefill) => {
       eventModal.openCreate(prefill);

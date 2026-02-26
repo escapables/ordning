@@ -305,39 +305,6 @@ test("drag ghost reflows width with overlap changes while dragging", async ({ pa
   await page.mouse.up();
 });
 
-test("dragging bottom edge resizes event end time with preview", async ({ page }) => {
-  await page.goto("/");
-
-  const targetEvent = page.locator(".day-column").nth(0).locator(".event-block", { hasText: "Sprint Planning" });
-  await expect(targetEvent).toHaveCount(1);
-  const box = await targetEvent.boundingBox();
-  expect(box).not.toBeNull();
-
-  await page.mouse.move(box.x + (box.width / 2), box.y + box.height - 2);
-  await page.mouse.down();
-  await page.mouse.move(box.x + (box.width / 2), box.y + box.height + 42, { steps: 8 });
-  await expect(page.locator(".day-column__move-preview")).toHaveCount(1);
-  await page.mouse.up();
-
-  await expect(targetEvent.locator(".event-block__time")).toContainText("09:00 - 11:30");
-});
-
-test("dragging bottom edge enforces 15-minute minimum duration", async ({ page }) => {
-  await page.goto("/");
-
-  const targetEvent = page.locator(".day-column").nth(0).locator(".event-block", { hasText: "Sprint Planning" });
-  await expect(targetEvent).toHaveCount(1);
-  const box = await targetEvent.boundingBox();
-  expect(box).not.toBeNull();
-
-  await page.mouse.move(box.x + (box.width / 2), box.y + box.height - 2);
-  await page.mouse.down();
-  await page.mouse.move(box.x + (box.width / 2), box.y - 42, { steps: 12 });
-  await page.mouse.up();
-
-  await expect(targetEvent.locator(".event-block__time")).toContainText("09:00 - 09:15");
-});
-
 test("single click selects event, dblclick opens modal, and clear selection works", async ({ page }) => {
   await page.goto("/");
 

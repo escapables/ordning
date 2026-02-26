@@ -1,138 +1,24 @@
-const MINUTES_PER_HOUR = 60;
-const MINUTES_PER_DAY = 24 * MINUTES_PER_HOUR;
-const MIN_SELECTION_MINUTES = 15;
-const DRAG_THRESHOLD_PX = 3;
-const TIME_STEP_MINUTES = 15;
-
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-}
-
-function roundNearest(value, step) {
-  return Math.round(value / step) * step;
-}
-
-function parseTimeToMinutes(timeValue) {
-  const [hours, minutes] = String(timeValue ?? "00:00").split(":").map(Number);
-  if (Number.isNaN(hours) || Number.isNaN(minutes)) {
-    return 0;
-  }
-  return clamp((hours * MINUTES_PER_HOUR) + minutes, 0, MINUTES_PER_DAY);
-}
-
-function formatTimeFromMinutes(value) {
-  const minutes = clamp(value, 0, MINUTES_PER_DAY - MIN_SELECTION_MINUTES);
-  const hoursPart = Math.floor(minutes / MINUTES_PER_HOUR);
-  const minutesPart = minutes % MINUTES_PER_HOUR;
-  return `${String(hoursPart).padStart(2, "0")}:${String(minutesPart).padStart(2, "0")}`;
-}
-
-function pointerToMinutes(clientY, rect, pixelsPerHour) {
-  const maxHeight = 24 * pixelsPerHour;
-  const y = clamp(clientY - rect.top, 0, maxHeight);
-  return clamp((y / pixelsPerHour) * MINUTES_PER_HOUR, 0, MINUTES_PER_DAY);
-}
-
-function eventDurationMinutes(event) {
-  const start = parseTimeToMinutes(event.startTime);
-  const end = parseTimeToMinutes(event.endTime);
-  if (end > start) {
-    return end - start;
-  }
-  return (MINUTES_PER_DAY - start) + end;
-}
-
-function clampStartForDuration(startMinutes, durationMinutes) {
-  const safeDuration = clamp(durationMinutes, MIN_SELECTION_MINUTES, MINUTES_PER_DAY);
-  return clamp(startMinutes, 0, MINUTES_PER_DAY - safeDuration);
-}
-
-function splitIntoOverlapGroups(items) {
-  const groups = [];
-  let group = [];
-  let maxEnd = 0;
-
-  items.forEach((item) => {
-    if (group.length === 0) {
-      group = [item];
-      maxEnd = item.endMinutes;
-      return;
-    }
-
-    if (item.startMinutes < maxEnd) {
-      group.push(item);
-      maxEnd = Math.max(maxEnd, item.endMinutes);
-      return;
-    }
-
-    groups.push(group);
-    group = [item];
-    maxEnd = item.endMinutes;
-  });
-
-  if (group.length > 0) {
-    groups.push(group);
-  }
-
-  return groups;
-}
-
-function assignColumns(group) {
-  const active = [];
-  let maxColumns = 1;
-
-  group.forEach((item) => {
-    for (let index = active.length - 1; index >= 0; index -= 1) {
-      if (active[index].endMinutes <= item.startMinutes) {
-        active.splice(index, 1);
-      }
-    }
-
-    const usedColumns = new Set(active.map((entry) => entry.column));
-    let column = 0;
-    while (usedColumns.has(column)) {
-      column += 1;
-    }
-
-    item.column = column;
-    active.push({ endMinutes: item.endMinutes, column });
-    maxColumns = Math.max(maxColumns, column + 1);
-  });
-
-  group.forEach((item) => {
-    item.totalColumns = maxColumns;
-  });
-}
-
-function layoutItems(items) {
-  const sorted = [...items].sort(
-    (left, right) => left.startMinutes - right.startMinutes || left.endMinutes - right.endMinutes
-  );
-  splitIntoOverlapGroups(sorted).forEach(assignColumns);
-  return sorted;
-}
-
-function readEventBlockRange(block) {
-  const startMinutes = Number.parseFloat(block.dataset.startMinutes ?? "");
-  const endMinutes = Number.parseFloat(block.dataset.endMinutes ?? "");
-  if (!Number.isFinite(startMinutes) || !Number.isFinite(endMinutes)) {
-    return null;
-  }
-  return {
-    startMinutes,
-    endMinutes
-  };
-}
-
-function resolveColumnFromPoint(clientX, clientY) {
-  const pointed = document.elementFromPoint(clientX, clientY);
-  if (!(pointed instanceof Element)) {
-    return null;
-  }
-  const column = pointed.closest(".day-column");
-  return column instanceof HTMLElement ? column : null;
-}
-
+import {
+  DRAG_THRESHOLD_PX,
+  MINUTES_PER_DAY,
+  MINUTES_PER_HOUR,
+  MIN_SELECTION_MINUTES,
+  TIME_STEP_MINUTES,
+  clamp,
+  clampStartForDuration,
+  eventDurationMinutes,
+  pointerToMinutes,
+  readEventBlockRange,
+  resolveColumnFromPoint,
+  roundNearest
+} from "./drag-time-utils.js";
+import { layoutOverlapItems } from "./drag-overlap-layout.js";
+import {
+  buildResizePayload,
+  buildTimedPayload,
+  resolveAbsoluteEndMinutes,
+  resolveDraggedEndMinutes
+} from "./drag-payload-utils.js";
 export function createEventMovePointerDownHandler(column, pixelsPerHour, handlers = {}) {
   const { onEventMove = async () => {}, onEventResize = async () => {} } = handlers;
   const dragState = {
@@ -142,6 +28,9 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     startX: 0,
     startY: 0,
     eventId: null,
+    eventDate: null,
+    eventClockStart: "00:00",
+    eventClockEnd: "00:00",
     eventColor: "#007aff",
     durationMinutes: MIN_SELECTION_MINUTES,
     sourceColumn: null,
@@ -149,8 +38,20 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     targetDate: null,
     targetStartMinutes: 0,
     targetEndMinutes: MIN_SELECTION_MINUTES,
+    initialStartMinutes: 0,
+    initialEndMinutes: MIN_SELECTION_MINUTES,
     draggedElement: null,
     preview: null,
+    neighborEventId: null,
+    neighborEventDate: null,
+    neighborClockStart: "00:00",
+    neighborClockEnd: "00:00",
+    neighborStartMinutes: 0,
+    neighborEndMinutes: 0,
+    neighborTargetStartMinutes: 0,
+    neighborTargetEndMinutes: 0,
+    neighborElement: null,
+    neighborPreview: null,
     originalStyles: new Map()
   };
 
@@ -182,6 +83,13 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     return {
       startMinutes: dragState.targetStartMinutes,
       endMinutes: dragState.targetEndMinutes
+    };
+  }
+
+  function neighborPreviewRange() {
+    return {
+      startMinutes: dragState.neighborTargetStartMinutes,
+      endMinutes: dragState.neighborTargetEndMinutes
     };
   }
 
@@ -218,6 +126,59 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     return dragState.preview;
   }
 
+  function ensureNeighborPreview(parentColumn) {
+    if (!(dragState.neighborPreview instanceof HTMLElement)) {
+      const preview = document.createElement("div");
+      preview.className = "day-column__move-preview";
+      dragState.neighborPreview = preview;
+    }
+    dragState.neighborPreview.style.setProperty("--event-color", dragState.eventColor);
+    if (dragState.neighborPreview.parentElement !== parentColumn) {
+      parentColumn.appendChild(dragState.neighborPreview);
+    }
+    return dragState.neighborPreview;
+  }
+
+  function findLinkedNeighbor() {
+    if (!(dragState.sourceColumn instanceof HTMLElement)) {
+      return null;
+    }
+    const candidates = Array.from(dragState.sourceColumn.querySelectorAll(".event-block"))
+      .filter((block) => block instanceof HTMLElement)
+      .map((block) => {
+        const range = readEventBlockRange(block);
+        if (!range || !block.dataset.eventId || block.dataset.eventId === dragState.eventId) {
+          return null;
+        }
+        return {
+          id: block.dataset.eventId,
+          date: block.dataset.eventDate ?? null,
+          clockStart: block.dataset.clockStart ?? "00:00",
+          clockEnd: block.dataset.clockEnd ?? "00:00",
+          startMinutes: range.startMinutes,
+          endMinutes: resolveAbsoluteEndMinutes(block, range.endMinutes),
+          element: block
+        };
+      })
+      .filter((item) => item);
+
+    if (dragState.mode === "resize-bottom") {
+      const neighbor = candidates
+        .filter((item) => item.startMinutes === dragState.initialEndMinutes)
+        .sort((left, right) => String(left.id).localeCompare(String(right.id)))[0];
+      return neighbor ?? null;
+    }
+
+    if (dragState.mode === "resize-top") {
+      const neighbor = candidates
+        .filter((item) => item.endMinutes === dragState.initialStartMinutes)
+        .sort((left, right) => String(left.id).localeCompare(String(right.id)))[0];
+      return neighbor ?? null;
+    }
+
+    return null;
+  }
+
   function applyItemPosition(item) {
     const widthPercent = 100 / item.totalColumns;
     rememberOriginalStyle(item.element);
@@ -233,7 +194,7 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
       if (!(block instanceof HTMLElement)) {
         return;
       }
-      if (block.dataset.eventId === dragState.eventId) {
+      if (block.dataset.eventId === dragState.eventId || block.dataset.eventId === dragState.neighborEventId) {
         return;
       }
       const range = readEventBlockRange(block);
@@ -255,8 +216,16 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
         endMinutes: ghost.endMinutes
       });
     }
+    if (includeGhost && dragState.neighborPreview instanceof HTMLElement && dragState.neighborEventId) {
+      const ghost = neighborPreviewRange();
+      items.push({
+        element: dragState.neighborPreview,
+        startMinutes: ghost.startMinutes,
+        endMinutes: ghost.endMinutes
+      });
+    }
 
-    layoutItems(items).forEach(applyItemPosition);
+    layoutOverlapItems(items).forEach(applyItemPosition);
   }
 
   function renderMovingLayout(clientX, clientY) {
@@ -317,9 +286,29 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     const rect = targetColumn.getBoundingClientRect();
     const rawMinutes = roundNearest(pointerToMinutes(clientY, rect, pixelsPerHour), TIME_STEP_MINUTES);
     if (dragState.mode === "resize-top") {
-      dragState.targetStartMinutes = clamp(rawMinutes, 0, dragState.targetEndMinutes - MIN_SELECTION_MINUTES);
+      const minStart = dragState.neighborEventId
+        ? dragState.neighborStartMinutes + MIN_SELECTION_MINUTES
+        : 0;
+      const maxStart = Math.min(
+        dragState.targetEndMinutes - MIN_SELECTION_MINUTES,
+        MINUTES_PER_DAY - MIN_SELECTION_MINUTES
+      );
+      dragState.targetStartMinutes = clamp(rawMinutes, minStart, maxStart);
     } else {
-      dragState.targetEndMinutes = clamp(rawMinutes, dragState.targetStartMinutes + MIN_SELECTION_MINUTES, MINUTES_PER_DAY);
+      const maxEnd = dragState.neighborEventId
+        ? dragState.neighborEndMinutes - MIN_SELECTION_MINUTES
+        : MINUTES_PER_DAY;
+      dragState.targetEndMinutes = clamp(rawMinutes, dragState.targetStartMinutes + MIN_SELECTION_MINUTES, maxEnd);
+    }
+
+    if (dragState.neighborEventId) {
+      if (dragState.mode === "resize-top") {
+        dragState.neighborTargetStartMinutes = dragState.neighborStartMinutes;
+        dragState.neighborTargetEndMinutes = dragState.targetStartMinutes;
+      } else {
+        dragState.neighborTargetStartMinutes = dragState.targetEndMinutes;
+        dragState.neighborTargetEndMinutes = dragState.neighborEndMinutes;
+      }
     }
 
     const preview = ensurePreview(targetColumn);
@@ -332,6 +321,16 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
       rememberOriginalStyle(dragState.draggedElement);
       dragState.draggedElement.style.visibility = "hidden";
     }
+    if (dragState.neighborElement instanceof HTMLElement) {
+      rememberOriginalStyle(dragState.neighborElement);
+      dragState.neighborElement.style.visibility = "hidden";
+      const neighborPreview = ensureNeighborPreview(targetColumn);
+      const neighborRange = neighborPreviewRange();
+      neighborPreview.style.top = `${(neighborRange.startMinutes / MINUTES_PER_HOUR) * pixelsPerHour}px`;
+      neighborPreview.style.height = `${Math.max(((neighborRange.endMinutes - neighborRange.startMinutes) / MINUTES_PER_HOUR) * pixelsPerHour, 18)}px`;
+    } else {
+      dragState.neighborPreview?.remove();
+    }
     layoutColumnItems(targetColumn, { includeGhost: true });
   }
 
@@ -342,19 +341,34 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
 
     restoreTemporaryStyles();
     dragState.preview?.remove();
+    dragState.neighborPreview?.remove();
 
     dragState.pointerId = null;
     dragState.dragging = false;
     dragState.mode = "move";
     dragState.eventId = null;
+    dragState.eventDate = null;
+    dragState.eventClockStart = "00:00";
+    dragState.eventClockEnd = "00:00";
     dragState.sourceColumn = null;
     dragState.targetColumn = null;
     dragState.targetDate = null;
     dragState.targetStartMinutes = 0;
     dragState.targetEndMinutes = MIN_SELECTION_MINUTES;
+    dragState.initialStartMinutes = 0;
+    dragState.initialEndMinutes = MIN_SELECTION_MINUTES;
     dragState.durationMinutes = MIN_SELECTION_MINUTES;
     dragState.eventColor = "#007aff";
     dragState.draggedElement = null;
+    dragState.neighborEventId = null;
+    dragState.neighborEventDate = null;
+    dragState.neighborClockStart = "00:00";
+    dragState.neighborClockEnd = "00:00";
+    dragState.neighborStartMinutes = 0;
+    dragState.neighborEndMinutes = 0;
+    dragState.neighborTargetStartMinutes = 0;
+    dragState.neighborTargetEndMinutes = 0;
+    dragState.neighborElement = null;
   }
 
   function handlePointerMove(pointerEvent) {
@@ -388,21 +402,36 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
       && Boolean(dragState.targetDate);
 
     if (didDrag && dragState.mode === "move") {
-      const endMinutes = Math.min(MINUTES_PER_DAY, dragState.targetStartMinutes + dragState.durationMinutes);
-      await onEventMove({
+      const endMinutes = dragState.targetStartMinutes + dragState.durationMinutes;
+      await onEventMove(buildTimedPayload({
         eventId: dragState.eventId,
         date: dragState.targetDate,
-        startTime: formatTimeFromMinutes(dragState.targetStartMinutes),
-        endTime: endMinutes >= MINUTES_PER_DAY ? "23:59" : formatTimeFromMinutes(endMinutes)
-      });
+        startMinutes: dragState.targetStartMinutes,
+        endMinutes
+      }));
     }
     if (didDrag && dragState.mode !== "move") {
-      await onEventResize({
+      const payload = buildResizePayload({
         eventId: dragState.eventId,
         date: dragState.targetDate,
-        startTime: formatTimeFromMinutes(dragState.targetStartMinutes),
-        endTime: dragState.targetEndMinutes >= MINUTES_PER_DAY ? "23:59" : formatTimeFromMinutes(dragState.targetEndMinutes)
+        startMinutes: dragState.targetStartMinutes,
+        endMinutes: dragState.targetEndMinutes,
+        anchorDate: dragState.eventDate,
+        clockStart: dragState.eventClockStart,
+        clockEnd: dragState.eventClockEnd
       });
+      payload.linkedNeighbor = dragState.neighborEventId
+        ? buildResizePayload({
+          eventId: dragState.neighborEventId,
+          date: dragState.targetDate,
+          startMinutes: dragState.neighborTargetStartMinutes,
+          endMinutes: dragState.neighborTargetEndMinutes,
+          anchorDate: dragState.neighborEventDate,
+          clockStart: dragState.neighborClockStart,
+          clockEnd: dragState.neighborClockEnd
+        })
+        : null;
+      await onEventResize(payload);
     }
 
     stopDrag();
@@ -418,17 +447,50 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     dragState.startX = pointerEvent.clientX;
     dragState.startY = pointerEvent.clientY;
     dragState.eventId = event.id;
+    dragState.eventDate = event.date ?? null;
+    dragState.eventClockStart = event.startTime ?? "00:00";
+    dragState.eventClockEnd = event.endTime ?? "00:00";
     dragState.eventColor = event.color ?? "#007aff";
     const range = readEventBlockRange(element);
     const startMinutes = range?.startMinutes ?? roundNearest(event.startMinutes ?? 0, TIME_STEP_MINUTES);
-    const endMinutes = range?.endMinutes ?? Math.min(MINUTES_PER_DAY, startMinutes + eventDurationMinutes(event));
+    const rawEndMinutes = range?.endMinutes ?? Math.min(MINUTES_PER_DAY, startMinutes + eventDurationMinutes(event));
+    const endMinutes = resolveDraggedEndMinutes(
+      event,
+      resolveAbsoluteEndMinutes(element, rawEndMinutes),
+      startMinutes
+    );
     dragState.durationMinutes = Math.max(MIN_SELECTION_MINUTES, endMinutes - startMinutes);
     dragState.sourceColumn = column;
     dragState.targetColumn = column;
     dragState.targetDate = column.dataset.date ?? null;
     dragState.targetStartMinutes = startMinutes;
     dragState.targetEndMinutes = endMinutes;
+    dragState.initialStartMinutes = startMinutes;
+    dragState.initialEndMinutes = endMinutes;
     dragState.draggedElement = element;
+
+    const neighbor = findLinkedNeighbor();
+    if (neighbor) {
+      dragState.neighborEventId = neighbor.id;
+      dragState.neighborEventDate = neighbor.date;
+      dragState.neighborClockStart = neighbor.clockStart;
+      dragState.neighborClockEnd = neighbor.clockEnd;
+      dragState.neighborStartMinutes = neighbor.startMinutes;
+      dragState.neighborEndMinutes = neighbor.endMinutes;
+      dragState.neighborTargetStartMinutes = neighbor.startMinutes;
+      dragState.neighborTargetEndMinutes = neighbor.endMinutes;
+      dragState.neighborElement = neighbor.element;
+    } else {
+      dragState.neighborEventId = null;
+      dragState.neighborEventDate = null;
+      dragState.neighborClockStart = "00:00";
+      dragState.neighborClockEnd = "00:00";
+      dragState.neighborStartMinutes = 0;
+      dragState.neighborEndMinutes = 0;
+      dragState.neighborTargetStartMinutes = 0;
+      dragState.neighborTargetEndMinutes = 0;
+      dragState.neighborElement = null;
+    }
 
     window.addEventListener("pointermove", handlePointerMove, true);
     window.addEventListener("pointerup", handlePointerUp, true);
