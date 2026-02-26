@@ -26,7 +26,7 @@ Swedish default, English toggle. Two-language only.
 
 - String map: `frontend/src/i18n/strings.js` → `{ sv: {...}, en: {...} }` keyed by ID
 - Lookup: `t('today')` returns current-lang string; `setLang('en'|'sv')` switches
-- Persistence: `"lang": "sv"` in app data JSON
+- Persistence: `"settings": { "lang": "sv" }` in app data JSON (legacy `lang` migrated on startup)
 - Day/month names in string map (`monday: "Måndag"` / `"Monday"`)
 - All UI text via `t()` — no hardcoded user-facing strings
 
@@ -71,7 +71,8 @@ Swedish default, English toggle. Two-language only.
 │       │   └── dialogs/
 │       │       ├── confirm-dialog.js
 │       │       ├── import-dialog.js
-│       │       └── export-dialog.js
+│       │       ├── export-dialog.js
+│       │       └── settings-dialog.js
 │       └── utils/
 │           ├── date-utils.js
 │           ├── color-utils.js
@@ -89,12 +90,13 @@ Swedish default, English toggle. Two-language only.
         │   ├── calendar_cmds.rs  # CRUD calendars
         │   ├── event_cmds.rs     # CRUD events
         │   ├── view_cmds.rs      # get_week_events, search_events
-        │   └── io_cmds.rs        # Import/export via native file dialogs
+        │   ├── io_cmds.rs        # Import/export via native file dialogs
+        │   └── settings_cmds.rs  # get_settings, set_settings
         ├── models/
         │   ├── calendar.rs       # Calendar { id, name, color, group, visible }
         │   ├── event.rs          # Event { ..., description_private, description_public }
         │   ├── recurrence.rs     # RecurrenceRule, Frequency, EndCondition
-        │   └── app_data.rs       # AppData { version, calendars, events }
+        │   └── app_data.rs       # AppData { version, settings, calendars, events }
         ├── storage/
         │   └── json_store.rs     # Load/save w/ atomic write
         └── import_export/

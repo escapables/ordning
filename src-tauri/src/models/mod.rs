@@ -4,7 +4,7 @@ pub mod event;
 pub mod recurrence;
 pub mod schema;
 
-pub use app_data::AppData;
+pub use app_data::{normalize_lang, AppData, AppSettings};
 pub use calendar::Calendar;
 pub use event::Event;
 pub use recurrence::RecurrenceRule;

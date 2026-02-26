@@ -3,9 +3,20 @@ use serde::{Deserialize, Serialize};
 use super::{Calendar, Event};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct AppSettings {
+    #[serde(default = "default_lang")]
+    pub lang: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AppData {
     pub version: u32,
+    #[serde(default)]
+    pub settings: AppSettings,
+    // Legacy top-level language key kept for backward-compatible reads.
+    // New writes persist language via settings.lang.
     #[serde(default = "default_lang")]
+    #[serde(skip_serializing)]
     pub lang: String,
     #[serde(default)]
     pub calendars: Vec<Calendar>,
@@ -17,6 +28,7 @@ impl Default for AppData {
     fn default() -> Self {
         Self {
             version: 1,
+            settings: AppSettings::default(),
             lang: default_lang(),
             calendars: Vec::new(),
             events: Vec::new(),
@@ -24,8 +36,33 @@ impl Default for AppData {
     }
 }
 
+impl Default for AppSettings {
+    fn default() -> Self {
+        Self {
+            lang: default_lang(),
+        }
+    }
+}
+
 fn default_lang() -> String {
     "sv".to_owned()
+}
+
+impl AppData {
+    pub fn normalize_settings(&mut self) {
+        let normalized = normalize_lang(&self.settings.lang)
+            .unwrap_or_else(|| normalize_lang(&self.lang).unwrap_or_else(default_lang));
+        self.settings.lang = normalized.clone();
+        self.lang = normalized;
+    }
+}
+
+pub fn normalize_lang(raw: &str) -> Option<String> {
+    match raw.trim() {
+        "sv" => Some("sv".to_owned()),
+        "en" => Some("en".to_owned()),
+        _ => None,
+    }
 }
 
 #[cfg(test)]
@@ -44,6 +81,9 @@ mod tests {
 
         let app_data = AppData {
             version: 1,
+            settings: AppSettings {
+                lang: "en".to_owned(),
+            },
             lang: "en".to_owned(),
             calendars: vec![Calendar {
                 id: calendar_id,
@@ -78,8 +118,25 @@ mod tests {
         };
 
         let json = serde_json::to_string(&app_data).unwrap();
-        let round_trip: AppData = serde_json::from_str(&json).unwrap();
+        assert!(json.contains("\"settings\""));
 
-        assert_eq!(round_trip, app_data);
+        let round_trip: AppData = serde_json::from_str(&json).unwrap();
+        assert_eq!(round_trip.settings.lang, "en");
+        assert_eq!(round_trip.lang, "sv");
+    }
+
+    #[test]
+    fn normalize_settings_uses_legacy_lang_when_needed() {
+        let mut app_data = AppData {
+            settings: AppSettings {
+                lang: "xx".to_owned(),
+            },
+            lang: "en".to_owned(),
+            ..AppData::default()
+        };
+        app_data.normalize_settings();
+
+        assert_eq!(app_data.settings.lang, "en");
+        assert_eq!(app_data.lang, "en");
     }
 }

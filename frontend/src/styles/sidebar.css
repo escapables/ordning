@@ -2,17 +2,10 @@
   background: var(--color-bg-sidebar);
   border-right: 1px solid var(--color-border-muted);
   padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
   user-select: none;
   -webkit-user-select: none;
-}
-
-.sidebar__title {
-  margin-bottom: 12px;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  color: var(--color-text-secondary);
 }
 
 .sidebar__new-event-btn {
@@ -58,6 +51,26 @@
 
 .sidebar__mini-month {
   margin-bottom: 10px;
+}
+
+.sidebar__settings-btn {
+  width: 36px;
+  height: 36px;
+  margin-top: auto;
+  border: 1px solid var(--color-border-muted);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.sidebar__settings-btn:hover {
+  background: rgb(0 122 255 / 0.08);
+  color: var(--color-text-primary);
 }
 
 .mini-month {
@@ -386,4 +399,66 @@
 
 .calendar-create-dialog__btn:hover {
   filter: brightness(0.96);
+}
+
+.settings-dialog {
+  width: min(320px, calc(100vw - 32px));
+  border: 0;
+  border-radius: 12px;
+  padding: 0;
+  box-shadow: 0 18px 42px rgb(0 0 0 / 0.2);
+}
+
+.settings-dialog::backdrop {
+  background: rgb(24 24 28 / 0.35);
+}
+
+.settings-dialog__form {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.settings-dialog__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.settings-dialog__field {
+  display: grid;
+  gap: 6px;
+}
+
+.settings-dialog__label {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.settings-dialog__select {
+  min-height: 34px;
+  border: 1px solid var(--color-border-muted);
+  border-radius: 7px;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 13px;
+  background: #fff;
+}
+
+.settings-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.settings-dialog__btn {
+  min-height: 32px;
+  border: 1px solid var(--color-border-muted);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 12px;
+  cursor: pointer;
 }

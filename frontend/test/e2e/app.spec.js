@@ -76,3 +76,12 @@ test("purge past events flow removes archived items after two-step confirm", asy
   await page.locator(".confirm-dialog__btn--danger").click();
   await expect(page.locator(".confirm-dialog[open]")).toHaveCount(0);
 });
+
+test("settings language switch updates UI text", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page.locator(".sidebar__new-event-btn")).toHaveText("Nytt event");
+  await page.locator(".sidebar__settings-btn").click();
+  await page.locator(".settings-dialog__select").selectOption("en");
+  await expect(page.locator(".sidebar__new-event-btn")).toHaveText("New event");
+});

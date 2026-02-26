@@ -84,11 +84,16 @@ const STRINGS = {
     purgePastButton: "Rensa gamla händelser",
     purgePastPreview: "Raderar alla händelser i kalendern innan dagens datum.",
     purgePastFinalConfirm: "Detta kan inte ångras. Fortsätt?",
-    purgePastFinalCancel: "Jag vill hålla fast vid det förflutna",
+    purgePastFinalCancel: "Gamla händelser faller (inte) av",
     purgePastFinalProceed: "Framhärda",
     purgePastSuccess: "{count} gamla händelser togs bort.",
     purgePastNone: "Inga gamla händelser att rensa.",
-    purgePastError: "Kunde inte rensa gamla händelser."
+    purgePastError: "Kunde inte rensa gamla händelser.",
+    settingsButtonAria: "Öppna inställningar",
+    settingsTitle: "Inställningar",
+    settingsLanguageLabel: "Språk",
+    settingsLanguageSwedish: "Svenska",
+    settingsLanguageEnglish: "English"
   },
   en: {
     appName: "Ordning",
@@ -175,11 +180,16 @@ const STRINGS = {
     purgePastButton: "Purge past events",
     purgePastPreview: "Delete all events in the calendar before today.",
     purgePastFinalConfirm: "This cannot be undone. Continue?",
-    purgePastFinalCancel: "Keep the past",
-    purgePastFinalProceed: "Proceed",
+    purgePastFinalCancel: "The past will persist",
+    purgePastFinalProceed: "I will persist",
     purgePastSuccess: "{count} past events were deleted.",
     purgePastNone: "No past events to purge.",
-    purgePastError: "Could not purge past events."
+    purgePastError: "Could not purge past events.",
+    settingsButtonAria: "Open settings",
+    settingsTitle: "Settings",
+    settingsLanguageLabel: "Language",
+    settingsLanguageSwedish: "Svenska",
+    settingsLanguageEnglish: "English"
   }
 };
 

@@ -1,5 +1,6 @@
-import { t } from "./i18n/strings.js";
+import { setLang, t } from "./i18n/strings.js";
 import { createConfirmDialog } from "./components/dialogs/confirm-dialog.js";
+import { createSettingsDialog } from "./components/dialogs/settings-dialog.js";
 import { createEventModal } from "./components/event-form/event-modal.js";
 import { createExportDialog } from "./components/export-dialog/export-dialog.js";
 import { createImportDialog } from "./components/import-dialog/import-dialog.js";
@@ -16,6 +17,9 @@ import {
   setCurrentWeekStart,
   subscribe
 } from "./state.js";
+
+let unsubscribeState = null;
+let keydownHandler = null;
 
 function invoke(command, payload = {}) {
   const invokeFn = window.__TAURI__?.core?.invoke;
@@ -84,23 +88,53 @@ function getWeekBounds(weekStart) {
   };
 }
 
+async function initializeLanguage() {
+  try {
+    const settings = await invoke("get_settings");
+    setLang(settings?.lang);
+  } catch (error) {
+    console.error("Failed to load settings", error);
+  }
+}
+
+async function applyLanguage(nextLang) {
+  setLang(nextLang);
+  try {
+    await invoke("set_settings", {
+      settings: { lang: nextLang }
+    });
+  } catch (error) {
+    console.error("Failed to persist settings", error);
+  }
+  await renderAppShell();
+}
+
 async function renderAppShell() {
+  if (unsubscribeState) {
+    unsubscribeState();
+    unsubscribeState = null;
+  }
+  if (keydownHandler) {
+    document.removeEventListener("keydown", keydownHandler);
+    keydownHandler = null;
+  }
+
   const app = document.querySelector("#app");
   if (!app) {
     return;
   }
 
   const now = new Date();
-  const initialWeekStart = getStartOfWeek(now, 1);
+  const initialWeekStart = getState().currentWeekStart ?? getStartOfWeek(now, 1);
   setCurrentWeekStart(initialWeekStart);
 
   app.innerHTML = `
     <div class="app-shell">
       <aside class="sidebar">
-        <div class="sidebar__title">${t("sidebarTitle")}</div>
         <button type="button" class="sidebar__new-event-btn">${t("newEventButton")}</button>
         <div class="sidebar__mini-month"></div>
         <div class="sidebar__calendar-list"></div>
+        <button type="button" class="sidebar__settings-btn" aria-label="${t("settingsButtonAria")}">&#9881;</button>
       </aside>
       <main class="main-content">
         <div class="main-toolbar-container"></div>
@@ -113,9 +147,10 @@ async function renderAppShell() {
 
   const sidebarList = app.querySelector(".sidebar__calendar-list");
   const sidebarMiniMonth = app.querySelector(".sidebar__mini-month");
+  const settingsButton = app.querySelector(".sidebar__settings-btn");
   const toolbarContainer = app.querySelector(".main-toolbar-container");
   const weekContainer = app.querySelector(".week-view-container");
-  if (!sidebarList || !sidebarMiniMonth || !toolbarContainer || !weekContainer) {
+  if (!sidebarList || !sidebarMiniMonth || !settingsButton || !toolbarContainer || !weekContainer) {
     return;
   }
 
@@ -200,6 +235,13 @@ async function renderAppShell() {
   app.appendChild(importDialog.element);
   const confirmDialog = createConfirmDialog();
   app.appendChild(confirmDialog.element);
+  const settingsDialog = createSettingsDialog({
+    onChangeLang: applyLanguage
+  });
+  app.appendChild(settingsDialog.element);
+  settingsButton.addEventListener("click", () => {
+    settingsDialog.open();
+  });
 
   const weekViewHandlers = {
     onEventClick: (eventId) => {
@@ -229,7 +271,7 @@ async function renderAppShell() {
     });
   }
 
-  subscribe(() => {
+  unsubscribeState = subscribe(() => {
     const calendars = getState().calendars;
     const weekStart = getState().currentWeekStart ?? getStartOfWeek(new Date(), 1);
     const { weekDates } = getWeekBounds(weekStart);
@@ -340,7 +382,7 @@ async function renderAppShell() {
 
   renderWeekSection(weekContainer, getWeekBounds(initialWeekStart).weekDates, weekViewHandlers);
 
-  document.addEventListener("keydown", async (keyboardEvent) => {
+  keydownHandler = async (keyboardEvent) => {
     if (keyboardEvent.altKey || keyboardEvent.ctrlKey || keyboardEvent.metaKey) {
       return;
     }
@@ -419,9 +461,15 @@ async function renderAppShell() {
     } finally {
       isDeletingFromKeyboard = false;
     }
-  });
+  };
+  document.addEventListener("keydown", keydownHandler);
 
   await refreshAndRender();
 }
 
-renderAppShell();
+async function bootstrap() {
+  await initializeLanguage();
+  await renderAppShell();
+}
+
+bootstrap();

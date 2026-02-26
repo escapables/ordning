@@ -17,6 +17,7 @@ use crate::commands::event_cmds::{
 use crate::commands::io_cmds::{
     export_json, get_export_event_count, import_json, preview_import_json,
 };
+use crate::commands::settings_cmds::{get_settings, set_settings};
 use crate::commands::view_cmds::{get_week_events, search_events};
 use crate::models::Calendar;
 use crate::state::AppState;
@@ -43,6 +44,7 @@ pub fn run() {
     let mut app_data = store
         .load_or_create()
         .expect("failed to load initial app data");
+    app_data.normalize_settings();
 
     if app_data.calendars.is_empty() {
         let now = Utc::now().to_rfc3339();
@@ -85,7 +87,9 @@ pub fn run() {
             export_json,
             get_export_event_count,
             preview_import_json,
-            import_json
+            import_json,
+            get_settings,
+            set_settings
         ])
         .run(tauri::generate_context!())
         .expect("failed to run Ordning application");

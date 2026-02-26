@@ -163,6 +163,9 @@
   var past = dateKey(addDays(monday, -14));
 
   var state = {
+    settings: {
+      lang: "sv"
+    },
     calendars: [
       {
         id: "cal-work",
@@ -287,6 +290,18 @@
 
   function invoke(command, payload) {
     switch (command) {
+      case "get_settings":
+        return Promise.resolve({ ...state.settings });
+
+      case "set_settings": {
+        var nextLang = payload && payload.settings && payload.settings.lang;
+        if (nextLang !== "sv" && nextLang !== "en") {
+          return Promise.reject("unsupported language");
+        }
+        state.settings.lang = nextLang;
+        return Promise.resolve({ ...state.settings });
+      }
+
       case "list_calendars":
         return Promise.resolve(state.calendars.slice());
 

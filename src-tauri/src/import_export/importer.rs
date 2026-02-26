@@ -4,7 +4,7 @@ use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::models::{AppData, Calendar, Event, ExportData};
+use crate::models::{AppData, AppSettings, Calendar, Event, ExportData};
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -87,6 +87,7 @@ pub fn parse_import_payload(raw: &str) -> Result<AppData, String> {
 
     Ok(AppData {
         version: 1,
+        settings: AppSettings::default(),
         lang: "sv".to_owned(),
         calendars,
         events,
@@ -188,6 +189,7 @@ fn merge_data(existing: &AppData, incoming: &AppData) -> AppData {
 
     let mut merged = AppData {
         version: existing.version,
+        settings: existing.settings.clone(),
         lang: existing.lang.clone(),
         calendars: calendar_map.into_values().collect(),
         events: event_map.into_values().collect(),
@@ -199,6 +201,7 @@ fn merge_data(existing: &AppData, incoming: &AppData) -> AppData {
 fn replace_data(existing: &AppData, incoming: &AppData) -> AppData {
     let mut replaced = AppData {
         version: existing.version,
+        settings: existing.settings.clone(),
         lang: existing.lang.clone(),
         calendars: incoming.calendars.clone(),
         events: incoming.events.clone(),
