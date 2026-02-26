@@ -1,7 +1,7 @@
 .sidebar {
   background: var(--color-bg-sidebar);
   border-right: 1px solid var(--color-border-muted);
-  padding: 20px 16px;
+  padding: 14px 11px;
   display: flex;
   flex-direction: column;
   user-select: none;
@@ -10,7 +10,7 @@
 
 .sidebar__new-event-btn {
   width: 100%;
-  min-height: 36px;
+  min-height: 32px;
   border: 1px solid var(--color-accent);
   border-radius: var(--radius-btn);
   background: var(--color-accent);
@@ -19,7 +19,7 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   transition: filter 120ms ease;
 }
 
@@ -42,20 +42,20 @@
 .sidebar__calendar-list {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 10px;
+  gap: 10px;
+  padding: 7px;
   border: 1px solid rgb(0 0 0 / 0.06);
   border-radius: var(--radius-dialog);
   background: rgb(255 255 255 / 0.62);
 }
 
 .sidebar__mini-month {
-  margin-bottom: 10px;
+  margin-bottom: 7px;
 }
 
 .sidebar__settings-btn {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   margin-top: auto;
   border: 1px solid var(--color-border-muted);
   border-radius: var(--radius-btn);
@@ -77,14 +77,14 @@
   border: 1px solid rgb(0 0 0 / 0.06);
   border-radius: var(--radius-dialog);
   background: rgb(255 255 255 / 0.62);
-  padding: 8px;
+  padding: 6px;
 }
 
 .mini-month__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .mini-month__title {
@@ -95,8 +95,8 @@
 }
 
 .mini-month__nav {
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   border: 1px solid var(--color-border-muted);
   border-radius: var(--radius-chip);
   background: #fff;
@@ -111,7 +111,7 @@
 .mini-month__grid {
   display: grid;
   grid-template-columns: 18px repeat(7, minmax(0, 1fr));
-  gap: 2px;
+  gap: 1px;
 }
 
 .mini-month__week-number-spacer {
@@ -133,7 +133,7 @@
 }
 
 .mini-month__day {
-  min-height: 24px;
+  min-height: 28px;
   border: 0;
   border-radius: var(--radius-chip);
   background: transparent;
@@ -163,11 +163,11 @@
 .calendar-list {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
 }
 
 .calendar-list__group {
-  padding-top: 8px;
+  padding-top: 6px;
   border-top: 1px solid rgb(0 0 0 / 0.06);
 }
 
@@ -177,7 +177,7 @@
 }
 
 .calendar-list__group-title {
-  margin: 0 0 6px;
+  margin: 0 0 4px;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.03em;
@@ -185,12 +185,12 @@
 }
 
 .calendar-list__item {
-  min-height: 32px;
+  min-height: 30px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   border-radius: var(--radius-btn);
-  padding: 0 8px;
+  padding: 0 6px;
   transition: background-color 120ms ease;
 }
 
@@ -257,8 +257,8 @@
 
 .calendar-list__io {
   display: flex;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 6px;
+  margin-top: 6px;
 }
 
 .calendar-list__io-btn {
@@ -288,8 +288,8 @@
 
 .calendar-list__purge {
   width: 100%;
-  min-height: 30px;
-  margin-top: 8px;
+  min-height: 28px;
+  margin-top: 6px;
   border: 1px solid #fda29b;
   border-radius: var(--radius-soft);
   background: #fff;
@@ -318,9 +318,9 @@
 }
 
 .calendar-create-dialog__form {
-  padding: 16px;
+  padding: 12px;
   display: grid;
-  gap: 10px;
+  gap: 7px;
 }
 
 .calendar-create-dialog__title {
@@ -330,7 +330,7 @@
 }
 
 .calendar-create-dialog__input {
-  min-height: 34px;
+  min-height: 30px;
   border: 1px solid var(--color-border-muted);
   border-radius: var(--radius-soft);
   padding: 0 10px;
@@ -347,7 +347,7 @@
 .calendar-create-dialog__colors {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
 }
 
 .calendar-create-dialog__color {
@@ -368,14 +368,14 @@
 .calendar-create-dialog__actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 6px;
 }
 
 .calendar-create-dialog__btn {
-  min-height: 32px;
+  min-height: 28px;
   border: 1px solid var(--color-border-muted);
   border-radius: var(--radius-soft);
-  padding: 0 12px;
+  padding: 0 10px;
   background: #fff;
   color: var(--color-text-primary);
   font: inherit;
@@ -386,10 +386,10 @@
 }
 
 .calendar-create-dialog__btn--primary {
-  min-height: 32px;
+  min-height: 28px;
   border: 0;
   border-radius: var(--radius-soft);
-  padding: 0 12px;
+  padding: 0 10px;
   background: var(--color-accent);
   color: #fff;
   font: inherit;
@@ -415,8 +415,8 @@
 
 .settings-dialog__form {
   display: grid;
-  gap: 12px;
-  padding: 16px;
+  gap: 8px;
+  padding: 12px;
 }
 
 .settings-dialog__title {
@@ -427,7 +427,7 @@
 
 .settings-dialog__field {
   display: grid;
-  gap: 6px;
+  gap: 4px;
 }
 
 .settings-dialog__label {
@@ -436,7 +436,7 @@
 }
 
 .settings-dialog__select {
-  min-height: 34px;
+  min-height: 30px;
   border: 1px solid var(--color-border-muted);
   border-radius: var(--radius-soft);
   padding: 0 10px;
@@ -451,7 +451,7 @@
 }
 
 .settings-dialog__btn {
-  min-height: 32px;
+  min-height: 28px;
   border: 1px solid var(--color-border-muted);
   border-radius: var(--radius-soft);
   background: #fff;
@@ -459,6 +459,6 @@
   font: inherit;
   font-size: 12px;
   font-weight: 600;
-  padding: 0 12px;
+  padding: 0 10px;
   cursor: pointer;
 }

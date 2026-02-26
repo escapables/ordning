@@ -14,13 +14,13 @@
 
 .export-dialog__form {
   display: grid;
-  gap: 12px;
-  padding: 20px;
+  gap: 8px;
+  padding: 14px;
 }
 
 .export-dialog__title {
   margin: 0;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
 }
 
@@ -34,9 +34,9 @@
   margin: 0;
   border: 1px solid var(--color-border-muted);
   border-radius: var(--radius-btn);
-  padding: 10px;
+  padding: 7px;
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .export-dialog__legend {
@@ -54,7 +54,7 @@
 
 .export-dialog__calendar-list {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .export-dialog__calendar {
@@ -83,12 +83,12 @@
 .export-dialog__actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 6px;
 }
 
 .export-dialog__btn {
-  min-height: 34px;
-  padding: 0 14px;
+  min-height: 30px;
+  padding: 0 10px;
   border: 1px solid var(--color-border-muted);
   border-radius: var(--radius-btn);
   background: #fff;

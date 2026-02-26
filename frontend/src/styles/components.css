@@ -36,9 +36,9 @@ textarea:focus-visible,
 }
 
 .confirm-dialog__form {
-  padding: 16px;
+  padding: 12px;
   display: grid;
-  gap: 12px;
+  gap: 8px;
 }
 
 .confirm-dialog__message {
@@ -50,14 +50,14 @@ textarea:focus-visible,
 .confirm-dialog__actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 6px;
 }
 
 .confirm-dialog__btn {
-  min-height: 32px;
+  min-height: 30px;
   border: 1px solid var(--color-border-muted);
   border-radius: var(--radius-btn);
-  padding: 0 12px;
+  padding: 0 10px;
   background: #fff;
   color: var(--color-text-primary);
   font: inherit;

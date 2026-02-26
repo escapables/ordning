@@ -332,7 +332,7 @@ test("empty day-column context menu opens New event with 30-minute snap", async 
   await page.goto("/");
 
   const firstColumn = page.locator(".day-column").first();
-  await firstColumn.click({ button: "right", position: { x: 24, y: 112 } });
+  await firstColumn.click({ button: "right", position: { x: 24, y: 84 } });
   await expect(page.locator(".context-menu")).toBeVisible();
   await page.locator(".context-menu__item", { hasText: "Nytt event" }).click();
 
@@ -352,12 +352,12 @@ test("empty day-column context menu shows Paste after copy and creates event at 
   await page.locator(".context-menu__item", { hasText: "Kopiera" }).click();
 
   const firstColumn = page.locator(".day-column").first();
-  await firstColumn.click({ button: "right", position: { x: 28, y: 420 } });
+  await firstColumn.click({ button: "right", position: { x: 28, y: 280 } });
   await expect(page.locator(".context-menu__item", { hasText: "Klistra in" })).toBeVisible();
   await page.locator(".context-menu__item", { hasText: "Klistra in" }).click();
 
   await expect(page.locator(".event-block", { hasText: "Sprint Planning" })).toHaveCount(2);
-  await expect(page.locator(".event-block", { hasText: "07:30 - 09:00" })).toHaveCount(1);
+  await expect(page.locator(".event-block", { hasText: "06:30 - 08:00" })).toHaveCount(1);
 });
 
 test("context menu is suppressed on non-column non-interactive areas", async ({ page }) => {

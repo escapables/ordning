@@ -18,7 +18,7 @@ body {
 
 .main-content {
   background: var(--color-bg-main);
-  padding: 20px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
   overflow: hidden;

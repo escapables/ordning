@@ -8,7 +8,7 @@ import { buildDayTimedSegments } from "../../utils/event-segments.js";
 
 const HOURS_PER_DAY = 24;
 const MINUTES_PER_HOUR = 60;
-const PIXELS_PER_HOUR = 56;
+const PIXELS_PER_HOUR = 42;
 
 function renderTimeLabel(hour) {
   const label = document.createElement("div");
@@ -176,14 +176,16 @@ export function renderWeekGrid(dates, events = [], allDayEvents = [], options = 
   bodyWrap.appendChild(body);
 
   root.appendChild(headers);
-  root.appendChild(
-    renderAllDayBar(dates, allDayEvents, {
-      onEventSelect,
-      onEventClick,
-      onEventDelete,
-      onEventCopy
-    })
-  );
+  if (allDayEvents.length > 0) {
+    root.appendChild(
+      renderAllDayBar(dates, allDayEvents, {
+        onEventSelect,
+        onEventClick,
+        onEventDelete,
+        onEventCopy
+      })
+    );
+  }
   root.appendChild(bodyWrap);
   mountOffscreenIndicators(bodyWrap, body);
   if (Number.isFinite(preserveScrollTop)) {

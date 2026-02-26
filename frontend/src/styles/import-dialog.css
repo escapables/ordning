@@ -14,13 +14,13 @@
 
 .import-dialog__form {
   display: grid;
-  gap: 12px;
-  padding: 20px;
+  gap: 8px;
+  padding: 14px;
 }
 
 .import-dialog__title {
   margin: 0;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
 }
 
@@ -34,9 +34,9 @@
   margin: 0;
   border: 1px solid var(--color-border-muted);
   border-radius: var(--radius-btn);
-  padding: 10px;
+  padding: 7px;
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .import-dialog__legend {
@@ -55,9 +55,9 @@
 .import-dialog__preview {
   border: 1px solid var(--color-border-muted);
   border-radius: var(--radius-btn);
-  padding: 10px;
+  padding: 7px;
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .import-dialog__path {
@@ -68,9 +68,9 @@
 
 .import-dialog__summary {
   margin: 0;
-  padding-left: 18px;
+  padding-left: 14px;
   display: grid;
-  gap: 4px;
+  gap: 3px;
   font-size: 13px;
   color: var(--color-text-primary);
 }
@@ -78,12 +78,12 @@
 .import-dialog__actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 6px;
 }
 
 .import-dialog__btn {
-  min-height: 34px;
-  padding: 0 14px;
+  min-height: 30px;
+  padding: 0 10px;
   border: 1px solid var(--color-border-muted);
   border-radius: var(--radius-btn);
   background: #fff;

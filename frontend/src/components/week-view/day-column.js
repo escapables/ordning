@@ -148,7 +148,7 @@ function wireEventContextMenu(column, handlers) {
     onCreateFromContextMenu = () => {},
     onPasteFromContextMenu = () => {},
     canPasteFromContextMenu = () => false,
-    pixelsPerHour = 56
+    pixelsPerHour = 42
   } = handlers;
 
   column.addEventListener("contextmenu", (contextMenuEvent) => {

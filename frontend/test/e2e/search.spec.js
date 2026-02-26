@@ -35,6 +35,6 @@ test("search result navigates week and scrolls with one-hour margin", async ({ p
   await expect(highlightedEvent).toHaveCount(1);
 
   const scrollTop = await body.evaluate((node) => node.scrollTop);
-  expect(scrollTop).toBeGreaterThan(380);
-  expect(scrollTop).toBeLessThan(405);
+  expect(scrollTop).toBeGreaterThan(285);
+  expect(scrollTop).toBeLessThan(305);
 });

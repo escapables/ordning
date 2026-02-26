@@ -14,13 +14,13 @@
 
 .event-modal__form {
   display: grid;
-  gap: 12px;
-  padding: 20px;
+  gap: 8px;
+  padding: 14px;
 }
 
 .event-modal__title {
   margin: 0;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
 }
 
@@ -33,9 +33,9 @@
 .event-modal__empty {
   border: 1px solid var(--color-border-muted);
   border-radius: var(--radius-popover);
-  padding: 14px;
+  padding: 10px;
   display: grid;
-  gap: 12px;
+  gap: 8px;
   background: var(--color-bg-main);
 }
 
@@ -52,18 +52,18 @@
 .event-modal__empty-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 6px;
 }
 
 .event-modal__row {
   display: grid;
-  gap: 10px;
+  gap: 7px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .event-modal__field {
   display: grid;
-  gap: 6px;
+  gap: 4px;
 }
 
 .event-modal__label {
@@ -73,8 +73,8 @@
 
 .event-modal__input {
   width: 100%;
-  min-height: 36px;
-  padding: 8px 10px;
+  min-height: 30px;
+  padding: 6px 8px;
   border-radius: var(--radius-chip);
   border: 1px solid var(--color-border-muted);
   font: inherit;
@@ -83,7 +83,7 @@
 }
 
 .event-modal__textarea {
-  min-height: 72px;
+  min-height: 56px;
   resize: vertical;
 }
 
@@ -107,13 +107,13 @@
 .event-modal__actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  margin-top: 4px;
+  gap: 6px;
+  margin-top: 2px;
 }
 
 .event-modal__btn {
-  min-height: 34px;
-  padding: 0 14px;
+  min-height: 30px;
+  padding: 0 10px;
   border: 1px solid var(--color-border-muted);
   border-radius: var(--radius-btn);
   background: #fff;

@@ -1,6 +1,6 @@
 :root {
-  --hour-row-height: 56px;
-  --time-column-width: 64px;
+  --hour-row-height: 42px;
+  --time-column-width: 52px;
 }
 
 .week-view {
@@ -32,8 +32,8 @@
   min-height: calc(var(--hour-row-height) * 8);
   display: grid;
   place-content: center;
-  gap: 6px;
-  padding: 24px;
+  gap: 4px;
+  padding: 16px;
   text-align: center;
 }
 
@@ -51,8 +51,8 @@
 }
 
 .day-header {
-  min-height: 56px;
-  padding: 8px 10px;
+  min-height: 42px;
+  padding: 6px 7px;
   border-right: 1px solid var(--color-border-muted);
   display: flex;
   flex-direction: column;
@@ -71,9 +71,9 @@
 }
 
 .day-header__date {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
-  margin-top: 2px;
+  margin-top: 1px;
   color: var(--color-text-primary);
 }
 
@@ -94,16 +94,17 @@
 
 .all-day-bar__label {
   border-right: 1px solid var(--color-border-muted);
-  min-height: 28px;
+  min-height: 22px;
 }
 
 .all-day-bar__day {
-  min-height: 28px;
-  padding: 4px 2px;
+  min-height: 22px;
+  padding: 0;
   border-right: 1px solid var(--color-border-muted);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
+  align-items: stretch;
 }
 
 .all-day-bar__day:last-child {
@@ -115,12 +116,15 @@
   color: #fff;
   border: 1px solid var(--event-color);
   border-radius: var(--radius-sm);
+  min-height: 22px;
   font-size: 11px;
-  line-height: 1.2;
-  padding: 2px 6px;
+  line-height: 1.15;
+  padding: 0 5px;
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
+  display: flex;
+  align-items: center;
 }
 
 .week-grid__body-wrap {
@@ -144,7 +148,7 @@
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  padding: 5px 16px;
+  padding: 4px 11px;
   font-size: 11px;
   font-weight: 700;
   color: #1b3f5f;
@@ -185,7 +189,7 @@
 
 .time-label {
   height: var(--hour-row-height);
-  padding: 2px 8px 0 0;
+  padding: 1px 6px 0 0;
   text-align: right;
   font-size: 11px;
   color: var(--color-text-secondary);
@@ -260,7 +264,7 @@
 
 .event-block {
   position: absolute;
-  padding: 4px 6px;
+  padding: 3px 5px;
   background-color: color-mix(in srgb, var(--event-color) 15%, #fff);
   border: 1px solid color-mix(in srgb, var(--event-color) 25%, transparent);
   border-left: 3px solid var(--event-color);
@@ -309,7 +313,7 @@
 }
 
 .event-block__time {
-  margin-top: 1px;
+  margin-top: 0;
   font-size: 11px;
   line-height: 1.2;
   opacity: 0.65;
