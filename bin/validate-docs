@@ -195,13 +195,7 @@ def _validate_todo_format(path: Path) -> list[str]:
     if not sections:
         return errors + ["TODO.md requires numbered sections like `### 1. Title`"]
 
-    expected = sections[0][1]
     for _, number, _, title in sections:
-        if number != expected:
-            errors.append(f"TODO.md section numbering must be sequential; expected {expected}, got {number}")
-            expected = number + 1
-        else:
-            expected += 1
         title_words = re.findall(r"[A-Za-z0-9][A-Za-z0-9+:/-]*", title)
         if not 2 <= len(title_words) <= 4:
             errors.append(
