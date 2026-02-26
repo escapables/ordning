@@ -55,7 +55,7 @@ export function setupKeyboardHandler(options = {}) {
       return;
     }
 
-    if (keyboardEvent.key !== "Delete") {
+    if (keyboardEvent.key !== "Delete" && keyboardEvent.key !== "Backspace") {
       return;
     }
 

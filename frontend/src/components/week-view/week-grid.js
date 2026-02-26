@@ -147,7 +147,14 @@ export function renderWeekGrid(dates, events = [], allDayEvents = [], options = 
   bodyWrap.appendChild(body);
 
   root.appendChild(headers);
-  root.appendChild(renderAllDayBar(dates, allDayEvents));
+  root.appendChild(
+    renderAllDayBar(dates, allDayEvents, {
+      onEventSelect,
+      onEventClick,
+      onEventDelete,
+      onEventCopy
+    })
+  );
   root.appendChild(bodyWrap);
   mountOffscreenIndicators(bodyWrap, body);
   deferAutoScroll(body, dates, PIXELS_PER_HOUR);

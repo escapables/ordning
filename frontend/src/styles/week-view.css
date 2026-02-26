@@ -111,8 +111,9 @@
 }
 
 .all-day-event {
+  background-color: var(--event-color);
   color: #fff;
-  border: 1px solid transparent;
+  border: 1px solid var(--event-color);
   border-radius: var(--radius-sm);
   font-size: 11px;
   line-height: 1.2;
@@ -269,6 +270,12 @@
 .event-block--highlighted {
   background-color: color-mix(in srgb, var(--event-color) 35%, #fff);
   border-color: color-mix(in srgb, var(--event-color) 50%, transparent);
+}
+
+.all-day-event.event-block--highlighted {
+  background-color: color-mix(in srgb, var(--event-color) 35%, #fff);
+  border-color: color-mix(in srgb, var(--event-color) 50%, transparent);
+  color: color-mix(in srgb, var(--event-color) 90%, #1c1c1e);
 }
 
 .event-block--selected {

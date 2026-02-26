@@ -8,9 +8,17 @@ import { renderCalendarList } from "./components/sidebar/calendar-list.js";
 import { renderMiniMonth } from "./components/sidebar/mini-month.js";
 import { renderToolbar } from "./components/toolbar/toolbar.js";
 import { renderWeekGrid } from "./components/week-view/week-grid.js";
-import { formatDateKey, getEndOfWeek, getStartOfWeek, getWeekDates } from "./utils/date-utils.js";
+import { getStartOfWeek } from "./utils/date-utils.js";
 import { setupKeyboardHandler } from "./utils/keyboard-handler.js";
 import { printWeek } from "./utils/print-week.js";
+import {
+  addDays,
+  getWeekBounds,
+  mapAllDayEvents,
+  mapBackendEvents,
+  parseDateKey,
+  scrollWeekBodyToEventStart
+} from "./utils/week-view-events.js";
 import { copyEventToClipboard, getCopiedEventData, pasteCopiedEventAtSlot, purgePastEventsFlow } from "./utils/ui-actions.js";
 import { getState, loadCalendars, loadWeekEvents, setCurrentWeekStart, subscribe } from "./state.js";
 
@@ -24,36 +32,6 @@ function invoke(command, payload = {}) {
     throw new Error("Tauri invoke API unavailable");
   }
   return invokeFn(command, payload);
-}
-function mapBackendEvents(events) {
-  return events.map((event) => ({
-    id: event.id,
-    date: event.date,
-    startTime: event.start_time,
-    endTime: event.end_time,
-    title: event.title,
-    color: event.color
-  }));
-}
-
-function mapAllDayEvents(events) {
-  return events.map((event) => ({
-    id: event.id,
-    date: event.date,
-    title: event.title,
-    color: event.color
-  }));
-}
-
-function addDays(date, days) {
-  const next = new Date(date);
-  next.setDate(next.getDate() + days);
-  return next;
-}
-
-function parseDateKey(dateKey) {
-  const [year, month, day] = dateKey.split("-").map(Number);
-  return new Date(year, month - 1, day);
 }
 
 function renderWeekSection(container, weekDates, options = {}) {
@@ -71,17 +49,6 @@ function renderWeekSection(container, weekDates, options = {}) {
   );
 }
 
-function getWeekBounds(weekStart) {
-  const start = getStartOfWeek(weekStart, 1);
-  const end = getEndOfWeek(weekStart, 1);
-  return {
-    start,
-    end,
-    startDate: formatDateKey(start),
-    endDate: formatDateKey(end),
-    weekDates: getWeekDates(start, 1)
-  };
-}
 async function initializeSettings() {
   try {
     const settings = await invoke("get_settings");
@@ -160,7 +127,7 @@ async function renderAppShell() {
     const activeElement = document.activeElement;
     if (
       activeElement instanceof HTMLElement &&
-      activeElement.classList.contains("event-block") &&
+      (activeElement.classList.contains("event-block") || activeElement.classList.contains("all-day-event")) &&
       (blurFocusedEvent || activeElement.classList.contains("event-block--selected"))
     ) {
       activeElement.blur();
@@ -171,10 +138,17 @@ async function renderAppShell() {
   };
 
   const highlightEventBlock = (eventId) => {
-    const block = weekContainer.querySelector(`.event-block[data-event-id="${eventId}"]`);
+    const block = weekContainer.querySelector(
+      `.event-block[data-event-id="${eventId}"], .all-day-event[data-event-id="${eventId}"]`
+    );
     if (!(block instanceof HTMLElement)) {
       return false;
     }
+
+    const stateSnapshot = getState();
+    const targetEvent = stateSnapshot.events.find((event) => event.id === eventId)
+      ?? stateSnapshot.allDayEvents.find((event) => event.id === eventId);
+    scrollWeekBodyToEventStart(weekContainer, targetEvent);
 
     block.classList.remove("event-block--highlighted");
     // Force class re-apply when selecting the same event repeatedly.
@@ -294,10 +268,10 @@ async function renderAppShell() {
     if (!(target instanceof Element)) {
       return;
     }
-    if (target.closest(".event-block")) {
+    if (target.closest(".event-block") || target.closest(".all-day-event")) {
       return;
     }
-    if (target.closest(".day-column")) {
+    if (target.closest(".day-column") || target.closest(".all-day-bar__day")) {
       clearEventSelection();
     }
   });
@@ -315,7 +289,7 @@ async function renderAppShell() {
       if (target.closest("input, textarea, select, [contenteditable='true']")) {
         return;
       }
-      if (target.closest(".day-column")) {
+      if (target.closest(".day-column") || target.closest(".all-day-event")) {
         return;
       }
       contextMenuEvent.preventDefault();
@@ -474,7 +448,8 @@ async function renderAppShell() {
       const focusedEvent = document.activeElement;
       const selectedEvent = weekContainer.querySelector(".event-block--selected");
       const targetEvent =
-        focusedEvent instanceof HTMLElement && focusedEvent.classList.contains("event-block")
+        focusedEvent instanceof HTMLElement
+          && (focusedEvent.classList.contains("event-block") || focusedEvent.classList.contains("all-day-event"))
           ? focusedEvent
           : selectedEvent instanceof HTMLElement
             ? selectedEvent

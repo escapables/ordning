@@ -174,6 +174,34 @@ test("cross-midnight event renders continuation segment on next day", async ({ p
   await expect(tuesdaySegment.locator(".event-block__time")).toHaveText("22:00 - 02:00");
 });
 
+test("all-day events support select open context menu and keyboard delete", async ({ page }) => {
+  await page.goto("/");
+
+  const allDayEvent = page.locator(".all-day-event", { hasText: "Company Offsite" });
+  await expect(allDayEvent).toHaveCount(1);
+
+  await allDayEvent.click();
+  await expect(allDayEvent).toHaveClass(/event-block--selected/);
+
+  await allDayEvent.dblclick();
+  await expect(page.locator(".event-modal[open]")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".event-modal[open]")).toHaveCount(0);
+
+  await allDayEvent.click({ button: "right" });
+  await expect(page.locator(".context-menu__item", { hasText: "Öppna" })).toBeVisible();
+  await expect(page.locator(".context-menu__item", { hasText: "Ta bort" })).toBeVisible();
+  await expect(page.locator(".context-menu__item", { hasText: "Kopiera" })).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await allDayEvent.focus();
+  await page.keyboard.press("Backspace");
+  await expect(page.locator(".confirm-dialog[open]")).toBeVisible();
+  await page.locator(".confirm-dialog__btn").first().click();
+  await expect(page.locator(".confirm-dialog[open]")).toHaveCount(0);
+  await expect(allDayEvent).toHaveCount(1);
+});
+
 test("single click selects event, dblclick opens modal, and clear selection works", async ({ page }) => {
   await page.goto("/");
 

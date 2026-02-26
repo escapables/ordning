@@ -17,3 +17,24 @@ test("toolbar search shows results, no-results state, and selection", async ({ p
   await expect(page.locator(".toolbar-search__dropdown")).toBeHidden();
   await expect(page.locator(".event-block--highlighted")).toHaveCount(1);
 });
+
+test("search result navigates week and scrolls with one-hour margin", async ({ page }) => {
+  await page.goto("/");
+
+  const toolbarTitle = page.locator(".main-toolbar__title");
+  const beforeTitle = await toolbarTitle.textContent();
+  const body = page.locator(".week-grid__body");
+
+  const input = page.locator(".toolbar-search__input");
+  await input.fill("Archived Planning");
+  await expect(page.locator(".toolbar-search__item-title", { hasText: "Archived Planning" })).toBeVisible();
+  await page.locator(".toolbar-search__item", { hasText: "Archived Planning" }).click();
+
+  await expect(toolbarTitle).not.toHaveText(beforeTitle || "");
+  const highlightedEvent = page.locator(".event-block--highlighted", { hasText: "Archived Planning" });
+  await expect(highlightedEvent).toHaveCount(1);
+
+  const scrollTop = await body.evaluate((node) => node.scrollTop);
+  expect(scrollTop).toBeGreaterThan(380);
+  expect(scrollTop).toBeLessThan(405);
+});
