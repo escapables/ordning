@@ -6,6 +6,8 @@ use super::{Calendar, Event};
 pub struct AppSettings {
     #[serde(default = "default_lang")]
     pub lang: String,
+    #[serde(default = "default_timezone")]
+    pub timezone: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -40,6 +42,7 @@ impl Default for AppSettings {
     fn default() -> Self {
         Self {
             lang: default_lang(),
+            timezone: default_timezone(),
         }
     }
 }
@@ -48,11 +51,17 @@ fn default_lang() -> String {
     "sv".to_owned()
 }
 
+fn default_timezone() -> String {
+    "UTC".to_owned()
+}
+
 impl AppData {
     pub fn normalize_settings(&mut self) {
         let normalized = normalize_lang(&self.settings.lang)
             .unwrap_or_else(|| normalize_lang(&self.lang).unwrap_or_else(default_lang));
+        let timezone = normalize_timezone(&self.settings.timezone).unwrap_or_else(default_timezone);
         self.settings.lang = normalized.clone();
+        self.settings.timezone = timezone;
         self.lang = normalized;
     }
 }
@@ -63,6 +72,15 @@ pub fn normalize_lang(raw: &str) -> Option<String> {
         "en" => Some("en".to_owned()),
         _ => None,
     }
+}
+
+pub fn normalize_timezone(raw: &str) -> Option<String> {
+    let timezone = raw.trim();
+    if timezone.is_empty() {
+        return None;
+    }
+
+    Some(timezone.to_owned())
 }
 
 #[cfg(test)]
@@ -83,6 +101,7 @@ mod tests {
             version: 1,
             settings: AppSettings {
                 lang: "en".to_owned(),
+                timezone: "Europe/Stockholm".to_owned(),
             },
             lang: "en".to_owned(),
             calendars: vec![Calendar {
@@ -130,6 +149,7 @@ mod tests {
         let mut app_data = AppData {
             settings: AppSettings {
                 lang: "xx".to_owned(),
+                timezone: "".to_owned(),
             },
             lang: "en".to_owned(),
             ..AppData::default()
@@ -137,6 +157,7 @@ mod tests {
         app_data.normalize_settings();
 
         assert_eq!(app_data.settings.lang, "en");
+        assert_eq!(app_data.settings.timezone, "UTC");
         assert_eq!(app_data.lang, "en");
     }
 }

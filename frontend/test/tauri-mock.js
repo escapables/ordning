@@ -164,7 +164,8 @@
 
   var state = {
     settings: {
-      lang: "sv"
+      lang: "sv",
+      timezone: "Europe/Stockholm"
     },
     calendars: [
       {
@@ -323,10 +324,15 @@
 
       case "set_settings": {
         var nextLang = payload && payload.settings && payload.settings.lang;
+        var nextTimezone = payload && payload.settings && payload.settings.timezone;
         if (nextLang !== "sv" && nextLang !== "en") {
           return Promise.reject("unsupported language");
         }
+        if (!nextTimezone || !String(nextTimezone).trim()) {
+          return Promise.reject("unsupported timezone");
+        }
         state.settings.lang = nextLang;
+        state.settings.timezone = String(nextTimezone);
         return Promise.resolve({ ...state.settings });
       }
 

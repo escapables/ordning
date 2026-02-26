@@ -1,17 +1,36 @@
 const MINUTES_PER_HOUR = 60;
 const MINUTES_PER_DAY = 24 * MINUTES_PER_HOUR;
 
-function isSameDate(dateA, dateB) {
-  return dateA.getFullYear() === dateB.getFullYear()
-    && dateA.getMonth() === dateB.getMonth()
-    && dateA.getDate() === dateB.getDate();
+function formatDateKey(date) {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
 }
 
-function getMinutesSinceMidnight(now) {
-  return now.getHours() * MINUTES_PER_HOUR + now.getMinutes() + now.getSeconds() / MINUTES_PER_HOUR;
+function getZonedDateTime(timezone) {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23"
+  });
+  const parts = formatter.formatToParts(new Date());
+  const value = (type) => parts.find((part) => part.type === type)?.value ?? "00";
+  const minutes =
+    Number(value("hour")) * MINUTES_PER_HOUR
+    + Number(value("minute"))
+    + Number(value("second")) / MINUTES_PER_HOUR;
+  return {
+    dateKey: `${value("year")}-${value("month")}-${value("day")}`,
+    minutes
+  };
 }
 
-export function mountTimeIndicator(container, dates, pixelsPerHour) {
+export function mountTimeIndicator(container, dates, pixelsPerHour, timezone = "UTC") {
   const line = document.createElement("div");
   line.className = "time-indicator";
   container.appendChild(line);
@@ -20,14 +39,14 @@ export function mountTimeIndicator(container, dates, pixelsPerHour) {
   let timeoutId = 0;
 
   function update() {
-    const todayIndex = dates.findIndex((date) => isSameDate(date, new Date()));
+    const zonedNow = getZonedDateTime(timezone);
+    const todayIndex = dates.findIndex((date) => formatDateKey(date) === zonedNow.dateKey);
     if (todayIndex < 0) {
       line.style.display = "none";
       return;
     }
 
-    const now = new Date();
-    const minutes = getMinutesSinceMidnight(now);
+    const minutes = zonedNow.minutes;
     if (minutes < 0 || minutes > MINUTES_PER_DAY) {
       line.style.display = "none";
       return;

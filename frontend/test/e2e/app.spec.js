@@ -82,8 +82,43 @@ test("settings language switch updates UI text", async ({ page }) => {
 
   await expect(page.locator(".sidebar__new-event-btn")).toHaveText("Nytt event");
   await page.locator(".sidebar__settings-btn").click();
-  await page.locator(".settings-dialog__select").selectOption("en");
+  await page.locator(".settings-dialog__field").first().locator("select").selectOption("en");
   await expect(page.locator(".sidebar__new-event-btn")).toHaveText("New event");
+});
+
+test("settings timezone selection persists", async ({ page }) => {
+  await page.goto("/");
+
+  await page.locator(".sidebar__settings-btn").click();
+  const timezoneSelect = page.locator(".settings-dialog__field").nth(1).locator("select");
+  const selectedTimezone = await timezoneSelect.evaluate((node) => node.value);
+  const nextTimezone = await timezoneSelect.evaluate((node) => {
+    const options = Array.from(node.options).map((option) => option.value);
+    return options.find((value) => value !== node.value) ?? node.value;
+  });
+  await timezoneSelect.selectOption(nextTimezone);
+  await expect(page.locator(".settings-dialog[open]")).toHaveCount(0);
+
+  await page.locator(".sidebar__settings-btn").click();
+  await expect(page.locator(".settings-dialog__field").nth(1).locator("select")).toHaveValue(
+    nextTimezone
+  );
+  expect(nextTimezone).not.toBe(selectedTimezone);
+});
+
+test("toolbar print button uses iframe print trigger", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.__printContexts = [];
+    window.print = function mockPrint() {
+      window.__printContexts.push(this === window ? "window" : "iframe");
+    };
+  });
+  await page.goto("/");
+
+  await page.locator(".main-toolbar__print-btn").click();
+  const printContexts = await page.evaluate(() => window.__printContexts);
+  expect(printContexts).toHaveLength(1);
+  expect(printContexts[0]).toBe("iframe");
 });
 
 test("overlapping Monday events are rendered in equal-width columns", async ({ page }) => {

@@ -10,11 +10,13 @@ import { renderToolbar } from "./components/toolbar/toolbar.js";
 import { renderWeekGrid } from "./components/week-view/week-grid.js";
 import { formatDateKey, getEndOfWeek, getStartOfWeek, getWeekDates } from "./utils/date-utils.js";
 import { setupKeyboardHandler } from "./utils/keyboard-handler.js";
+import { printWeek } from "./utils/print-week.js";
 import { copyEventToClipboard, getCopiedEventData, pasteCopiedEventAtSlot, purgePastEventsFlow } from "./utils/ui-actions.js";
 import { getState, loadCalendars, loadWeekEvents, setCurrentWeekStart, subscribe } from "./state.js";
 
 let unsubscribeState = null;
 let keydownHandler = null;
+let currentTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? "UTC";
 
 function invoke(command, payload = {}) {
   const invokeFn = window.__TAURI__?.core?.invoke;
@@ -23,7 +25,6 @@ function invoke(command, payload = {}) {
   }
   return invokeFn(command, payload);
 }
-
 function mapBackendEvents(events) {
   return events.map((event) => ({
     id: event.id,
@@ -60,7 +61,6 @@ function renderWeekSection(container, weekDates, options = {}) {
   if (previous) {
     previous.remove();
   }
-
   const mappedEvents = mapBackendEvents(getState().events);
   const mappedAllDayEvents = mapAllDayEvents(getState().allDayEvents);
   container.appendChild(
@@ -82,28 +82,26 @@ function getWeekBounds(weekStart) {
     weekDates: getWeekDates(start, 1)
   };
 }
-
-async function initializeLanguage() {
+async function initializeSettings() {
   try {
     const settings = await invoke("get_settings");
     setLang(settings?.lang);
+    currentTimezone = settings?.timezone ?? currentTimezone;
   } catch (error) {
     console.error("Failed to load settings", error);
   }
 }
-
-async function applyLanguage(nextLang) {
-  setLang(nextLang);
+async function applySettings(nextSettings) {
   try {
-    await invoke("set_settings", {
-      settings: { lang: nextLang }
-    });
+    const persisted = await invoke("set_settings", { settings: nextSettings });
+    setLang(persisted?.lang ?? nextSettings.lang);
+    currentTimezone = persisted?.timezone ?? nextSettings.timezone ?? currentTimezone;
   } catch (error) {
     console.error("Failed to persist settings", error);
+    return;
   }
   await renderAppShell();
 }
-
 async function renderAppShell() {
   if (unsubscribeState) {
     unsubscribeState();
@@ -118,7 +116,6 @@ async function renderAppShell() {
   if (!app) {
     return;
   }
-
   const now = new Date();
   const initialWeekStart = getState().currentWeekStart ?? getStartOfWeek(now, 1);
   setCurrentWeekStart(initialWeekStart);
@@ -139,7 +136,6 @@ async function renderAppShell() {
   `;
 
   document.title = t("appName");
-
   const sidebarList = app.querySelector(".sidebar__calendar-list");
   const sidebarMiniMonth = app.querySelector(".sidebar__mini-month");
   const settingsButton = app.querySelector(".sidebar__settings-btn");
@@ -158,7 +154,6 @@ async function renderAppShell() {
   const refreshAndRender = async () => {
     await Promise.all([loadCalendars(), refreshCurrentWeekEvents()]);
   };
-
   let pendingHighlightEventId = null;
   let activeHighlight = null;
   const clearEventSelection = ({ blurFocusedEvent = false } = {}) => {
@@ -170,7 +165,6 @@ async function renderAppShell() {
     ) {
       activeElement.blur();
     }
-
     weekContainer.querySelectorAll(".event-block--selected").forEach((block) => {
       block.classList.remove("event-block--selected");
     });
@@ -244,7 +238,8 @@ async function renderAppShell() {
   const confirmDialog = createConfirmDialog();
   app.appendChild(confirmDialog.element);
   const settingsDialog = createSettingsDialog({
-    onChangeLang: applyLanguage
+    getTimezone: () => currentTimezone,
+    onChangeSettings: applySettings
   });
   app.appendChild(settingsDialog.element);
   settingsButton.addEventListener("click", () => {
@@ -314,19 +309,15 @@ async function renderAppShell() {
       if (!(target instanceof Element)) {
         return;
       }
-
       if (target.closest(".context-menu")) {
         return;
       }
-
       if (target.closest("input, textarea, select, [contenteditable='true']")) {
         return;
       }
-
       if (target.closest(".day-column")) {
         return;
       }
-
       contextMenuEvent.preventDefault();
     },
     true
@@ -417,6 +408,13 @@ async function renderAppShell() {
         onPreviousWeek: goToPreviousWeek,
         onNextWeek: goToNextWeek,
         onToday: goToToday,
+        onPrint: () => {
+          printWeek({
+            weekDates,
+            events: mapBackendEvents(getState().events),
+            allDayEvents: mapAllDayEvents(getState().allDayEvents)
+          });
+        },
         onSearch: async (query) => {
           return invoke("search_events", { query });
         },
@@ -432,7 +430,10 @@ async function renderAppShell() {
       })
     );
 
-    renderWeekSection(weekContainer, weekDates, weekViewHandlers);
+    renderWeekSection(weekContainer, weekDates, {
+      ...weekViewHandlers,
+      timezone: currentTimezone
+    });
 
     if (pendingHighlightEventId && highlightEventBlock(pendingHighlightEventId)) {
       activeHighlight = {
@@ -448,8 +449,10 @@ async function renderAppShell() {
       activeHighlight = null;
     }
   });
-
-  renderWeekSection(weekContainer, getWeekBounds(initialWeekStart).weekDates, weekViewHandlers);
+  renderWeekSection(weekContainer, getWeekBounds(initialWeekStart).weekDates, {
+    ...weekViewHandlers,
+    timezone: currentTimezone
+  });
 
   keydownHandler = setupKeyboardHandler({
     closeOpenDialogs: () => {
@@ -485,12 +488,10 @@ async function renderAppShell() {
     }
   });
   document.addEventListener("keydown", keydownHandler);
-
   await refreshAndRender();
 }
-
 async function bootstrap() {
-  await initializeLanguage();
+  await initializeSettings();
   await renderAppShell();
 }
 

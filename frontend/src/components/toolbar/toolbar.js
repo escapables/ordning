@@ -68,6 +68,7 @@ export function renderToolbar(options) {
     onPreviousWeek = () => {},
     onNextWeek = () => {},
     onToday = () => {},
+    onPrint = () => {},
     onSearch = async () => [],
     onSearchSelect = () => {}
   } = options;
@@ -101,7 +102,14 @@ export function renderToolbar(options) {
   todayButton.textContent = t("todayButton");
   todayButton.addEventListener("click", onToday);
 
-  nav.append(previousButton, nextButton, todayButton);
+  const printButton = document.createElement("button");
+  printButton.type = "button";
+  printButton.className = "main-toolbar__today-btn main-toolbar__print-btn";
+  printButton.tabIndex = 1;
+  printButton.textContent = t("printButton");
+  printButton.addEventListener("click", onPrint);
+
+  nav.append(previousButton, nextButton, todayButton, printButton);
 
   const title = document.createElement("h1");
   title.className = "main-toolbar__title";

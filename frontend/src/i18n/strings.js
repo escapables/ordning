@@ -7,6 +7,7 @@ const STRINGS = {
     exportButton: "Exportera",
     importButton: "Importera",
     todayButton: "Idag",
+    printButton: "Skriv ut",
     toolbarPreviousWeek: "Föregående vecka",
     toolbarNextWeek: "Nästa vecka",
     searchPlaceholder: "Sök event",
@@ -94,6 +95,7 @@ const STRINGS = {
     settingsButtonAria: "Öppna inställningar",
     settingsTitle: "Inställningar",
     settingsLanguageLabel: "Språk",
+    settingsTimezoneLabel: "Tidszon",
     settingsLanguageSwedish: "Svenska",
     settingsLanguageEnglish: "English"
   },
@@ -105,6 +107,7 @@ const STRINGS = {
     exportButton: "Export",
     importButton: "Import",
     todayButton: "Today",
+    printButton: "Print",
     toolbarPreviousWeek: "Previous week",
     toolbarNextWeek: "Next week",
     searchPlaceholder: "Search events",
@@ -192,6 +195,7 @@ const STRINGS = {
     settingsButtonAria: "Open settings",
     settingsTitle: "Settings",
     settingsLanguageLabel: "Language",
+    settingsTimezoneLabel: "Timezone",
     settingsLanguageSwedish: "Svenska",
     settingsLanguageEnglish: "English"
   }

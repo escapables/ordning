@@ -80,7 +80,8 @@ export function renderWeekGrid(dates, events = [], allDayEvents = [], options = 
     onCreateSlot = () => {},
     onCreateFromContextMenu = () => {},
     onPasteFromContextMenu = () => {},
-    canPasteFromContextMenu = () => false
+    canPasteFromContextMenu = () => false,
+    timezone = "UTC"
   } = options;
   const root = document.createElement("section");
   root.className = "week-view";
@@ -144,7 +145,7 @@ export function renderWeekGrid(dates, events = [], allDayEvents = [], options = 
     );
   });
 
-  mountTimeIndicator(body, dates, PIXELS_PER_HOUR);
+  mountTimeIndicator(body, dates, PIXELS_PER_HOUR, timezone);
 
   const bodyWrap = document.createElement("div");
   bodyWrap.className = "week-grid__body-wrap";
