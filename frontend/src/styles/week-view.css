@@ -253,26 +253,26 @@
   border: 1px solid color-mix(in srgb, var(--event-color) 25%, transparent);
   border-left: 3px solid var(--event-color);
   border-radius: var(--radius-sm);
-  box-shadow: none;
   color: color-mix(in srgb, var(--event-color) 90%, #1c1c1e);
   overflow: hidden;
   cursor: pointer;
   pointer-events: auto;
   z-index: 3;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
 }
 
 .event-block:hover {
-  background-color: color-mix(in srgb, var(--event-color) 22%, #fff);
-  box-shadow: none;
+  background-color: color-mix(in srgb, var(--event-color) 35%, #fff);
+  border-color: color-mix(in srgb, var(--event-color) 35%, transparent);
 }
 
 .event-block--highlighted {
-  box-shadow: 0 0 0 2px rgb(255 255 255 / 0.85), 0 0 0 4px rgb(0 122 255 / 0.55);
+  background-color: color-mix(in srgb, var(--event-color) 35%, #fff);
+  border-color: color-mix(in srgb, var(--event-color) 50%, transparent);
 }
 
 .event-block--selected {
-  background-color: color-mix(in srgb, var(--event-color) 25%, #fff);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--event-color) 30%, transparent);
+  background-color: color-mix(in srgb, var(--event-color) 35%, #fff);
 }
 
 .event-block:focus-visible {
