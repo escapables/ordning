@@ -242,6 +242,7 @@ export function printWeek({ weekDates = [], events = [], allDayEvents = [] } = {
     const dayEvents = layoutEvents(eventsByDate.get(formatDateKey(date)) ?? []);
     dayEvents.forEach((event) => {
       const eventNode = printDocument.createElement("div");
+      const eventColor = event.color ?? "#4a90d9";
       const top = (event.startMinutes / MINUTES_PER_HOUR) * pixelsPerHour;
       const height = Math.max(3, ((event.endMinutes - event.startMinutes) / MINUTES_PER_HOUR) * pixelsPerHour);
       const widthPercent = 100 / (event.totalColumns || 1);
@@ -252,9 +253,10 @@ export function printWeek({ weekDates = [], events = [], allDayEvents = [] } = {
       eventNode.style.top = `${top}mm`;
       eventNode.style.height = `${height}mm`;
       eventNode.style.boxSizing = "border-box";
-      eventNode.style.background = event.color ?? "#4a90d9";
-      eventNode.style.border = "1px solid rgba(0, 0, 0, 0.35)";
-      eventNode.style.color = "#fff";
+      eventNode.style.background = `color-mix(in srgb, ${eventColor} 15%, #fff)`;
+      eventNode.style.border = `1px solid color-mix(in srgb, ${eventColor} 25%, transparent)`;
+      eventNode.style.borderLeft = `1px solid ${eventColor}`;
+      eventNode.style.color = `color-mix(in srgb, ${eventColor} 90%, #1c1c1e)`;
       eventNode.style.fontSize = "6.5pt";
       eventNode.style.padding = "1mm";
       eventNode.style.overflow = "hidden";

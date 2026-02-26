@@ -106,7 +106,6 @@ function createEventElement(event, pixelsPerMinute, handlers) {
   const widthPercent = 100 / event.totalColumns;
   element.style.width = `calc(${widthPercent}% - 4px)`;
   element.style.left = `calc(${event.column * widthPercent}% + 2px)`;
-  element.style.backgroundColor = event.color;
   element.style.setProperty("--event-color", event.color);
   element.dataset.eventId = event.id;
   element.tabIndex = 3;
