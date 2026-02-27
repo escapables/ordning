@@ -82,7 +82,7 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
   function previewRange() {
     if (dragState.mode === "move") {
       return {
-        startMinutes: dragState.targetStartMinutes,
+        startMinutes: Math.max(0, dragState.targetStartMinutes),
         endMinutes: Math.min(MINUTES_PER_DAY, dragState.targetStartMinutes + dragState.durationMinutes)
       };
     }
@@ -192,23 +192,40 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     }
     const rect = targetColumn.getBoundingClientRect();
     const rawStart = roundNearest(pointerToMinutes(clientY, rect, pixelsPerHour) - dragState.clickOffsetMinutes, TIME_STEP_MINUTES);
-    const startMinutes = clamp(rawStart, 0, MINUTES_PER_DAY - TIME_STEP_MINUTES);
+    const startMinutes = clamp(rawStart, -MINUTES_PER_DAY + TIME_STEP_MINUTES, MINUTES_PER_DAY - TIME_STEP_MINUTES);
     const absoluteEndMinutes = startMinutes + dragState.durationMinutes;
-    const overflowEndMinutes = Math.min(MINUTES_PER_DAY, Math.max(absoluteEndMinutes - MINUTES_PER_DAY, 0));
-    const overflowDate = addDaysToDateKey(targetDate, 1);
-    const overflowColumn = overflowEndMinutes > 0 ? findColumnByDate(column, overflowDate) : null;
+    const hasOverflow = absoluteEndMinutes > MINUTES_PER_DAY;
+    const hasUnderflow = startMinutes < 0;
+    const overflowEndMinutes = hasOverflow ? Math.min(MINUTES_PER_DAY, absoluteEndMinutes - MINUTES_PER_DAY) : 0;
+    const underflowStartMinutes = hasUnderflow ? startMinutes + MINUTES_PER_DAY : 0;
+    const neighborDate = hasOverflow
+      ? addDaysToDateKey(targetDate, 1)
+      : hasUnderflow
+        ? addDaysToDateKey(targetDate, -1)
+        : null;
+    const neighborColumn = neighborDate ? findColumnByDate(column, neighborDate) : null;
     dragState.targetColumn = targetColumn;
     dragState.targetDate = targetDate;
     dragState.targetStartMinutes = startMinutes;
+    const primaryTop = Math.max(startMinutes, 0);
+    const primaryBottom = Math.min(absoluteEndMinutes, MINUTES_PER_DAY);
     const preview = ensurePreview(dragState, "preview", targetColumn);
-    preview.style.top = `${(startMinutes / MINUTES_PER_HOUR) * pixelsPerHour}px`;
-    preview.style.height = `${Math.max(((Math.min(absoluteEndMinutes, MINUTES_PER_DAY) - startMinutes) / MINUTES_PER_HOUR) * pixelsPerHour, 18)}px`;
-    if (overflowColumn instanceof HTMLElement) {
-      dragState.neighborTargetStartMinutes = 0;
-      dragState.neighborTargetEndMinutes = overflowEndMinutes;
-      const overflowPreview = ensurePreview(dragState, "neighborPreview", overflowColumn);
-      overflowPreview.style.top = "0px";
-      overflowPreview.style.height = `${Math.max((overflowEndMinutes / MINUTES_PER_HOUR) * pixelsPerHour, 18)}px`;
+    preview.style.top = `${(primaryTop / MINUTES_PER_HOUR) * pixelsPerHour}px`;
+    preview.style.height = `${Math.max(((primaryBottom - primaryTop) / MINUTES_PER_HOUR) * pixelsPerHour, 18)}px`;
+    if (neighborColumn instanceof HTMLElement) {
+      if (hasOverflow) {
+        dragState.neighborTargetStartMinutes = 0;
+        dragState.neighborTargetEndMinutes = overflowEndMinutes;
+        const overflowPreview = ensurePreview(dragState, "neighborPreview", neighborColumn);
+        overflowPreview.style.top = "0px";
+        overflowPreview.style.height = `${Math.max((overflowEndMinutes / MINUTES_PER_HOUR) * pixelsPerHour, 18)}px`;
+      } else {
+        dragState.neighborTargetStartMinutes = underflowStartMinutes;
+        dragState.neighborTargetEndMinutes = MINUTES_PER_DAY;
+        const underflowPreview = ensurePreview(dragState, "neighborPreview", neighborColumn);
+        underflowPreview.style.top = `${(underflowStartMinutes / MINUTES_PER_HOUR) * pixelsPerHour}px`;
+        underflowPreview.style.height = `${Math.max(((MINUTES_PER_DAY - underflowStartMinutes) / MINUTES_PER_HOUR) * pixelsPerHour, 18)}px`;
+      }
     } else {
       dragState.neighborTargetStartMinutes = 0;
       dragState.neighborTargetEndMinutes = 0;
@@ -228,8 +245,8 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
         .filter((candidate) => candidate instanceof HTMLElement)
     );
     columnsToLayout.add(targetColumn);
-    if (overflowColumn instanceof HTMLElement) {
-      columnsToLayout.add(overflowColumn);
+    if (neighborColumn instanceof HTMLElement) {
+      columnsToLayout.add(neighborColumn);
     }
     columnsToLayout.forEach((candidateColumn) => {
       layoutColumnItems(candidateColumn, { includeGhost: true });

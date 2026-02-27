@@ -21,38 +21,40 @@ function formatWeekRange(startDate, endDate) {
   const sameYear = startDate.getFullYear() === endDate.getFullYear();
   const sameMonth = sameYear && startDate.getMonth() === endDate.getMonth();
 
+  const strip = (value) => value.replace(/\.$/, "");
+
   if (sameMonth) {
-    const startLabel = new Intl.DateTimeFormat(locale, {
+    const startLabel = strip(new Intl.DateTimeFormat(locale, {
       month: "short",
       day: "numeric"
-    }).format(startDate);
+    }).format(startDate));
     const endLabel = `${endDate.getDate()}, ${endDate.getFullYear()}`;
     return `${startLabel} - ${endLabel}`;
   }
 
   if (sameYear) {
-    const startLabel = new Intl.DateTimeFormat(locale, {
+    const startLabel = strip(new Intl.DateTimeFormat(locale, {
       month: "short",
       day: "numeric"
-    }).format(startDate);
-    const endLabel = new Intl.DateTimeFormat(locale, {
+    }).format(startDate));
+    const endLabel = strip(new Intl.DateTimeFormat(locale, {
       month: "short",
       day: "numeric",
       year: "numeric"
-    }).format(endDate);
+    }).format(endDate));
     return `${startLabel} - ${endLabel}`;
   }
 
-  const startLabel = new Intl.DateTimeFormat(locale, {
+  const startLabel = strip(new Intl.DateTimeFormat(locale, {
     month: "short",
     day: "numeric",
     year: "numeric"
-  }).format(startDate);
-  const endLabel = new Intl.DateTimeFormat(locale, {
+  }).format(startDate));
+  const endLabel = strip(new Intl.DateTimeFormat(locale, {
     month: "short",
     day: "numeric",
     year: "numeric"
-  }).format(endDate);
+  }).format(endDate));
   return `${startLabel} - ${endLabel}`;
 }
 

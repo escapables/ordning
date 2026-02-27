@@ -487,3 +487,32 @@ test("context menu is suppressed on non-column non-interactive areas", async ({ 
   await page.locator(".sidebar").click({ button: "right", position: { x: 8, y: 8 } });
   await expect(page.locator(".context-menu")).toHaveCount(0);
 });
+
+test("drag-move past 00:00 wraps backward to previous day with dual ghost", async ({ page }) => {
+  await page.goto("/");
+
+  const body = page.locator(".week-grid__body");
+  const tuesdayColumn = page.locator(".day-column").nth(1);
+  const sourceEvent = tuesdayColumn.locator(".event-block", { hasText: "Design Review" });
+  await expect(sourceEvent).toHaveCount(1);
+  await sourceEvent.scrollIntoViewIfNeeded();
+
+  const sourceBox = await sourceEvent.boundingBox();
+  expect(sourceBox).not.toBeNull();
+
+  await page.mouse.move(sourceBox.x + 12, sourceBox.y + 10);
+  await page.mouse.down();
+  await page.mouse.move(sourceBox.x + 18, sourceBox.y + 14, { steps: 4 });
+
+  await body.evaluate((node) => { node.scrollTop = 0; });
+  const bodyBox = await body.boundingBox();
+  expect(bodyBox).not.toBeNull();
+
+  await page.mouse.move(sourceBox.x + 20, bodyBox.y - 20, { steps: 12 });
+  await expect(page.locator(".day-column__move-preview")).toHaveCount(2);
+  await page.mouse.up();
+
+  await expect(tuesdayColumn.locator(".event-block", { hasText: "Design Review" })).toHaveCount(1);
+  const mondaySegment = page.locator(".day-column").nth(0).locator(".event-block", { hasText: "Design Review" });
+  await expect(mondaySegment).toHaveCount(1);
+});

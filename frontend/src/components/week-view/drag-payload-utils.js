@@ -17,11 +17,14 @@ export function formatClockMinutes(value) {
 }
 
 export function buildTimedPayload({ eventId, date, startMinutes, endMinutes }) {
-  const overflowDays = Math.floor(endMinutes / MINUTES_PER_DAY);
+  const startDayShift = Math.floor(startMinutes / MINUTES_PER_DAY);
+  const startDate = startDayShift ? addDaysToDateKey(date, startDayShift) : date;
+  const adjustedEnd = endMinutes - startDayShift * MINUTES_PER_DAY;
+  const overflowDays = Math.floor(adjustedEnd / MINUTES_PER_DAY);
   return {
     eventId,
-    startDate: date,
-    endDate: addDaysToDateKey(date, overflowDays),
+    startDate,
+    endDate: addDaysToDateKey(startDate, overflowDays),
     startTime: formatClockMinutes(startMinutes),
     endTime: formatClockMinutes(endMinutes)
   };
