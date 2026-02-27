@@ -19,13 +19,18 @@ export function createConfirmDialog() {
   cancelButton.className = "confirm-dialog__btn";
   cancelButton.textContent = t("eventFormCancel");
 
+  const alternateButton = document.createElement("button");
+  alternateButton.type = "button";
+  alternateButton.className = "confirm-dialog__btn";
+  alternateButton.hidden = true;
+
   const confirmButton = document.createElement("button");
   confirmButton.type = "button";
   confirmButton.className = "confirm-dialog__btn confirm-dialog__btn--danger";
   confirmButton.textContent = t("eventFormDelete");
   confirmButton.autofocus = true;
 
-  actions.append(cancelButton, confirmButton);
+  actions.append(cancelButton, alternateButton, confirmButton);
   form.append(message, actions);
   dialog.appendChild(form);
 
@@ -45,6 +50,10 @@ export function createConfirmDialog() {
     closeWith(false);
   });
 
+  alternateButton.addEventListener("click", () => {
+    closeWith("alternate");
+  });
+
   confirmButton.addEventListener("click", () => {
     closeWith(true);
   });
@@ -58,12 +67,6 @@ export function createConfirmDialog() {
     if (keyboardEvent.key === "Escape") {
       keyboardEvent.preventDefault();
       closeWith(false);
-      return;
-    }
-
-    if (keyboardEvent.key === "Enter") {
-      keyboardEvent.preventDefault();
-      closeWith(true);
     }
   });
 
@@ -80,6 +83,22 @@ export function createConfirmDialog() {
 
   const defaultCancelLabel = t("eventFormCancel");
   const defaultConfirmLabel = t("eventFormDelete");
+  const defaultAlternateLabel = "";
+  const defaultAlternateTone = "neutral";
+  const confirmToneClasses = ["confirm-dialog__btn--danger", "confirm-dialog__btn--success"];
+  const alternateToneClasses = ["confirm-dialog__btn--danger-soft"];
+  const applyConfirmTone = (tone = "danger") => {
+    confirmButton.classList.remove(...confirmToneClasses);
+    confirmButton.classList.add(
+      tone === "success" ? "confirm-dialog__btn--success" : "confirm-dialog__btn--danger"
+    );
+  };
+  const applyAlternateTone = (tone = defaultAlternateTone) => {
+    alternateButton.classList.remove(...alternateToneClasses);
+    if (tone === "danger") {
+      alternateButton.classList.add("confirm-dialog__btn--danger-soft");
+    }
+  };
 
   const confirm = (text, options = {}) =>
     new Promise((resolve) => {
@@ -87,12 +106,31 @@ export function createConfirmDialog() {
       message.textContent = text;
       cancelButton.textContent = options.cancelLabel ?? defaultCancelLabel;
       confirmButton.textContent = options.confirmLabel ?? defaultConfirmLabel;
+      applyConfirmTone(options.confirmTone);
+      alternateButton.hidden = true;
+      applyAlternateTone();
+      dialog.showModal();
+      confirmButton.focus();
+    });
+
+  const choose = (text, options = {}) =>
+    new Promise((resolve) => {
+      resolver = resolve;
+      message.textContent = text;
+      cancelButton.textContent = options.cancelLabel ?? defaultCancelLabel;
+      confirmButton.textContent = options.confirmLabel ?? defaultConfirmLabel;
+      applyConfirmTone(options.confirmTone);
+      const alternateLabel = options.alternateLabel ?? defaultAlternateLabel;
+      alternateButton.textContent = alternateLabel;
+      applyAlternateTone(options.alternateTone);
+      alternateButton.hidden = !alternateLabel;
       dialog.showModal();
       confirmButton.focus();
     });
 
   return {
     element: dialog,
-    confirm
+    confirm,
+    choose
   };
 }

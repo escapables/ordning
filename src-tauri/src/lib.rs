@@ -18,6 +18,9 @@ use crate::commands::event_cmds::{
 use crate::commands::io_cmds::{
     export_json, get_export_event_count, import_json, preview_import_json,
 };
+use crate::commands::persistence_cmds::{
+    discard_unsaved_changes, has_unsaved_changes, persist_snapshot, request_app_close,
+};
 use crate::commands::settings_cmds::{get_settings, set_settings};
 use crate::commands::view_cmds::{get_week_events, search_events};
 use crate::models::Calendar;
@@ -64,7 +67,8 @@ pub fn run() {
     }
 
     let state = AppState {
-        data: Mutex::new(app_data),
+        data: Mutex::new(app_data.clone()),
+        persisted: Mutex::new(app_data),
         store,
     };
 
@@ -158,7 +162,11 @@ pub fn run() {
             preview_import_json,
             import_json,
             get_settings,
-            set_settings
+            set_settings,
+            has_unsaved_changes,
+            persist_snapshot,
+            discard_unsaved_changes,
+            request_app_close
         ])
         .run(tauri::generate_context!())
         .expect("failed to run Ordning application");

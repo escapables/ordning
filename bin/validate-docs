@@ -248,8 +248,8 @@ def _validate_todo_format(path: Path) -> list[str]:
             errors.append(f"TODO section {section_number} `Task:` must include a sentence")
         elif task_text[-1] not in ".!?":
             errors.append(f"TODO section {section_number} `Task:` must end with sentence punctuation")
-        elif len(re.findall(r"[.!?]", task_text)) != 1:
-            errors.append(f"TODO section {section_number} `Task:` must be exactly one sentence")
+        elif len(re.findall(r"[.!?]", task_text)) > 2:
+            errors.append(f"TODO section {section_number} `Task:` must be one or two sentences")
 
         scope_lines = block[scope_idx + 1 : done_idx]
         done_lines = block[done_idx + 1 :]

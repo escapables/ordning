@@ -124,7 +124,14 @@ pub fn import_json(
             .data
             .lock()
             .map_err(|err| format!("failed to lock app state: {err}"))?;
-        *locked = updated_data;
+        *locked = updated_data.clone();
+    }
+    {
+        let mut persisted = state
+            .persisted
+            .lock()
+            .map_err(|err| format!("failed to lock persisted state: {err}"))?;
+        *persisted = updated_data;
     }
 
     Ok(ImportResult {

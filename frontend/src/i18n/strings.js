@@ -98,7 +98,10 @@ const STRINGS = {
     settingsLanguageLabel: "Språk",
     settingsTimezoneLabel: "Tidszon",
     settingsLanguageSwedish: "Svenska",
-    settingsLanguageEnglish: "English"
+    settingsLanguageEnglish: "English",
+    closeUnsavedPrompt: "Du har osparade ändringar. Vad vill du göra?",
+    closeUnsavedSave: "Spara",
+    closeUnsavedDontSave: "Spara inte"
   },
   en: {
     appName: "Ordning",
@@ -199,7 +202,10 @@ const STRINGS = {
     settingsLanguageLabel: "Language",
     settingsTimezoneLabel: "Timezone",
     settingsLanguageSwedish: "Svenska",
-    settingsLanguageEnglish: "English"
+    settingsLanguageEnglish: "English",
+    closeUnsavedPrompt: "You have unsaved changes. What do you want to do?",
+    closeUnsavedSave: "Save",
+    closeUnsavedDontSave: "Don't save"
   }
 };
 

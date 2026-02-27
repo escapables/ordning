@@ -72,6 +72,18 @@ textarea:focus-visible,
   color: #b42318;
 }
 
+.confirm-dialog__btn--success {
+  background: #ecfdf3;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.confirm-dialog__btn--danger-soft {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
 .confirm-dialog__btn:hover {
   filter: brightness(0.97);
 }

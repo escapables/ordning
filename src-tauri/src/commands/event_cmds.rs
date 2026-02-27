@@ -82,7 +82,6 @@ pub fn create_event(event: EventInput, state: State<'_, AppState>) -> Result<Eve
         created
     };
 
-    persist_snapshot(&state)?;
     Ok(EventDto::from(&created))
 }
 
@@ -115,7 +114,6 @@ pub fn update_event(
         replacement
     };
 
-    persist_snapshot(&state)?;
     Ok(EventDto::from(&updated))
 }
 
@@ -138,7 +136,7 @@ pub fn delete_event(id: String, state: State<'_, AppState>) -> Result<(), String
         return Err(format!("event '{event_id}' not found"));
     }
 
-    persist_snapshot(&state)
+    Ok(())
 }
 
 #[tauri::command]
@@ -193,7 +191,6 @@ pub fn purge_past_events(
         return Ok(0);
     }
 
-    persist_snapshot(&state)?;
     Ok(purged)
 }
 
@@ -296,21 +293,6 @@ fn ensure_calendar_exists(
     } else {
         Err(format!("calendar '{calendar_id}' not found"))
     }
-}
-
-fn persist_snapshot(state: &State<'_, AppState>) -> Result<(), String> {
-    let snapshot = {
-        let app_data = state
-            .data
-            .lock()
-            .map_err(|err| format!("failed to lock app state: {err}"))?;
-        app_data.clone()
-    };
-
-    state
-        .store
-        .save(&snapshot)
-        .map_err(|err| format!("failed to persist event changes: {err}"))
 }
 
 #[cfg(test)]

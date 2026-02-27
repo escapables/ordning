@@ -5,7 +5,6 @@ import {
   MIN_SELECTION_MINUTES,
   TIME_STEP_MINUTES,
   clamp,
-  clampStartForDuration,
   eventDurationMinutes,
   pointerToMinutes,
   readEventBlockRange,
@@ -14,6 +13,14 @@ import {
 } from "./drag-time-utils.js";
 import { layoutOverlapItems } from "./drag-overlap-layout.js";
 import {
+  addDaysToDateKey,
+  applyItemPosition,
+  ensurePreview,
+  findColumnByDate,
+  rememberOriginalStyle,
+  restoreTemporaryStyles
+} from "./drag-dom-helpers.js";
+import {
   buildResizePayload,
   buildTimedPayload,
   resolveAbsoluteEndMinutes,
@@ -21,6 +28,7 @@ import {
 } from "./drag-payload-utils.js";
 export function createEventMovePointerDownHandler(column, pixelsPerHour, handlers = {}) {
   const { onEventMove = async () => {}, onEventResize = async () => {} } = handlers;
+
   const dragState = {
     pointerId: null,
     dragging: false,
@@ -33,6 +41,7 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     eventClockEnd: "00:00",
     eventColor: "#007aff",
     durationMinutes: MIN_SELECTION_MINUTES,
+    draggedElements: [],
     sourceColumn: null,
     targetColumn: null,
     targetDate: null,
@@ -93,51 +102,6 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     };
   }
 
-  function rememberOriginalStyle(element) {
-    if (dragState.originalStyles.has(element)) {
-      return;
-    }
-    dragState.originalStyles.set(element, {
-      width: element.style.width,
-      left: element.style.left,
-      visibility: element.style.visibility
-    });
-  }
-
-  function restoreTemporaryStyles() {
-    dragState.originalStyles.forEach((value, element) => {
-      element.style.width = value.width;
-      element.style.left = value.left;
-      element.style.visibility = value.visibility;
-    });
-    dragState.originalStyles.clear();
-  }
-
-  function ensurePreview(parentColumn) {
-    if (!(dragState.preview instanceof HTMLElement)) {
-      const preview = document.createElement("div");
-      preview.className = "day-column__move-preview";
-      dragState.preview = preview;
-    }
-    dragState.preview.style.setProperty("--event-color", dragState.eventColor);
-    if (dragState.preview.parentElement !== parentColumn) {
-      parentColumn.appendChild(dragState.preview);
-    }
-    return dragState.preview;
-  }
-
-  function ensureNeighborPreview(parentColumn) {
-    if (!(dragState.neighborPreview instanceof HTMLElement)) {
-      const preview = document.createElement("div");
-      preview.className = "day-column__move-preview";
-      dragState.neighborPreview = preview;
-    }
-    dragState.neighborPreview.style.setProperty("--event-color", dragState.eventColor);
-    if (dragState.neighborPreview.parentElement !== parentColumn) {
-      parentColumn.appendChild(dragState.neighborPreview);
-    }
-    return dragState.neighborPreview;
-  }
 
   function findLinkedNeighbor() {
     if (!(dragState.sourceColumn instanceof HTMLElement)) {
@@ -179,13 +143,6 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     return null;
   }
 
-  function applyItemPosition(item) {
-    const widthPercent = 100 / item.totalColumns;
-    rememberOriginalStyle(item.element);
-    item.element.style.width = `calc(${widthPercent}% - 4px)`;
-    item.element.style.left = `calc(${item.column * widthPercent}% + 2px)`;
-  }
-
   function layoutColumnItems(targetColumn, { includeGhost = false } = {}) {
     const blocks = Array.from(targetColumn.querySelectorAll(".event-block"));
     const items = [];
@@ -208,7 +165,11 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
       });
     });
 
-    if (includeGhost && dragState.preview instanceof HTMLElement) {
+    if (
+      includeGhost
+      && dragState.preview instanceof HTMLElement
+      && dragState.preview.parentElement === targetColumn
+    ) {
       const ghost = previewRange();
       items.push({
         element: dragState.preview,
@@ -216,7 +177,11 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
         endMinutes: ghost.endMinutes
       });
     }
-    if (includeGhost && dragState.neighborPreview instanceof HTMLElement && dragState.neighborEventId) {
+    if (
+      includeGhost
+      && dragState.neighborPreview instanceof HTMLElement
+      && dragState.neighborPreview.parentElement === targetColumn
+    ) {
       const ghost = neighborPreviewRange();
       items.push({
         element: dragState.neighborPreview,
@@ -225,7 +190,9 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
       });
     }
 
-    layoutOverlapItems(items).forEach(applyItemPosition);
+    layoutOverlapItems(items).forEach((item) => {
+      applyItemPosition(dragState, item);
+    });
   }
 
   function renderMovingLayout(clientX, clientY) {
@@ -241,32 +208,55 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
 
     const rect = targetColumn.getBoundingClientRect();
     const rawStart = roundNearest(pointerToMinutes(clientY, rect, pixelsPerHour), TIME_STEP_MINUTES);
-    const startMinutes = clampStartForDuration(rawStart, dragState.durationMinutes);
+    const startMinutes = clamp(rawStart, 0, MINUTES_PER_DAY - TIME_STEP_MINUTES);
+    const absoluteEndMinutes = startMinutes + dragState.durationMinutes;
+    const overflowEndMinutes = Math.min(MINUTES_PER_DAY, Math.max(absoluteEndMinutes - MINUTES_PER_DAY, 0));
+    const overflowDate = addDaysToDateKey(targetDate, 1);
+    const overflowColumn = overflowEndMinutes > 0 ? findColumnByDate(column, overflowDate) : null;
 
     dragState.targetColumn = targetColumn;
     dragState.targetDate = targetDate;
     dragState.targetStartMinutes = startMinutes;
 
-    const preview = ensurePreview(targetColumn);
+    const preview = ensurePreview(dragState, "preview", targetColumn);
     preview.style.top = `${(startMinutes / MINUTES_PER_HOUR) * pixelsPerHour}px`;
-    preview.style.height = `${Math.max((dragState.durationMinutes / MINUTES_PER_HOUR) * pixelsPerHour, 18)}px`;
+    preview.style.height = `${Math.max(((Math.min(absoluteEndMinutes, MINUTES_PER_DAY) - startMinutes) / MINUTES_PER_HOUR) * pixelsPerHour, 18)}px`;
 
-    restoreTemporaryStyles();
-
-    if (dragState.draggedElement instanceof HTMLElement) {
-      rememberOriginalStyle(dragState.draggedElement);
-      dragState.draggedElement.style.visibility = "hidden";
+    if (overflowColumn instanceof HTMLElement) {
+      dragState.neighborTargetStartMinutes = 0;
+      dragState.neighborTargetEndMinutes = overflowEndMinutes;
+      const overflowPreview = ensurePreview(dragState, "neighborPreview", overflowColumn);
+      overflowPreview.style.top = "0px";
+      overflowPreview.style.height = `${Math.max((overflowEndMinutes / MINUTES_PER_HOUR) * pixelsPerHour, 18)}px`;
+    } else {
+      dragState.neighborTargetStartMinutes = 0;
+      dragState.neighborTargetEndMinutes = 0;
+      dragState.neighborPreview?.remove();
     }
 
-    if (dragState.sourceColumn instanceof HTMLElement) {
-      layoutColumnItems(dragState.sourceColumn, {
-        includeGhost: dragState.sourceColumn === targetColumn
-      });
+    restoreTemporaryStyles(dragState);
+
+    dragState.draggedElements.forEach((eventElement) => {
+      if (!(eventElement instanceof HTMLElement)) {
+        return;
+      }
+      rememberOriginalStyle(dragState, eventElement);
+      eventElement.style.visibility = "hidden";
+    });
+
+    const columnsToLayout = new Set(
+      dragState.draggedElements
+        .map((eventElement) => eventElement.closest(".day-column"))
+        .filter((candidate) => candidate instanceof HTMLElement)
+    );
+    columnsToLayout.add(targetColumn);
+    if (overflowColumn instanceof HTMLElement) {
+      columnsToLayout.add(overflowColumn);
     }
 
-    if (targetColumn !== dragState.sourceColumn) {
-      layoutColumnItems(targetColumn, { includeGhost: true });
-    }
+    columnsToLayout.forEach((candidateColumn) => {
+      layoutColumnItems(candidateColumn, { includeGhost: true });
+    });
   }
 
   function renderResizingLayout(clientY) {
@@ -311,20 +301,20 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
       }
     }
 
-    const preview = ensurePreview(targetColumn);
+    const preview = ensurePreview(dragState, "preview", targetColumn);
     const range = previewRange();
     preview.style.top = `${(range.startMinutes / MINUTES_PER_HOUR) * pixelsPerHour}px`;
     preview.style.height = `${Math.max(((range.endMinutes - range.startMinutes) / MINUTES_PER_HOUR) * pixelsPerHour, 18)}px`;
 
-    restoreTemporaryStyles();
+    restoreTemporaryStyles(dragState);
     if (dragState.draggedElement instanceof HTMLElement) {
-      rememberOriginalStyle(dragState.draggedElement);
+      rememberOriginalStyle(dragState, dragState.draggedElement);
       dragState.draggedElement.style.visibility = "hidden";
     }
     if (dragState.neighborElement instanceof HTMLElement) {
-      rememberOriginalStyle(dragState.neighborElement);
+      rememberOriginalStyle(dragState, dragState.neighborElement);
       dragState.neighborElement.style.visibility = "hidden";
-      const neighborPreview = ensureNeighborPreview(targetColumn);
+      const neighborPreview = ensurePreview(dragState, "neighborPreview", targetColumn);
       const neighborRange = neighborPreviewRange();
       neighborPreview.style.top = `${(neighborRange.startMinutes / MINUTES_PER_HOUR) * pixelsPerHour}px`;
       neighborPreview.style.height = `${Math.max(((neighborRange.endMinutes - neighborRange.startMinutes) / MINUTES_PER_HOUR) * pixelsPerHour, 18)}px`;
@@ -339,7 +329,7 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     window.removeEventListener("pointerup", handlePointerUp, true);
     window.removeEventListener("pointercancel", stopDrag, true);
 
-    restoreTemporaryStyles();
+    restoreTemporaryStyles(dragState);
     dragState.preview?.remove();
     dragState.neighborPreview?.remove();
 
@@ -360,6 +350,7 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     dragState.durationMinutes = MIN_SELECTION_MINUTES;
     dragState.eventColor = "#007aff";
     dragState.draggedElement = null;
+    dragState.draggedElements = [];
     dragState.neighborEventId = null;
     dragState.neighborEventDate = null;
     dragState.neighborClockStart = "00:00";
@@ -459,7 +450,11 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
       resolveAbsoluteEndMinutes(element, rawEndMinutes),
       startMinutes
     );
-    dragState.durationMinutes = Math.max(MIN_SELECTION_MINUTES, endMinutes - startMinutes);
+    const fullDurationMinutes = eventDurationMinutes(event);
+    dragState.durationMinutes = Math.max(
+      MIN_SELECTION_MINUTES,
+      dragState.mode === "move" ? fullDurationMinutes : endMinutes - startMinutes
+    );
     dragState.sourceColumn = column;
     dragState.targetColumn = column;
     dragState.targetDate = column.dataset.date ?? null;
@@ -468,6 +463,10 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     dragState.initialStartMinutes = startMinutes;
     dragState.initialEndMinutes = endMinutes;
     dragState.draggedElement = element;
+    const scope = element.closest(".week-grid") ?? document;
+    dragState.draggedElements = Array.from(
+      scope.querySelectorAll(`.event-block[data-event-id="${event.id}"]`)
+    ).filter((eventElement) => eventElement instanceof HTMLElement);
 
     const neighbor = findLinkedNeighbor();
     if (neighbor) {

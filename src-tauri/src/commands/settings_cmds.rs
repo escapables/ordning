@@ -61,26 +61,10 @@ pub fn set_settings(
         app_data.lang = next_lang.clone();
     }
 
-    persist_snapshot(&state)?;
     Ok(SettingsResponse {
         lang: next_lang,
         timezone: next_timezone,
     })
-}
-
-fn persist_snapshot(state: &State<'_, AppState>) -> Result<(), String> {
-    let snapshot = {
-        let app_data = state
-            .data
-            .lock()
-            .map_err(|err| format!("failed to lock app state: {err}"))?;
-        app_data.clone()
-    };
-
-    state
-        .store
-        .save(&snapshot)
-        .map_err(|err| format!("failed to persist settings: {err}"))
 }
 
 #[cfg(test)]

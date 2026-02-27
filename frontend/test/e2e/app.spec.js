@@ -353,7 +353,7 @@ test("drag-move preserves week scroll position after refresh", async ({ page }) 
   await page.mouse.down();
   await page.mouse.move(sourceBox.x + 18, sourceBox.y + 14, { steps: 4 });
   await page.mouse.move(targetBox.x + 24, targetBox.y + 8, { steps: 10 });
-  await expect(page.locator(".day-column__move-preview")).toHaveCount(1);
+  await expect(page.locator(".day-column__move-preview")).toHaveCount(2);
   const dropScrollTop = await body.evaluate((node) => node.scrollTop);
   await page.mouse.up();
 
@@ -388,6 +388,33 @@ test("drag ghost reflows width with overlap changes while dragging", async ({ pa
   expect(expandedPreviewBox.width).toBeGreaterThan(overlapPreviewBox.width + 20);
 
   await page.mouse.up();
+});
+
+test("dragging cross-midnight event updates both ghost segments and persists wrapped move", async ({ page }) => {
+  await page.goto("/");
+
+  const mondaySegment = page.locator(".day-column").nth(0).locator(".event-block", { hasText: "Night Deploy" });
+  await expect(mondaySegment).toHaveCount(1);
+  await mondaySegment.scrollIntoViewIfNeeded();
+
+  const sourceBox = await mondaySegment.boundingBox();
+  const targetHour = page.locator(".day-column").nth(2).locator(".day-column__hour").nth(21);
+  const targetBox = await targetHour.boundingBox();
+  expect(sourceBox).not.toBeNull();
+  expect(targetBox).not.toBeNull();
+
+  await page.mouse.move(sourceBox.x + 12, sourceBox.y + 10);
+  await page.mouse.down();
+  await page.mouse.move(sourceBox.x + 18, sourceBox.y + 14, { steps: 4 });
+  await page.mouse.move(targetBox.x + 20, targetBox.y + 1, { steps: 10 });
+  await expect(page.locator(".day-column__move-preview")).toHaveCount(2);
+  await page.mouse.up();
+
+  await expect(page.locator(".day-column").nth(0).locator(".event-block", { hasText: "Night Deploy" })).toHaveCount(0);
+  await expect(page.locator(".day-column").nth(1).locator(".event-block", { hasText: "Night Deploy" })).toHaveCount(0);
+  await expect(page.locator(".day-column").nth(2).locator(".event-block", { hasText: "Night Deploy" })).toHaveCount(1);
+  await expect(page.locator(".day-column").nth(3).locator(".event-block", { hasText: "Night Deploy" })).toHaveCount(1);
+  await expect(page.locator(".day-column").nth(2).locator(".event-block", { hasText: "Night Deploy" })).toContainText("21:00 - 01:00");
 });
 
 test("single click selects event, dblclick opens modal, and clear selection works", async ({ page }) => {

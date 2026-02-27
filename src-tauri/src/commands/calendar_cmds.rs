@@ -41,8 +41,6 @@ pub fn create_calendar(
         app_data.calendars.push(calendar.clone());
     }
 
-    persist_snapshot(&state)?;
-
     Ok(calendar)
 }
 
@@ -75,7 +73,6 @@ pub fn update_calendar(
         )?
     };
 
-    persist_snapshot(&state)?;
     Ok(updated)
 }
 
@@ -92,7 +89,6 @@ pub fn toggle_visibility(id: String, state: State<'_, AppState>) -> Result<Calen
         toggle_visibility_in_data(&mut app_data, calendar_id, updated_at)?
     };
 
-    persist_snapshot(&state)?;
     Ok(toggled)
 }
 
@@ -108,7 +104,6 @@ pub fn delete_calendar(id: String, state: State<'_, AppState>) -> Result<(), Str
         delete_calendar_in_data(&mut app_data, calendar_id)?;
     }
 
-    persist_snapshot(&state)?;
     Ok(())
 }
 
@@ -199,21 +194,6 @@ fn sanitize_color(value: Option<String>) -> String {
 
 fn parse_uuid(value: &str) -> Result<Uuid, String> {
     Uuid::parse_str(value).map_err(|err| format!("invalid id '{value}': {err}"))
-}
-
-fn persist_snapshot(state: &State<'_, AppState>) -> Result<(), String> {
-    let snapshot = {
-        let app_data = state
-            .data
-            .lock()
-            .map_err(|err| format!("failed to lock app state: {err}"))?;
-        app_data.clone()
-    };
-
-    state
-        .store
-        .save(&snapshot)
-        .map_err(|err| format!("failed to persist calendar: {err}"))
 }
 
 #[cfg(test)]
