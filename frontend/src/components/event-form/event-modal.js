@@ -443,8 +443,8 @@ export function createEventModal({
         await invoke("create_event", { event: payload });
       }
 
+      await onPersist?.();
       dialog.close();
-      await onPersist();
     } catch (invokeError) {
       showError(String(invokeError));
     }

@@ -88,7 +88,13 @@ async function renderAppShell() {
     const { startDate, endDate } = getWeekBounds(getState().currentWeekStart ?? getStartOfWeek(new Date(), 1));
     await loadWeekEvents(startDate, endDate);
   };
-  const refreshAndRender = async () => { await Promise.all([loadCalendars(), refreshCurrentWeekEvents()]); };
+  let capturedWeekScrollTop = null;
+  const refreshAndRender = async () => {
+    const body = weekContainer.querySelector(".week-grid__body");
+    capturedWeekScrollTop = body instanceof HTMLElement ? body.scrollTop : null;
+    await Promise.all([loadCalendars(), refreshCurrentWeekEvents()]);
+    capturedWeekScrollTop = null;
+  };
   let pendingHighlightEvent = null;
   let activeHighlight = null;
   let currentPixelsPerHour = DEFAULT_PIXELS_PER_HOUR;
@@ -226,9 +232,12 @@ async function renderAppShell() {
     }
   }
   const weekViewHandlers = {
-    onEventSelect: (_eventId, element) => {
+    onEventSelect: (eventId, element) => {
       clearEventSelection();
-      element.classList.add("event-block--selected");
+      const scope = element.closest(".week-grid") ?? weekContainer;
+      scope.querySelectorAll(`[data-event-id="${eventId}"]`).forEach((block) => {
+        block.classList.add("event-block--selected");
+      });
     },
     onEventClick: (eventId) => {
       eventModal.openEdit(eventId);
@@ -311,69 +320,73 @@ async function renderAppShell() {
       eventModal.openCreate();
     });
   }
+  let lastRenderedCalendarsJson = null;
   unsubscribeState = subscribe(() => {
-    const previousCalendarGroups = sidebarList.querySelector(".calendar-list__groups");
-    const previousCalendarScrollTop = previousCalendarGroups instanceof HTMLElement
-      ? previousCalendarGroups.scrollTop
-      : null;
     const calendars = getState().calendars;
     const weekStart = getState().currentWeekStart ?? getStartOfWeek(new Date(), 1);
     const { weekDates } = getWeekBounds(weekStart);
-    sidebarList.innerHTML = "";
-    sidebarList.appendChild(
-      renderCalendarList(calendars, {
-        onCreate: async ({ name, color }) => {
-          if (!name) {
-            return;
-          }
-          await invoke("create_calendar", {
-            name,
-            color
-          });
-          await refreshAndRender();
-        },
-        onDelete: async (calendar) => {
-          try {
-            await invoke("delete_calendar", { id: calendar.id });
-            await refreshAndRender();
-          } catch (error) {
-            window.alert(t("calendarDeleteError"));
-            console.error("Failed to delete calendar", error);
-          }
-        },
-        onToggleVisibility: async (calendarId) => {
-          try {
-            await invoke("toggle_visibility", { id: calendarId });
-            await refreshAndRender();
-          } catch (error) {
-            window.alert(t("calendarVisibilityError"));
-            console.error("Failed to toggle calendar visibility", error);
-          }
-        },
-        onExport: () => {
-          exportDialog.open();
-        },
-        onImport: () => {
-          importDialog.open();
-        },
-        onPurgePast: async () => {
-          try {
-            await purgePastEventsFlow({
-              invoke,
-              confirm: confirmDialog.confirm,
-              refresh: refreshAndRender,
-              t
+    const calendarsJson = JSON.stringify(calendars);
+    if (calendarsJson !== lastRenderedCalendarsJson) {
+      const previousCalendarGroups = sidebarList.querySelector(".calendar-list__groups");
+      const previousCalendarScrollTop = previousCalendarGroups instanceof HTMLElement
+        ? previousCalendarGroups.scrollTop
+        : null;
+      lastRenderedCalendarsJson = calendarsJson;
+      sidebarList.replaceChildren(
+        renderCalendarList(calendars, {
+          onCreate: async ({ name, color }) => {
+            if (!name) {
+              return;
+            }
+            await invoke("create_calendar", {
+              name,
+              color
             });
-          } catch (error) {
-            window.alert(t("purgePastError"));
-            console.error("Failed to purge past events", error);
+            await refreshAndRender();
+          },
+          onDelete: async (calendar) => {
+            try {
+              await invoke("delete_calendar", { id: calendar.id });
+              await refreshAndRender();
+            } catch (error) {
+              window.alert(t("calendarDeleteError"));
+              console.error("Failed to delete calendar", error);
+            }
+          },
+          onToggleVisibility: async (calendarId) => {
+            try {
+              await invoke("toggle_visibility", { id: calendarId });
+              await refreshAndRender();
+            } catch (error) {
+              window.alert(t("calendarVisibilityError"));
+              console.error("Failed to toggle calendar visibility", error);
+            }
+          },
+          onExport: () => {
+            exportDialog.open();
+          },
+          onImport: () => {
+            importDialog.open();
+          },
+          onPurgePast: async () => {
+            try {
+              await purgePastEventsFlow({
+                invoke,
+                confirm: confirmDialog.confirm,
+                refresh: refreshAndRender,
+                t
+              });
+            } catch (error) {
+              window.alert(t("purgePastError"));
+              console.error("Failed to purge past events", error);
+            }
           }
-        }
-      })
-    );
-    const nextCalendarGroups = sidebarList.querySelector(".calendar-list__groups");
-    if (nextCalendarGroups instanceof HTMLElement && previousCalendarScrollTop !== null) {
-      nextCalendarGroups.scrollTop = previousCalendarScrollTop;
+        })
+      );
+      const nextCalendarGroups = sidebarList.querySelector(".calendar-list__groups");
+      if (nextCalendarGroups instanceof HTMLElement && previousCalendarScrollTop !== null) {
+        nextCalendarGroups.scrollTop = previousCalendarScrollTop;
+      }
     }
     sidebarMiniMonth.innerHTML = "";
     sidebarMiniMonth.appendChild(
@@ -392,12 +405,26 @@ async function renderAppShell() {
     } else {
       pendingWeekViewRenderOptions = null;
     }
+    const hasExplicitOptions = weekViewRenderOptions != null;
+    const weekChanged = weekContainer.dataset.renderedWeek !== String(weekDates[0]);
+    const fallbackScrollTop = !hasExplicitOptions && !weekChanged
+      ? capturedWeekScrollTop
+      : null;
+    weekContainer.dataset.renderedWeek = weekDates[0];
+    const effectiveScrollTop = weekViewRenderOptions?.preserveScrollTop ?? fallbackScrollTop;
     renderWeekSection(weekContainer, weekDates, {
       ...weekViewHandlers,
       timezone: getCurrentTimezone(), pixelsPerHour: currentPixelsPerHour,
-      preserveScrollTop: weekViewRenderOptions?.preserveScrollTop,
+      preserveScrollTop: effectiveScrollTop,
       skipAutoScroll: Boolean(weekViewRenderOptions?.skipAutoScroll)
     });
+    if (Number.isFinite(effectiveScrollTop)) {
+      const newBody = weekContainer.querySelector(".week-grid__body");
+      if (newBody) {
+        void newBody.scrollHeight;
+        newBody.scrollTop = effectiveScrollTop;
+      }
+    }
     if (pendingHighlightEvent && highlightEventBlock(pendingHighlightEvent)) {
       activeHighlight = {
         eventId: pendingHighlightEvent.eventId,

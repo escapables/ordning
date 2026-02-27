@@ -30,6 +30,9 @@ export function subscribe(listener) {
 }
 
 export function setCalendars(calendars) {
+  if (JSON.stringify(calendars) === JSON.stringify(state.calendars)) {
+    return;
+  }
   state.calendars = calendars;
   notify();
 }
