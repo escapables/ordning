@@ -352,7 +352,7 @@ test("drag-move preserves week scroll position after refresh", async ({ page }) 
   await page.mouse.move(sourceBox.x + 12, sourceBox.y + 10);
   await page.mouse.down();
   await page.mouse.move(sourceBox.x + 18, sourceBox.y + 14, { steps: 4 });
-  await page.mouse.move(targetBox.x + 24, targetBox.y + 8, { steps: 10 });
+  await page.mouse.move(targetBox.x + 24, targetBox.y + 18, { steps: 10 });
   await expect(page.locator(".day-column__move-preview")).toHaveCount(2);
   const dropScrollTop = await body.evaluate((node) => node.scrollTop);
   await page.mouse.up();
@@ -406,7 +406,7 @@ test("dragging cross-midnight event updates both ghost segments and persists wra
   await page.mouse.move(sourceBox.x + 12, sourceBox.y + 10);
   await page.mouse.down();
   await page.mouse.move(sourceBox.x + 18, sourceBox.y + 14, { steps: 4 });
-  await page.mouse.move(targetBox.x + 20, targetBox.y + 1, { steps: 10 });
+  await page.mouse.move(targetBox.x + 20, targetBox.y + 10, { steps: 10 });
   await expect(page.locator(".day-column__move-preview")).toHaveCount(2);
   await page.mouse.up();
 

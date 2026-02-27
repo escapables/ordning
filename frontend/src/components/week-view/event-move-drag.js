@@ -61,7 +61,8 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     neighborTargetEndMinutes: 0,
     neighborElement: null,
     neighborPreview: null,
-    originalStyles: new Map()
+    originalStyles: new Map(),
+    clickOffsetMinutes: 0
   };
   function isResizeTop(pointerEvent, element) {
     return pointerEvent.clientY - element.getBoundingClientRect().top <= 6;
@@ -190,7 +191,7 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
       return;
     }
     const rect = targetColumn.getBoundingClientRect();
-    const rawStart = roundNearest(pointerToMinutes(clientY, rect, pixelsPerHour), TIME_STEP_MINUTES);
+    const rawStart = roundNearest(pointerToMinutes(clientY, rect, pixelsPerHour) - dragState.clickOffsetMinutes, TIME_STEP_MINUTES);
     const startMinutes = clamp(rawStart, 0, MINUTES_PER_DAY - TIME_STEP_MINUTES);
     const absoluteEndMinutes = startMinutes + dragState.durationMinutes;
     const overflowEndMinutes = Math.min(MINUTES_PER_DAY, Math.max(absoluteEndMinutes - MINUTES_PER_DAY, 0));
@@ -330,6 +331,7 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     dragState.neighborTargetStartMinutes = 0;
     dragState.neighborTargetEndMinutes = 0;
     dragState.neighborElement = null;
+    dragState.clickOffsetMinutes = 0;
   }
   function handlePointerMove(pointerEvent) {
     if (pointerEvent.pointerId !== dragState.pointerId) {
@@ -420,6 +422,10 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
       MIN_SELECTION_MINUTES,
       dragState.mode === "move" ? fullDurationMinutes : endMinutes - startMinutes
     );
+    if (dragState.mode === "move") {
+      const columnRect = column.getBoundingClientRect();
+      dragState.clickOffsetMinutes = pointerToMinutes(pointerEvent.clientY, columnRect, pixelsPerHour) - startMinutes;
+    }
     dragState.sourceColumn = column;
     dragState.targetColumn = column;
     dragState.targetDate = column.dataset.date ?? null;
