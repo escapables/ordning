@@ -213,7 +213,7 @@ fn read_import_file(path: &PathBuf) -> Result<AppData, String> {
 
 #[cfg(test)]
 mod tests {
-    use chrono::NaiveDate;
+    use chrono::{NaiveDate, NaiveTime};
 
     use super::*;
     use crate::models::{Calendar, Event};
@@ -298,5 +298,44 @@ mod tests {
         assert_eq!(exported.events.len(), 1);
         assert_eq!(exported.events[0].calendar_id, include_id);
         assert!(exported.events[0].description_private.is_some());
+    }
+
+    #[test]
+    fn build_export_data_preserves_wrapped_event_dates_and_times() {
+        let calendar_id = Uuid::new_v4();
+        let app_data = AppData {
+            calendars: vec![calendar(calendar_id, "Work")],
+            events: vec![Event {
+                id: Uuid::new_v4(),
+                calendar_id,
+                title: "Night Deploy".to_owned(),
+                start_date: NaiveDate::from_ymd_opt(2026, 2, 24).expect("valid date"),
+                end_date: NaiveDate::from_ymd_opt(2026, 2, 25).expect("valid date"),
+                start_time: Some(NaiveTime::from_hms_opt(23, 0, 0).expect("valid time")),
+                end_time: Some(NaiveTime::from_hms_opt(1, 30, 0).expect("valid time")),
+                all_day: false,
+                description_private: "private".to_owned(),
+                description_public: "public".to_owned(),
+                location: None,
+                recurrence: None,
+                created_at: "2026-02-24T00:00:00Z".to_owned(),
+                updated_at: "2026-02-24T00:00:00Z".to_owned(),
+            }],
+            ..AppData::default()
+        };
+
+        let exported = build_export_data(
+            &app_data,
+            ExportMode::Full,
+            Some(HashSet::from([calendar_id])),
+        )
+        .expect("export should succeed");
+
+        assert_eq!(exported.events.len(), 1);
+        let event = &exported.events[0];
+        assert_eq!(event.start_date, "2026-02-24");
+        assert_eq!(event.end_date, "2026-02-25");
+        assert_eq!(event.start_time.as_deref(), Some("23:00"));
+        assert_eq!(event.end_time.as_deref(), Some("01:30"));
     }
 }

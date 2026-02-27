@@ -28,7 +28,6 @@ import {
 } from "./drag-payload-utils.js";
 export function createEventMovePointerDownHandler(column, pixelsPerHour, handlers = {}) {
   const { onEventMove = async () => {}, onEventResize = async () => {} } = handlers;
-
   const dragState = {
     pointerId: null,
     dragging: false,
@@ -63,15 +62,12 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     neighborPreview: null,
     originalStyles: new Map()
   };
-
   function isResizeTop(pointerEvent, element) {
     return pointerEvent.clientY - element.getBoundingClientRect().top <= 6;
   }
-
   function isResizeBottom(pointerEvent, element) {
     return element.getBoundingClientRect().bottom - pointerEvent.clientY <= 6;
   }
-
   function resolveDragMode(pointerEvent, element) {
     if (isResizeTop(pointerEvent, element)) {
       return "resize-top";
@@ -81,7 +77,6 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     }
     return "move";
   }
-
   function previewRange() {
     if (dragState.mode === "move") {
       return {
@@ -94,15 +89,12 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
       endMinutes: dragState.targetEndMinutes
     };
   }
-
   function neighborPreviewRange() {
     return {
       startMinutes: dragState.neighborTargetStartMinutes,
       endMinutes: dragState.neighborTargetEndMinutes
     };
   }
-
-
   function findLinkedNeighbor() {
     if (!(dragState.sourceColumn instanceof HTMLElement)) {
       return null;
@@ -125,28 +117,23 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
         };
       })
       .filter((item) => item);
-
     if (dragState.mode === "resize-bottom") {
       const neighbor = candidates
         .filter((item) => item.startMinutes === dragState.initialEndMinutes)
         .sort((left, right) => String(left.id).localeCompare(String(right.id)))[0];
       return neighbor ?? null;
     }
-
     if (dragState.mode === "resize-top") {
       const neighbor = candidates
         .filter((item) => item.endMinutes === dragState.initialStartMinutes)
         .sort((left, right) => String(left.id).localeCompare(String(right.id)))[0];
       return neighbor ?? null;
     }
-
     return null;
   }
-
   function layoutColumnItems(targetColumn, { includeGhost = false } = {}) {
     const blocks = Array.from(targetColumn.querySelectorAll(".event-block"));
     const items = [];
-
     blocks.forEach((block) => {
       if (!(block instanceof HTMLElement)) {
         return;
@@ -164,7 +151,6 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
         endMinutes: range.endMinutes
       });
     });
-
     if (
       includeGhost
       && dragState.preview instanceof HTMLElement
@@ -189,23 +175,19 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
         endMinutes: ghost.endMinutes
       });
     }
-
     layoutOverlapItems(items).forEach((item) => {
       applyItemPosition(dragState, item);
     });
   }
-
   function renderMovingLayout(clientX, clientY) {
     const targetColumn = resolveColumnFromPoint(clientX, clientY) ?? dragState.sourceColumn;
     if (!(targetColumn instanceof HTMLElement)) {
       return;
     }
-
     const targetDate = targetColumn.dataset.date;
     if (!targetDate) {
       return;
     }
-
     const rect = targetColumn.getBoundingClientRect();
     const rawStart = roundNearest(pointerToMinutes(clientY, rect, pixelsPerHour), TIME_STEP_MINUTES);
     const startMinutes = clamp(rawStart, 0, MINUTES_PER_DAY - TIME_STEP_MINUTES);
@@ -213,15 +195,12 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     const overflowEndMinutes = Math.min(MINUTES_PER_DAY, Math.max(absoluteEndMinutes - MINUTES_PER_DAY, 0));
     const overflowDate = addDaysToDateKey(targetDate, 1);
     const overflowColumn = overflowEndMinutes > 0 ? findColumnByDate(column, overflowDate) : null;
-
     dragState.targetColumn = targetColumn;
     dragState.targetDate = targetDate;
     dragState.targetStartMinutes = startMinutes;
-
     const preview = ensurePreview(dragState, "preview", targetColumn);
     preview.style.top = `${(startMinutes / MINUTES_PER_HOUR) * pixelsPerHour}px`;
     preview.style.height = `${Math.max(((Math.min(absoluteEndMinutes, MINUTES_PER_DAY) - startMinutes) / MINUTES_PER_HOUR) * pixelsPerHour, 18)}px`;
-
     if (overflowColumn instanceof HTMLElement) {
       dragState.neighborTargetStartMinutes = 0;
       dragState.neighborTargetEndMinutes = overflowEndMinutes;
@@ -233,9 +212,7 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
       dragState.neighborTargetEndMinutes = 0;
       dragState.neighborPreview?.remove();
     }
-
     restoreTemporaryStyles(dragState);
-
     dragState.draggedElements.forEach((eventElement) => {
       if (!(eventElement instanceof HTMLElement)) {
         return;
@@ -243,7 +220,6 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
       rememberOriginalStyle(dragState, eventElement);
       eventElement.style.visibility = "hidden";
     });
-
     const columnsToLayout = new Set(
       dragState.draggedElements
         .map((eventElement) => eventElement.closest(".day-column"))
@@ -253,26 +229,21 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     if (overflowColumn instanceof HTMLElement) {
       columnsToLayout.add(overflowColumn);
     }
-
     columnsToLayout.forEach((candidateColumn) => {
       layoutColumnItems(candidateColumn, { includeGhost: true });
     });
   }
-
   function renderResizingLayout(clientY) {
     const targetColumn = dragState.sourceColumn;
     if (!(targetColumn instanceof HTMLElement)) {
       return;
     }
-
     const targetDate = targetColumn.dataset.date;
     if (!targetDate) {
       return;
     }
-
     dragState.targetColumn = targetColumn;
     dragState.targetDate = targetDate;
-
     const rect = targetColumn.getBoundingClientRect();
     const rawMinutes = roundNearest(pointerToMinutes(clientY, rect, pixelsPerHour), TIME_STEP_MINUTES);
     if (dragState.mode === "resize-top") {
@@ -290,7 +261,6 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
         : MINUTES_PER_DAY;
       dragState.targetEndMinutes = clamp(rawMinutes, dragState.targetStartMinutes + MIN_SELECTION_MINUTES, maxEnd);
     }
-
     if (dragState.neighborEventId) {
       if (dragState.mode === "resize-top") {
         dragState.neighborTargetStartMinutes = dragState.neighborStartMinutes;
@@ -300,12 +270,10 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
         dragState.neighborTargetEndMinutes = dragState.neighborEndMinutes;
       }
     }
-
     const preview = ensurePreview(dragState, "preview", targetColumn);
     const range = previewRange();
     preview.style.top = `${(range.startMinutes / MINUTES_PER_HOUR) * pixelsPerHour}px`;
     preview.style.height = `${Math.max(((range.endMinutes - range.startMinutes) / MINUTES_PER_HOUR) * pixelsPerHour, 18)}px`;
-
     restoreTemporaryStyles(dragState);
     if (dragState.draggedElement instanceof HTMLElement) {
       rememberOriginalStyle(dragState, dragState.draggedElement);
@@ -323,16 +291,16 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     }
     layoutColumnItems(targetColumn, { includeGhost: true });
   }
-
   function stopDrag() {
     window.removeEventListener("pointermove", handlePointerMove, true);
     window.removeEventListener("pointerup", handlePointerUp, true);
     window.removeEventListener("pointercancel", stopDrag, true);
-
+    if (dragState.pointerId !== null && typeof column.releasePointerCapture === "function") {
+      try { column.releasePointerCapture(dragState.pointerId); } catch (_error) {}
+    }
     restoreTemporaryStyles(dragState);
     dragState.preview?.remove();
     dragState.neighborPreview?.remove();
-
     dragState.pointerId = null;
     dragState.dragging = false;
     dragState.mode = "move";
@@ -361,12 +329,10 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     dragState.neighborTargetEndMinutes = 0;
     dragState.neighborElement = null;
   }
-
   function handlePointerMove(pointerEvent) {
     if (pointerEvent.pointerId !== dragState.pointerId) {
       return;
     }
-
     if (!dragState.dragging) {
       const deltaX = Math.abs(pointerEvent.clientX - dragState.startX);
       const deltaY = Math.abs(pointerEvent.clientY - dragState.startY);
@@ -374,24 +340,23 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
         return;
       }
       dragState.dragging = true;
+      if (typeof column.setPointerCapture === "function") {
+        try { column.setPointerCapture(pointerEvent.pointerId); } catch (_error) {}
+      }
     }
-
     if (dragState.mode === "move") {
       renderMovingLayout(pointerEvent.clientX, pointerEvent.clientY);
       return;
     }
     renderResizingLayout(pointerEvent.clientY);
   }
-
   async function handlePointerUp(pointerEvent) {
     if (pointerEvent.pointerId !== dragState.pointerId) {
       return;
     }
-
     const didDrag = dragState.dragging
       && Boolean(dragState.eventId)
       && Boolean(dragState.targetDate);
-
     if (didDrag && dragState.mode === "move") {
       const endMinutes = dragState.targetStartMinutes + dragState.durationMinutes;
       await onEventMove(buildTimedPayload({
@@ -424,15 +389,12 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
         : null;
       await onEventResize(payload);
     }
-
     stopDrag();
   }
-
   return (pointerEvent, event, element) => {
     if (pointerEvent.button !== 0 || !(element instanceof HTMLElement)) {
       return;
     }
-
     dragState.pointerId = pointerEvent.pointerId;
     dragState.mode = resolveDragMode(pointerEvent, element);
     dragState.startX = pointerEvent.clientX;
@@ -467,7 +429,6 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     dragState.draggedElements = Array.from(
       scope.querySelectorAll(`.event-block[data-event-id="${event.id}"]`)
     ).filter((eventElement) => eventElement instanceof HTMLElement);
-
     const neighbor = findLinkedNeighbor();
     if (neighbor) {
       dragState.neighborEventId = neighbor.id;
@@ -490,7 +451,6 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
       dragState.neighborTargetEndMinutes = 0;
       dragState.neighborElement = null;
     }
-
     window.addEventListener("pointermove", handlePointerMove, true);
     window.addEventListener("pointerup", handlePointerUp, true);
     window.addEventListener("pointercancel", stopDrag, true);

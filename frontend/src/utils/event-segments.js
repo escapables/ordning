@@ -30,58 +30,86 @@ function addDaysToDateKey(dateKey, days) {
   return formatDateKey(date);
 }
 
+function compareDateKeys(left, right) {
+  return String(left).localeCompare(String(right));
+}
+
+function normalizeEventRange(event) {
+  const startDate = event.startDate ?? event.date;
+  let endDate = event.endDate ?? event.date;
+
+  if (!startDate || !endDate) {
+    return null;
+  }
+
+  const normalizedStartTime = extractTimeToken(event.startTime);
+  const normalizedEndTime = extractTimeToken(event.endTime, { fromEnd: true });
+  const startMinutes = parseTimeToMinutes(normalizedStartTime);
+  const endMinutes = parseTimeToMinutes(normalizedEndTime);
+
+  if (compareDateKeys(endDate, startDate) < 0) {
+    return null;
+  }
+
+  // Backward-compatible normalization for legacy wrapped payloads that
+  // encoded cross-midnight timed events on a single date.
+  if (endDate === startDate && endMinutes <= startMinutes) {
+    endDate = addDaysToDateKey(startDate, 1);
+  }
+
+  return {
+    startDate,
+    endDate,
+    startMinutes,
+    endMinutes,
+    normalizedStartTime,
+    normalizedEndTime
+  };
+}
+
 export function buildDayTimedSegments(dates, events) {
   const segmentsByDate = new Map(
     dates.map((date) => [formatDateKey(date), []])
   );
 
   events.forEach((event) => {
-    const normalizedStartTime = extractTimeToken(event.startTime);
-    const normalizedEndTime = extractTimeToken(event.endTime, { fromEnd: true });
-    const startMinutes = parseTimeToMinutes(normalizedStartTime);
-    const endMinutes = parseTimeToMinutes(normalizedEndTime);
-    const isCrossMidnight = endMinutes < startMinutes;
-    const daySegments = segmentsByDate.get(event.date);
-
-    if (!isCrossMidnight) {
-      if (daySegments) {
-        daySegments.push({
-          ...event,
-          startMinutes,
-          endMinutes,
-          startTime: normalizedStartTime,
-          endTime: normalizedEndTime,
-          displayStartTime: normalizedStartTime,
-          displayEndTime: normalizedEndTime
-        });
-      }
+    const normalized = normalizeEventRange(event);
+    if (!normalized) {
       return;
     }
 
-    if (daySegments) {
-      daySegments.push({
-        ...event,
-        startMinutes,
-        endMinutes: MINUTES_PER_DAY,
-        startTime: normalizedStartTime,
-        endTime: normalizedEndTime,
-        displayStartTime: normalizedStartTime,
-        displayEndTime: normalizedEndTime
-      });
-    }
+    const {
+      startDate,
+      endDate,
+      startMinutes,
+      endMinutes,
+      normalizedStartTime,
+      normalizedEndTime
+    } = normalized;
 
-    const nextDateKey = addDaysToDateKey(event.date, 1);
-    const nextDaySegments = segmentsByDate.get(nextDateKey);
-    if (nextDaySegments && endMinutes > 0) {
-      nextDaySegments.push({
-        ...event,
-        startMinutes: 0,
-        endMinutes,
-        startTime: normalizedStartTime,
-        endTime: normalizedEndTime,
-        displayStartTime: normalizedStartTime,
-        displayEndTime: normalizedEndTime
-      });
+    let currentDate = startDate;
+    while (compareDateKeys(currentDate, endDate) <= 0) {
+      const daySegments = segmentsByDate.get(currentDate);
+      if (daySegments) {
+        const segmentStartMinutes = currentDate === startDate ? startMinutes : 0;
+        const segmentEndMinutes = currentDate === endDate ? endMinutes : MINUTES_PER_DAY;
+        if (segmentEndMinutes > segmentStartMinutes) {
+          daySegments.push({
+            ...event,
+            startMinutes: segmentStartMinutes,
+            endMinutes: segmentEndMinutes,
+            startTime: normalizedStartTime,
+            endTime: normalizedEndTime,
+            displayStartTime: normalizedStartTime,
+            displayEndTime: normalizedEndTime
+          });
+        }
+      }
+
+      if (currentDate === endDate) {
+        break;
+      }
+      currentDate = addDaysToDateKey(currentDate, 1);
     }
   });
 

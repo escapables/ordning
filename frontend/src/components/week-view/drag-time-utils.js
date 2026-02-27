@@ -3,6 +3,7 @@ export const MINUTES_PER_DAY = 24 * MINUTES_PER_HOUR;
 export const MIN_SELECTION_MINUTES = 15;
 export const DRAG_THRESHOLD_PX = 3;
 export const TIME_STEP_MINUTES = 15;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -36,6 +37,16 @@ export function pointerToMinutes(clientY, rect, pixelsPerHour) {
 export function eventDurationMinutes(event) {
   const start = parseTimeToMinutes(event.startTime);
   const end = parseTimeToMinutes(event.endTime);
+  const startDate = String(event.startDate ?? event.date ?? "");
+  const endDate = String(event.endDate ?? event.date ?? "");
+  const startDateValue = Date.parse(`${startDate}T00:00:00`);
+  const endDateValue = Date.parse(`${endDate}T00:00:00`);
+  if (Number.isFinite(startDateValue) && Number.isFinite(endDateValue)) {
+    const daySpan = Math.round((endDateValue - startDateValue) / DAY_MS);
+    if (daySpan > 0) {
+      return (daySpan * MINUTES_PER_DAY) + (end - start);
+    }
+  }
   if (end > start) {
     return end - start;
   }

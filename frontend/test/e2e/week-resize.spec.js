@@ -5,6 +5,7 @@ test("dragging bottom edge resizes event end time with preview", async ({ page }
 
   const targetEvent = page.locator(".day-column").nth(0).locator(".event-block", { hasText: "Sprint Planning" });
   await expect(targetEvent).toHaveCount(1);
+  await targetEvent.scrollIntoViewIfNeeded();
   const box = await targetEvent.boundingBox();
   expect(box).not.toBeNull();
 
@@ -22,6 +23,7 @@ test("dragging bottom edge enforces 15-minute minimum duration", async ({ page }
 
   const targetEvent = page.locator(".day-column").nth(0).locator(".event-block", { hasText: "Sprint Planning" });
   await expect(targetEvent).toHaveCount(1);
+  await targetEvent.scrollIntoViewIfNeeded();
   const box = await targetEvent.boundingBox();
   expect(box).not.toBeNull();
 
@@ -180,5 +182,59 @@ test("wrapped continuation payload keeps original start anchor date", async ({ p
     endDate: "2026-02-24",
     startTime: "23:30",
     endTime: "01:15"
+  });
+});
+
+test("multi-day continuation resize payload keeps original start anchor date", async ({ page }) => {
+  await page.goto("/");
+
+  const payload = await page.evaluate(async () => {
+    const mod = await import("/src/components/week-view/drag-payload-utils.js");
+    return mod.buildResizePayload({
+      eventId: "evt-span",
+      date: "2026-02-25",
+      startMinutes: 0,
+      endMinutes: 180,
+      anchorDate: "2026-02-23",
+      clockStart: "10:00",
+      clockEnd: "12:00"
+    });
+  });
+
+  expect(payload).toEqual({
+    eventId: "evt-span",
+    startDate: "2026-02-23",
+    endDate: "2026-02-25",
+    startTime: "10:00",
+    endTime: "03:00"
+  });
+});
+
+test("moving >24h timed event keeps full span in payload math", async ({ page }) => {
+  await page.goto("/");
+
+  const payload = await page.evaluate(async () => {
+    const dragTime = await import("/src/components/week-view/drag-time-utils.js");
+    const dragPayload = await import("/src/components/week-view/drag-payload-utils.js");
+    const durationMinutes = dragTime.eventDurationMinutes({
+      startDate: "2026-02-24",
+      endDate: "2026-02-26",
+      startTime: "10:00",
+      endTime: "12:00"
+    });
+    return dragPayload.buildTimedPayload({
+      eventId: "evt-long",
+      date: "2026-02-23",
+      startMinutes: 10 * 60,
+      endMinutes: (10 * 60) + durationMinutes
+    });
+  });
+
+  expect(payload).toEqual({
+    eventId: "evt-long",
+    startDate: "2026-02-23",
+    endDate: "2026-02-25",
+    startTime: "10:00",
+    endTime: "12:00"
   });
 });

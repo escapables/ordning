@@ -312,6 +312,10 @@ async function renderAppShell() {
     });
   }
   unsubscribeState = subscribe(() => {
+    const previousCalendarGroups = sidebarList.querySelector(".calendar-list__groups");
+    const previousCalendarScrollTop = previousCalendarGroups instanceof HTMLElement
+      ? previousCalendarGroups.scrollTop
+      : null;
     const calendars = getState().calendars;
     const weekStart = getState().currentWeekStart ?? getStartOfWeek(new Date(), 1);
     const { weekDates } = getWeekBounds(weekStart);
@@ -367,6 +371,10 @@ async function renderAppShell() {
         }
       })
     );
+    const nextCalendarGroups = sidebarList.querySelector(".calendar-list__groups");
+    if (nextCalendarGroups instanceof HTMLElement && previousCalendarScrollTop !== null) {
+      nextCalendarGroups.scrollTop = previousCalendarScrollTop;
+    }
     sidebarMiniMonth.innerHTML = "";
     sidebarMiniMonth.appendChild(
       renderMiniMonth({

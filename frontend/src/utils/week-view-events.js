@@ -6,6 +6,8 @@ export function mapBackendEvents(events) {
   return events.map((event) => ({
     id: event.id,
     date: event.date,
+    startDate: event.start_date ?? event.date,
+    endDate: event.end_date ?? event.date,
     startTime: event.start_time,
     endTime: event.end_time,
     title: event.title,

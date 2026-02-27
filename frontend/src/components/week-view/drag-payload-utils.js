@@ -28,14 +28,13 @@ export function buildTimedPayload({ eventId, date, startMinutes, endMinutes }) {
 }
 
 export function buildResizePayload({ eventId, date, startMinutes, endMinutes, anchorDate, clockStart, clockEnd }) {
-  const wraps = isCrossMidnightClock(clockStart, clockEnd);
-  if (wraps && anchorDate && date !== anchorDate) {
+  if (anchorDate && date !== anchorDate) {
     const overflowDays = Math.floor(endMinutes / MINUTES_PER_DAY);
     return {
       eventId,
       startDate: anchorDate,
       endDate: addDaysToDateKey(date, overflowDays),
-      startTime: clockStart,
+      startTime: clockStart ?? formatClockMinutes(startMinutes),
       endTime: formatClockMinutes(endMinutes)
     };
   }
@@ -48,12 +47,6 @@ function parseClockMinutes(value) {
     return null;
   }
   return (hours * MINUTES_PER_HOUR) + minutes;
-}
-
-function isCrossMidnightClock(startClock, endClock) {
-  const parsedStart = parseClockMinutes(startClock);
-  const parsedEnd = parseClockMinutes(endClock);
-  return parsedStart !== null && parsedEnd !== null && parsedEnd < parsedStart;
 }
 
 export function resolveAbsoluteEndMinutes(block, fallbackEndMinutes) {

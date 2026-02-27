@@ -125,3 +125,32 @@ test("confirm dialog Escape cancels action", async ({ page }) => {
   await expect(page.locator(".confirm-dialog[open]")).toHaveCount(0);
   await expect(targetEvent).toHaveCount(1);
 });
+
+test("multi-day timed event renders segments across all spanned days", async ({ page }) => {
+  await page.goto("/");
+
+  const dayKeys = await page.locator(".day-column").evaluateAll((nodes) =>
+    nodes.slice(0, 3).map((node) => node.dataset.date)
+  );
+  const [startDay, middleDay, endDay] = dayKeys;
+
+  await page.locator(".sidebar__new-event-btn").click();
+  await expect(page.locator(".event-modal[open]")).toBeVisible();
+  await page.locator(".event-modal__input[name='title']").fill("Playwright Multi-day Span");
+  await page.locator(".event-modal__input[name='startDate']").fill(startDay);
+  await page.locator(".event-modal__input[name='endDate']").fill(endDay);
+  await page.locator(".event-modal__input[name='startTime']").fill("10:00");
+  await page.locator(".event-modal__input[name='endTime']").fill("12:00");
+  await page.locator(".event-modal__actions button[type='submit']").click();
+  await expect(page.locator(".event-modal[open]")).toHaveCount(0);
+
+  await expect(
+    page.locator(`.day-column[data-date='${startDay}'] .event-block`, { hasText: "Playwright Multi-day Span" })
+  ).toHaveCount(1);
+  await expect(
+    page.locator(`.day-column[data-date='${middleDay}'] .event-block`, { hasText: "Playwright Multi-day Span" })
+  ).toHaveCount(1);
+  await expect(
+    page.locator(`.day-column[data-date='${endDay}'] .event-block`, { hasText: "Playwright Multi-day Span" })
+  ).toHaveCount(1);
+});

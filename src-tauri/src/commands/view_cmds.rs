@@ -18,6 +18,8 @@ pub struct TimedWeekEvent {
     pub calendar_id: Uuid,
     pub title: String,
     pub date: String,
+    pub start_date: String,
+    pub end_date: String,
     pub start_time: String,
     pub end_time: String,
     pub color: String,
@@ -151,6 +153,8 @@ fn build_week_events_response(
             calendar_id: event.calendar_id,
             title: event.title.clone(),
             date,
+            start_date: event.start_date.format("%Y-%m-%d").to_string(),
+            end_date: event.end_date.format("%Y-%m-%d").to_string(),
             start_time: start_time.format("%H:%M").to_string(),
             end_time: end_time.format("%H:%M").to_string(),
             color: color.clone(),
@@ -273,7 +277,36 @@ mod tests {
         assert_eq!(result.timed.len(), 1);
         assert_eq!(result.all_day.len(), 1);
         assert_eq!(result.timed[0].title, "Timed");
+        assert_eq!(result.timed[0].start_date, "2026-02-24");
+        assert_eq!(result.timed[0].end_date, "2026-02-24");
         assert_eq!(result.all_day[0].title, "All day");
+    }
+
+    #[test]
+    fn build_week_events_response_preserves_multi_day_timed_dates() {
+        let calendar_id = Uuid::new_v4();
+        let start_date = NaiveDate::from_ymd_opt(2026, 2, 24).unwrap();
+        let end_date = NaiveDate::from_ymd_opt(2026, 2, 26).unwrap();
+
+        let event = sample_event(
+            Uuid::new_v4(),
+            calendar_id,
+            start_date,
+            end_date,
+            Some(NaiveTime::from_hms_opt(10, 0, 0).unwrap()),
+            Some(NaiveTime::from_hms_opt(12, 0, 0).unwrap()),
+            false,
+            "Long run",
+        );
+
+        let mut visible = HashMap::new();
+        visible.insert(calendar_id, "#007aff".to_owned());
+
+        let result = build_week_events_response(&[event], &visible, start_date, end_date);
+
+        assert_eq!(result.timed.len(), 1);
+        assert_eq!(result.timed[0].start_date, "2026-02-24");
+        assert_eq!(result.timed[0].end_date, "2026-02-26");
     }
 
     #[test]
