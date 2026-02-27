@@ -27,7 +27,7 @@ export function buildTimedPayload({ eventId, date, startMinutes, endMinutes }) {
   };
 }
 
-export function buildResizePayload({ eventId, date, startMinutes, endMinutes, anchorDate, clockStart, clockEnd }) {
+export function buildResizePayload({ eventId, date, startMinutes, endMinutes, anchorDate, clockStart, clockEnd, eventEndDate }) {
   if (anchorDate && date !== anchorDate) {
     const overflowDays = Math.floor(endMinutes / MINUTES_PER_DAY);
     return {
@@ -38,7 +38,22 @@ export function buildResizePayload({ eventId, date, startMinutes, endMinutes, an
       endTime: formatClockMinutes(endMinutes)
     };
   }
+  if (eventEndDate && eventEndDate !== date && endMinutes === MINUTES_PER_DAY) {
+    return {
+      eventId,
+      startDate: date,
+      endDate: eventEndDate,
+      startTime: formatClockMinutes(startMinutes),
+      endTime: clockEnd ?? formatClockMinutes(endMinutes)
+    };
+  }
   return buildTimedPayload({ eventId, date, startMinutes, endMinutes });
+}
+
+function isCrossMidnightClock(startClock, endClock) {
+  const parsedStart = parseClockMinutes(startClock);
+  const parsedEnd = parseClockMinutes(endClock);
+  return parsedStart !== null && parsedEnd !== null && parsedEnd < parsedStart;
 }
 
 function parseClockMinutes(value) {

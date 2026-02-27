@@ -38,6 +38,7 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     eventDate: null,
     eventClockStart: "00:00",
     eventClockEnd: "00:00",
+    eventEndDate: null,
     eventColor: "#007aff",
     durationMinutes: MIN_SELECTION_MINUTES,
     draggedElements: [],
@@ -308,6 +309,7 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     dragState.eventDate = null;
     dragState.eventClockStart = "00:00";
     dragState.eventClockEnd = "00:00";
+    dragState.eventEndDate = null;
     dragState.sourceColumn = null;
     dragState.targetColumn = null;
     dragState.targetDate = null;
@@ -374,7 +376,8 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
         endMinutes: dragState.targetEndMinutes,
         anchorDate: dragState.eventDate,
         clockStart: dragState.eventClockStart,
-        clockEnd: dragState.eventClockEnd
+        clockEnd: dragState.eventClockEnd,
+        eventEndDate: dragState.eventEndDate
       });
       payload.linkedNeighbor = dragState.neighborEventId
         ? buildResizePayload({
@@ -403,15 +406,15 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     dragState.eventDate = event.date ?? null;
     dragState.eventClockStart = event.startTime ?? "00:00";
     dragState.eventClockEnd = event.endTime ?? "00:00";
+    dragState.eventEndDate = event.endDate ?? null;
     dragState.eventColor = event.color ?? "#007aff";
     const range = readEventBlockRange(element);
     const startMinutes = range?.startMinutes ?? roundNearest(event.startMinutes ?? 0, TIME_STEP_MINUTES);
     const rawEndMinutes = range?.endMinutes ?? Math.min(MINUTES_PER_DAY, startMinutes + eventDurationMinutes(event));
-    const endMinutes = resolveDraggedEndMinutes(
-      event,
-      resolveAbsoluteEndMinutes(element, rawEndMinutes),
-      startMinutes
-    );
+    const absoluteEndMinutes = resolveAbsoluteEndMinutes(element, rawEndMinutes);
+    const endMinutes = dragState.mode === "move"
+      ? resolveDraggedEndMinutes(event, absoluteEndMinutes, startMinutes)
+      : absoluteEndMinutes;
     const fullDurationMinutes = eventDurationMinutes(event);
     dragState.durationMinutes = Math.max(
       MIN_SELECTION_MINUTES,
