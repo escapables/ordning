@@ -11,6 +11,7 @@ import { DEFAULT_PIXELS_PER_HOUR, installPinchZoom, installZoomGuards } from "./
 import { installCloseGuard } from "./main/close-guard.js";
 import { createEventHighlightHelpers } from "./main/event-highlight.js";
 import { invoke } from "./main/invoke.js";
+import { createManualSaveController } from "./main/manual-save.js";
 import { applySettings, getCurrentTimezone, initializeSettings } from "./main/settings.js";
 import { renderWeekSection } from "./main/week-render.js";
 import { getStartOfWeek } from "./utils/date-utils.js";
@@ -24,6 +25,7 @@ let keydownHandler = null;
 let teardownZoomGuards = null;
 let teardownPinchZoom = null;
 let teardownCloseGuard = null;
+let teardownManualSave = null;
 let pendingWeekViewRenderOptions = null;
 async function renderAppShell() {
   if (unsubscribeState) {
@@ -45,6 +47,10 @@ async function renderAppShell() {
   if (teardownCloseGuard) {
     teardownCloseGuard();
     teardownCloseGuard = null;
+  }
+  if (teardownManualSave) {
+    teardownManualSave();
+    teardownManualSave = null;
   }
   const app = document.querySelector("#app");
   if (!app) {
@@ -92,6 +98,7 @@ async function renderAppShell() {
   const goToPreviousWeek = () => navigateWeek(addDays(currentWeekStartOrDefault(), -7));
   const goToNextWeek = () => navigateWeek(addDays(currentWeekStartOrDefault(), 7));
   const goToToday = () => navigateWeek(getStartOfWeek(new Date(), 1));
+  let saveController = null;
   const deleteEventById = async (eventId) => {
     const confirmed = await confirmDialog.confirm(t("eventFormDeleteConfirm"));
     if (!confirmed) {
@@ -146,6 +153,36 @@ async function renderAppShell() {
   settingsButton.addEventListener("click", () => {
     settingsDialog.open();
   });
+  const renderToolbarSection = (weekStart) => {
+    toolbarContainer.innerHTML = "";
+    toolbarContainer.appendChild(
+      renderToolbar({
+        weekStart,
+        onPreviousWeek: goToPreviousWeek,
+        onNextWeek: goToNextWeek,
+        onToday: goToToday,
+        ...saveController?.getToolbarProps(),
+        onSearch: async (query) => {
+          return invoke("search_events", { query });
+        },
+        onSearchSelect: async (result) => {
+          if (!result?.start_date || !result?.id) {
+            return;
+          }
+          pendingHighlightEvent = { eventId: result.id, skipScroll: false };
+          setCurrentWeekStart(getStartOfWeek(parseDateKey(result.start_date), 1));
+          await refreshCurrentWeekEvents();
+        }
+      })
+    );
+  };
+  saveController = createManualSaveController({
+    invoke,
+    onChange: () => {
+      renderToolbarSection(currentWeekStartOrDefault());
+    }
+  });
+  teardownManualSave = saveController.dispose;
   async function updateTimedEventPosition({ eventId, date, startDate, endDate, startTime, endTime, linkedNeighbor }, actionName) {
     try {
       const weekBody = weekContainer.querySelector(".week-grid__body");
@@ -340,26 +377,7 @@ async function renderAppShell() {
         }
       })
     );
-    toolbarContainer.innerHTML = "";
-    toolbarContainer.appendChild(
-      renderToolbar({
-        weekStart,
-        onPreviousWeek: goToPreviousWeek,
-        onNextWeek: goToNextWeek,
-        onToday: goToToday,
-        onSearch: async (query) => {
-          return invoke("search_events", { query });
-        },
-        onSearchSelect: async (result) => {
-          if (!result?.start_date || !result?.id) {
-            return;
-          }
-          pendingHighlightEvent = { eventId: result.id, skipScroll: false };
-          setCurrentWeekStart(getStartOfWeek(parseDateKey(result.start_date), 1));
-          await refreshCurrentWeekEvents();
-        }
-      })
-    );
+    renderToolbarSection(weekStart);
     const weekViewRenderOptions = pendingWeekViewRenderOptions;
     if (pendingWeekViewRenderOptions?.remainingRenders > 1) {
       pendingWeekViewRenderOptions.remainingRenders -= 1;
@@ -385,6 +403,7 @@ async function renderAppShell() {
     } else {
       activeHighlight = null;
     }
+    void saveController.sync();
   });
   renderWeekSection(
     weekContainer,
@@ -433,6 +452,7 @@ async function renderAppShell() {
     onZoomChange: handleZoomChange
   });
   await refreshAndRender();
+  await saveController.sync();
 }
 async function bootstrap() {
   await initializeSettings({ invoke });

@@ -31,7 +31,8 @@
 }
 
 .main-toolbar__icon-btn,
-.main-toolbar__today-btn {
+.main-toolbar__today-btn,
+.main-toolbar__save-btn {
   min-height: 30px;
   border: 1px solid var(--color-border-muted);
   border-radius: var(--radius-btn);
@@ -57,8 +58,27 @@
 }
 
 .main-toolbar__icon-btn:hover,
-.main-toolbar__today-btn:hover {
+.main-toolbar__today-btn:hover,
+.main-toolbar__save-btn:hover {
   background: #f6f7f9;
+}
+
+.main-toolbar__save-btn {
+  background: #ecfdf3;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.main-toolbar__save-btn:disabled {
+  background: #f8fafc;
+  border-color: var(--color-border-muted);
+  color: var(--color-text-secondary);
+  cursor: not-allowed;
+}
+
+.main-toolbar__save-btn--saved {
+  background: #dcfce7;
+  border-color: #4ade80;
 }
 
 .main-toolbar input,

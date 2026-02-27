@@ -68,6 +68,9 @@ export function renderToolbar(options) {
     onPreviousWeek = () => {},
     onNextWeek = () => {},
     onToday = () => {},
+    onSave = () => {},
+    saveEnabled = false,
+    saveStatus = "idle",
     onSearch = async () => [],
     onSearchSelect = () => {}
   } = options;
@@ -101,7 +104,22 @@ export function renderToolbar(options) {
   todayButton.textContent = t("todayButton");
   todayButton.addEventListener("click", onToday);
 
-  nav.append(previousButton, nextButton, todayButton);
+  const saveButton = document.createElement("button");
+  saveButton.type = "button";
+  saveButton.className = "main-toolbar__save-btn";
+  saveButton.tabIndex = 1;
+  saveButton.disabled = !saveEnabled;
+  saveButton.textContent = saveStatus === "saving"
+    ? t("saveButtonSaving")
+    : saveStatus === "saved"
+      ? t("saveButtonSaved")
+      : t("saveButton");
+  if (saveStatus === "saved") {
+    saveButton.classList.add("main-toolbar__save-btn--saved");
+  }
+  saveButton.addEventListener("click", onSave);
+
+  nav.append(previousButton, nextButton, todayButton, saveButton);
 
   const title = document.createElement("h1");
   title.className = "main-toolbar__title";
