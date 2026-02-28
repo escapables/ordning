@@ -66,6 +66,10 @@ function getCalendarColor(calendarId) {
   );
 }
 
+function getCalendarName(calendarId) {
+  return getState().calendars.find((calendar) => calendar.id === calendarId)?.name ?? "";
+}
+
 function getTemplateTiming(result, templateEvent) {
   const startDateKey = result?.start_date ?? templateEvent?.startDate ?? templateEvent?.start_date;
   const endDateKey = result?.end_date ?? templateEvent?.endDate ?? templateEvent?.end_date ?? startDateKey;
@@ -105,8 +109,10 @@ function getTemplateTiming(result, templateEvent) {
   return { allDay: false, durationMinutes: Math.max(1, durationMinutes) };
 }
 
-function formatDurationLabel(result) {
+function formatTimeLabel(result) {
   const timing = getTemplateTiming(result);
+  const startTime = result?.start_time;
+  const endTime = result?.end_time;
 
   if (timing.allDay) {
     if (timing.daySpan <= 1) {
@@ -116,31 +122,32 @@ function formatDurationLabel(result) {
     return t("eventFormTemplateDays").replace("{count}", String(timing.daySpan));
   }
 
-  const hours = Math.floor(timing.durationMinutes / 60);
-  const minutes = timing.durationMinutes % 60;
-
-  if (hours === 0) {
-    return `${minutes}m`;
+  if (startTime && endTime) {
+    return `${startTime}-${endTime}`;
   }
 
-  if (minutes === 0) {
-    return `${hours}h`;
-  }
-
-  return `${hours}h${minutes}m`;
+  return `${timing.durationMinutes}m`;
 }
 
-function normalizeGroupValue(value) {
-  return String(value ?? "").trim().toLowerCase();
+function formatResultSubtitle(result) {
+  const parts = [getCalendarName(result?.calendar_id), formatTimeLabel(result)];
+
+  if (result?.location) {
+    parts.push(result.location);
+  }
+
+  if (result?.description_public) {
+    parts.push(result.description_public);
+  }
+
+  return parts.filter(Boolean).join(" • ");
 }
 
 function buildGroupKey(result) {
   return [
     result?.calendar_id ?? "",
-    normalizeGroupValue(result?.title),
-    normalizeGroupValue(result?.location),
-    normalizeGroupValue(result?.description_private),
-    normalizeGroupValue(result?.description_public)
+    String(result?.title ?? "").trim().toLowerCase(),
+    String(result?.description_public ?? "").trim().toLowerCase()
   ].join("\u241f");
 }
 
@@ -149,8 +156,14 @@ function collapseResults(results) {
 
   (Array.isArray(results) ? results : []).forEach((result) => {
     const key = buildGroupKey(result);
-    if (!grouped.has(key)) {
-      grouped.set(key, result);
+    const existing = grouped.get(key);
+    if (!existing) {
+      grouped.set(key, { ...result });
+      return;
+    }
+
+    if (!existing.location && result?.location) {
+      existing.location = result.location;
     }
   });
 
@@ -258,20 +271,14 @@ export function createEventTemplateSearch({
       title.className = "event-modal__template-item-title";
       title.textContent = result.title;
 
-      const duration = document.createElement("span");
-      duration.className = "event-modal__template-duration";
-      duration.textContent = formatDurationLabel(result);
-
       titleGroup.append(dot, title);
-      topRow.append(titleGroup, duration);
+      topRow.append(titleGroup);
       item.append(topRow);
 
-      if (result.location) {
-        const subtitle = document.createElement("span");
-        subtitle.className = "event-modal__template-item-subtitle";
-        subtitle.textContent = result.location;
-        item.append(subtitle);
-      }
+      const subtitle = document.createElement("span");
+      subtitle.className = "event-modal__template-item-subtitle";
+      subtitle.textContent = formatResultSubtitle(result);
+      item.append(subtitle);
 
       item.addEventListener("click", () => {
         void selectResult(index);

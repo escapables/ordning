@@ -135,7 +135,6 @@
           end_time: event.endTime,
           all_day: Boolean(event.allDay || !event.startTime || !event.endTime),
           location: event.location || null,
-          description_private: event.descriptionPrivate || "",
           description_public: event.descriptionPublic || ""
         };
       });

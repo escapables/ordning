@@ -61,9 +61,17 @@ test("template search pre-fills create modal while preserving chosen start date 
 
   const titleInput = page.locator(".event-modal__input[name='title']");
   await titleInput.fill("Design");
-  await expect(page.locator(".event-modal__template-item")).toHaveCount(3);
+  await expect(page.locator(".event-modal__template-item")).toHaveCount(4);
+  const workshopResults = page.locator(".event-modal__template-item", { hasText: "Design Workshop" });
+  await expect(workshopResults).toHaveCount(2);
+  await expect(workshopResults.nth(0)).toContainText("Personal");
+  await expect(workshopResults.nth(0)).toContainText("13:15-15:00");
+  await expect(workshopResults.nth(0)).toContainText("Studio");
+  await expect(workshopResults.nth(0)).toContainText("Review mockups");
+  await expect(workshopResults.nth(1)).toContainText("Annex");
+  await expect(workshopResults.nth(1)).toContainText("Ship v2");
 
-  await page.locator(".event-modal__template-item", { hasText: "Design Workshop" }).click();
+  await page.locator(".event-modal__template-item", { hasText: "Review mockups" }).click();
 
   await expect(titleInput).toHaveValue("Design Workshop");
   await expect(titleInput).toBeFocused();
@@ -85,7 +93,7 @@ test("clicking outside title suggestions collapses dropdown without changing typ
 
   const titleInput = page.locator(".event-modal__input[name='title']");
   await titleInput.fill("Design Workshop");
-  await expect(page.locator(".event-modal__template-item")).toHaveCount(1);
+  await expect(page.locator(".event-modal__template-item")).toHaveCount(2);
 
   await page.locator(".event-modal__title").click();
   await expect(page.locator(".event-modal__template-dropdown")).toBeHidden();

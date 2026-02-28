@@ -82,9 +82,9 @@
           startTime: "15:30",
           endTime: "16:15",
           allDay: false,
-          location: "Studio",
-          descriptionPrivate: "Bring sketches",
-          descriptionPublic: "Review mockups",
+          location: "Annex",
+          descriptionPrivate: "Bring notes",
+          descriptionPublic: "Ship v2",
           updated_at: ts
         },
         {

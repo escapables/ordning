@@ -51,7 +51,6 @@ pub struct SearchEventResult {
     pub end_time: Option<String>,
     pub all_day: bool,
     pub location: Option<String>,
-    pub description_private: String,
     pub description_public: String,
 }
 
@@ -204,7 +203,6 @@ fn build_search_event_results(
             end_time: event.end_time.map(|time| time.format("%H:%M").to_string()),
             all_day: event.all_day || event.start_time.is_none() || event.end_time.is_none(),
             location: event.location.clone(),
-            description_private: event.description_private.clone(),
             description_public: event.description_public.clone(),
         })
         .collect();
@@ -412,15 +410,10 @@ mod tests {
         assert_eq!(query_title[0].start_time.as_deref(), Some("09:00"));
         assert_eq!(query_title[0].end_time.as_deref(), Some("10:00"));
         assert!(!query_title[0].all_day);
-        assert_eq!(query_title[0].description_private, "");
         assert_eq!(query_title[0].description_public, "Team sync");
 
         assert_eq!(query_description.len(), 1);
         assert_eq!(query_description[0].title, "Daily");
-        assert_eq!(
-            query_description[0].description_private,
-            "Contains Urgent context"
-        );
 
         assert_eq!(query_location.len(), 1);
         assert_eq!(query_location[0].location.as_deref(), Some("Rooftop"));
