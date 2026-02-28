@@ -261,7 +261,7 @@
 }
 
 .calendar-list__edit {
-  color: var(--color-accent);
+  color: var(--color-text-secondary);
 }
 
 .calendar-list__edit:hover {

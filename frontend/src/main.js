@@ -335,6 +335,7 @@ async function renderAppShell() {
             });
             await refreshAndRender();
           },
+          onConfirmDelete: () => confirmDialog.confirm(t("calendarDeleteConfirm")),
           onDelete: async (calendar) => {
             try {
               await invoke("delete_calendar", { id: calendar.id });

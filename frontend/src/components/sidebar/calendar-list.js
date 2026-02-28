@@ -49,6 +49,7 @@ function listGroupNames(calendars) {
 export function renderCalendarList(calendars, handlers) {
   const {
     onCreate = () => {},
+    onConfirmDelete = async () => true,
     onDelete = () => {},
     onToggleVisibility = () => {},
     onImport = () => {},
@@ -104,12 +105,12 @@ export function renderCalendarList(calendars, handlers) {
       deleteButton.className = "calendar-list__delete";
       deleteButton.tabIndex = 2;
       deleteButton.textContent = t("calendarDeleteButton");
-      deleteButton.addEventListener("click", () => {
-        const confirmed = window.confirm(t("calendarDeleteConfirm"));
+      deleteButton.addEventListener("click", async () => {
+        const confirmed = await onConfirmDelete(calendar);
         if (!confirmed) {
           return;
         }
-        onDelete(calendar);
+        await onDelete(calendar);
       });
       editButton.addEventListener("click", () => {
         openDialog(calendar);

@@ -14,10 +14,21 @@ test("calendar create dialog supports create delete toggle and zero-state", asyn
   await firstCheckbox.uncheck();
   await expect(firstCheckbox).not.toBeChecked();
 
-  page.on("dialog", (dialog) => dialog.accept());
+  const workCalendar = page.locator(".calendar-list__item", { hasText: "Work" });
+  await expect(workCalendar).toHaveCount(1);
+
+  await page.locator(".calendar-list__item .calendar-list__delete").first().click();
+  await expect(page.locator(".confirm-dialog[open]")).toBeVisible();
+  await page.locator(".confirm-dialog__btn", { hasText: "Avbryt" }).click();
+  await expect(page.locator(".confirm-dialog[open]")).toHaveCount(0);
+  await expect(workCalendar).toHaveCount(1);
+  await expect(page.locator(".calendar-list__item")).toHaveCount(3);
 
   for (let index = 0; index < 3; index += 1) {
     await page.locator(".calendar-list__item .calendar-list__delete").first().click();
+    await expect(page.locator(".confirm-dialog[open]")).toBeVisible();
+    await page.locator(".confirm-dialog__btn--danger").click();
+    await expect(page.locator(".confirm-dialog[open]")).toHaveCount(0);
   }
 
   await expect(page.locator(".calendar-list__item")).toHaveCount(0);
