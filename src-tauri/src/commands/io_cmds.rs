@@ -39,6 +39,7 @@ pub struct ImportResult {
 pub async fn export_json(
     mode: ExportMode,
     calendar_ids: Option<Vec<String>>,
+    default_path: Option<String>,
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<ExportResult, String> {
@@ -50,6 +51,7 @@ pub async fn export_json(
         .dialog()
         .file()
         .set_title("Export Ordning JSON")
+        .set_directory(resolve_dialog_directory(&state, default_path))
         .set_file_name("ordning-export.json")
         .add_filter("JSON", &["json"])
         .blocking_save_file()
@@ -79,8 +81,14 @@ pub fn get_export_event_count(
 }
 
 #[tauri::command]
+pub fn get_launch_directory(state: State<'_, AppState>) -> Result<String, String> {
+    Ok(state.launch_directory.display().to_string())
+}
+
+#[tauri::command]
 pub async fn preview_import_json(
     strategy: ImportStrategy,
+    default_path: Option<String>,
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<ImportPreview, String> {
@@ -88,6 +96,7 @@ pub async fn preview_import_json(
         .dialog()
         .file()
         .set_title("Import Ordning JSON")
+        .set_directory(resolve_dialog_directory(&state, default_path))
         .add_filter("JSON", &["json"])
         .blocking_pick_file()
         .ok_or_else(|| "import canceled".to_owned())?;
@@ -146,6 +155,14 @@ fn snapshot_data(state: &State<'_, AppState>) -> Result<AppData, String> {
         .lock()
         .map_err(|err| format!("failed to lock app state: {err}"))?;
     Ok(app_data.clone())
+}
+
+fn resolve_dialog_directory(state: &State<'_, AppState>, default_path: Option<String>) -> PathBuf {
+    default_path
+        .map(|path| path.trim().to_owned())
+        .filter(|path| !path.is_empty())
+        .map(PathBuf::from)
+        .unwrap_or_else(|| state.launch_directory.clone())
 }
 
 fn parse_calendar_ids(raw: Option<Vec<String>>) -> Result<Option<HashSet<Uuid>>, String> {

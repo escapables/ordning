@@ -1,4 +1,5 @@
 import { t } from "../../i18n/strings.js";
+import { getDialogDefaultPath } from "../../utils/dialog-default-path.js";
 
 function invoke(command, payload = {}) {
   const invokeFn = window.__TAURI__?.core?.invoke;
@@ -152,8 +153,10 @@ export function createImportDialog({ onImported = async () => {} } = {}) {
     previewSummary.hidden = true;
 
     try {
+      const defaultPath = await getDialogDefaultPath();
       const preview = await invoke("preview_import_json", {
-        strategy: selectedStrategy()
+        strategy: selectedStrategy(),
+        defaultPath
       });
       state.filePath = preview.path;
       state.summary = preview.summary;

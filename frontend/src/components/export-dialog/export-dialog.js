@@ -1,5 +1,6 @@
 import { t } from "../../i18n/strings.js";
 import { getState } from "../../state.js";
+import { getDialogDefaultPath } from "../../utils/dialog-default-path.js";
 
 function invoke(command, payload = {}) {
   const invokeFn = window.__TAURI__?.core?.invoke;
@@ -116,6 +117,7 @@ export function createExportDialog({ onPrint } = {}) {
   dialog.appendChild(form);
 
   const selection = new Set();
+  let defaultPath = "";
 
   function showError(message) {
     error.hidden = false;
@@ -204,6 +206,7 @@ export function createExportDialog({ onPrint } = {}) {
 
   async function open() {
     clearError();
+    defaultPath = await getDialogDefaultPath();
     buildCalendarList();
     await refreshPreview();
     dialog.showModal();
@@ -226,7 +229,8 @@ export function createExportDialog({ onPrint } = {}) {
     try {
       const result = await invoke("export_json", {
         mode: selectedMode(),
-        calendarIds
+        calendarIds,
+        defaultPath
       });
       dialog.close();
       window.alert(t("exportSuccessMessage").replace("{path}", result.path));

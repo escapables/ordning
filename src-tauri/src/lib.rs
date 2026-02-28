@@ -16,7 +16,7 @@ use crate::commands::event_cmds::{
     create_event, delete_event, get_event, get_past_events_count, purge_past_events, update_event,
 };
 use crate::commands::io_cmds::{
-    export_json, get_export_event_count, import_json, preview_import_json,
+    export_json, get_export_event_count, get_launch_directory, import_json, preview_import_json,
 };
 use crate::commands::persistence_cmds::{
     discard_unsaved_changes, has_unsaved_changes, persist_snapshot, request_app_close,
@@ -66,10 +66,12 @@ pub fn run() {
             .expect("failed to seed default calendar");
     }
 
+    let launch_directory = std::env::current_dir().unwrap_or_else(|_| std::env::temp_dir());
     let state = AppState {
         data: Mutex::new(app_data.clone()),
         persisted: Mutex::new(app_data),
         store,
+        launch_directory,
     };
 
     tauri::Builder::default()
@@ -159,6 +161,7 @@ pub fn run() {
             purge_past_events,
             export_json,
             get_export_event_count,
+            get_launch_directory,
             preview_import_json,
             import_json,
             get_settings,

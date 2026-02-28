@@ -10,8 +10,15 @@
   const calendars = new Map();
   const events = new Map();
   const virtualFiles = new Map();
+  const launchDirectory = "/tmp/ordning-launch";
   let exportCounter = 0;
   let lastPath = "";
+
+  window.__ORDNING_DIALOG_DEFAULTS = {
+    exportDefaultPath: null,
+    importDefaultPath: null,
+    launchDirectory
+  };
 
   const toDate = (value) => {
     const [year, month, day] = String(value).split("-").map(Number);
@@ -99,7 +106,12 @@
       });
     }
 
+    if (command === "get_launch_directory") {
+      return Promise.resolve(launchDirectory);
+    }
+
     if (command === "export_json") {
+      window.__ORDNING_DIALOG_DEFAULTS.exportDefaultPath = payload?.defaultPath ?? null;
       const selectedIds = new Set(payload?.calendarIds ?? []);
       const exportEvents = [...events.values()].filter((event) =>
         selectedIds.has(event.calendarId)
@@ -124,6 +136,7 @@
     }
 
     if (command === "preview_import_json") {
+      window.__ORDNING_DIALOG_DEFAULTS.importDefaultPath = payload?.defaultPath ?? null;
       const snapshot = virtualFiles.get(lastPath);
       if (!snapshot) {
         return Promise.reject("import canceled");

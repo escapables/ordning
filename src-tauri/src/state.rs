@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::sync::Mutex;
 
 use crate::models::AppData;
@@ -7,4 +8,5 @@ pub struct AppState {
     pub data: Mutex<AppData>,
     pub persisted: Mutex<AppData>,
     pub store: JsonStore,
+    pub launch_directory: PathBuf,
 }
