@@ -314,9 +314,12 @@ export function createEventModal({
     const hasCalendars = fillCalendarOptions(prefill.calendarId, true);
     setDefaults();
 
-    if (prefill.date) {
-      startDateInput.value = prefill.date;
-      endDateInput.value = prefill.date;
+    if (prefill.startDate || prefill.date) {
+      startDateInput.value = prefill.startDate ?? prefill.date;
+    }
+
+    if (prefill.endDate || prefill.date) {
+      endDateInput.value = prefill.endDate ?? prefill.date;
     }
 
     if (prefill.startTime) {
