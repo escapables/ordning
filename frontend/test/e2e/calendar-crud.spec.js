@@ -5,7 +5,7 @@ test("calendar create dialog supports create delete toggle and zero-state", asyn
 
   await page.locator(".calendar-list__add").click();
   await expect(page.locator(".calendar-create-dialog")).toBeVisible();
-  await page.locator(".calendar-create-dialog__input").fill("Errands");
+  await page.locator(".calendar-create-dialog__input:not(.calendar-create-dialog__group)").fill("Errands");
   await page.locator(".calendar-create-dialog__btn--primary").click();
 
   await expect(page.locator(".calendar-list__name", { hasText: "Errands" })).toBeVisible();

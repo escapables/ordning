@@ -22,6 +22,7 @@ read_when:
 - **Functions:** snake_case (`create_event`, `get_week_events`)
 - **Constants:** SCREAMING_SNAKE_CASE (`MAX_EVENTS`, `DEFAULT_COLOR`)
 - **Acronyms in types:** PascalCase (`JsonStore`, not `JSONStore`)
+- **Derive order:** `Debug, Clone, Serialize, Deserialize` (alpha after Debug/Clone)
 
 ### JavaScript (src/)
 
@@ -46,7 +47,7 @@ read_when:
 
 ## File Size
 
-- Keep files under ~500 LOC. Split/refactor when approaching the limit.
+- Keep files under ~500 LOC (Rust, JS, and CSS). Split/refactor when approaching the limit.
 
 ## Project Layout
 
@@ -89,7 +90,7 @@ import { formatTime } from '../utils/date-utils.js';
 
 - Rust tests in the same file (`#[cfg(test)] mod tests`) or in `tests/`
 - Use `#[test]` with descriptive names: `fn create_event_sets_updated_at()`
-- JS has no test framework yet — manual testing via `cargo tauri dev`
+- Playwright e2e tests in `frontend/test/e2e/`: `npx playwright test`
 - Add regression tests for bugs
 
 ## Comments

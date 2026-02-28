@@ -82,9 +82,7 @@ It is robust for tested targets, but not guaranteed for all Linux distros and GP
 1. Dual artifacts:
    - `Ordning-portable-sw` (current profile, safest default)
    - `Ordning-gpu` (keeps GPU libs/features for performance-focused users)
-2. Add startup diagnostics mode:
-   - env + GL/EGL loader traces in a log file for faster field debugging
-3. Expand CI/manual matrix:
+2. Expand CI/manual matrix:
    - Debian/Ubuntu LTS, Fedora, Arch variants
-4. Optional env toggle docs for advanced users:
+3. Optional env toggle docs for advanced users:
    - allow opting into GPU path explicitly (unsupported by default)

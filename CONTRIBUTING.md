@@ -78,6 +78,7 @@ Run these before pushing:
 cargo clippy --workspace -- -D warnings
 cargo test --workspace
 cargo fmt --all -- --check
+npx playwright test
 bin/validate-docs
 ```
 

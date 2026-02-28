@@ -5,7 +5,7 @@ test("opening event modal preserves sidebar calendar scroll position", async ({ 
 
   for (let index = 0; index < 12; index += 1) {
     await page.locator(".calendar-list__add").click();
-    await page.locator(".calendar-create-dialog__input").fill(`Scroll ${index}`);
+    await page.locator(".calendar-create-dialog__input:not(.calendar-create-dialog__group)").fill(`Scroll ${index}`);
     await page.locator(".calendar-create-dialog__btn--primary").click();
   }
 

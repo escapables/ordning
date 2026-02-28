@@ -4,7 +4,7 @@ test("calendar groups can be set changed and cleared from the sidebar", async ({
   await page.goto("/");
 
   await page.locator(".calendar-list__add").click();
-  await page.locator(".calendar-create-dialog__input").fill("Grouped");
+  await page.locator(".calendar-create-dialog__input:not(.calendar-create-dialog__group)").fill("Grouped");
   await page.locator(".calendar-create-dialog__group").fill("Projects");
   await page.locator(".calendar-create-dialog__btn--primary").click();
 

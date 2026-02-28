@@ -160,16 +160,8 @@ export function renderCalendarList(calendars, handlers) {
   groupInput.maxLength = 100;
   groupInput.tabIndex = 2;
   groupInput.placeholder = t("calendarGroupPlaceholder");
-  groupInput.className = "calendar-create-dialog__group";
+  groupInput.className = "calendar-create-dialog__input calendar-create-dialog__group";
   groupInput.setAttribute("aria-label", t("calendarGroupLabel"));
-  groupInput.style.minHeight = "30px";
-  groupInput.style.border = "1px solid var(--color-border-muted)";
-  groupInput.style.borderRadius = "var(--radius-soft)";
-  groupInput.style.padding = "0 10px";
-  groupInput.style.font = "inherit";
-  groupInput.style.fontSize = "13px";
-  groupInput.style.background = "#fff";
-  groupInput.style.color = "var(--color-text-primary)";
 
   const groupListId = "calendar-group-options";
   groupInput.setAttribute("list", groupListId);
