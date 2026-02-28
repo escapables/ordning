@@ -1,5 +1,6 @@
 import { t } from "../../i18n/strings.js";
 import { getState } from "../../state.js";
+import { createEventTemplateSearch } from "./event-template-search.js";
 
 function invoke(command, payload = {}) {
   const invokeFn = window.__TAURI__?.core?.invoke;
@@ -99,7 +100,8 @@ export function createEventModal({
 
   const titleInput = createInput("text", "title");
   titleInput.maxLength = 200;
-  form.appendChild(createField(t("eventFormTitle"), titleInput));
+  const titleField = createField(t("eventFormTitle"), titleInput);
+  form.appendChild(titleField);
 
   const calendarSelect = document.createElement("select");
   calendarSelect.className = "event-modal__input";
@@ -159,6 +161,26 @@ export function createEventModal({
   publicDescriptionInput.rows = 3;
   form.appendChild(createField(t("eventFormPublicDescription"), publicDescriptionInput));
 
+  const templateField = createEventTemplateSearch({
+    invoke,
+    showError,
+    clearError,
+    applyAllDayState,
+    titleField,
+    fields: {
+      titleInput,
+      calendarSelect,
+      startDateInput,
+      endDateInput,
+      startTimeInput,
+      endTimeInput,
+      allDayInput,
+      locationInput,
+      privateDescriptionInput,
+      publicDescriptionInput
+    }
+  });
+
   const actions = document.createElement("div");
   actions.className = "event-modal__actions";
 
@@ -192,6 +214,7 @@ export function createEventModal({
   function toggleNoCalendarsCreateState(enabled) {
     noCalendarsPrompt.hidden = !enabled;
     noCalendarsPrompt.classList.toggle(FORCE_HIDDEN_CLASS, !enabled);
+    templateField.setEnabled(!enabled && state.mode === "create");
     const editableSections = form.querySelectorAll(
       ".event-modal__field, .event-modal__row, .event-modal__checkbox, .event-modal__actions"
     );
@@ -272,6 +295,7 @@ export function createEventModal({
     locationInput.value = "";
     privateDescriptionInput.value = "";
     publicDescriptionInput.value = "";
+    templateField.reset();
     applyAllDayState();
     setTitleValidationError(false);
   }
@@ -281,6 +305,7 @@ export function createEventModal({
     state.editingId = null;
     heading.textContent = t("eventFormCreateHeading");
     deleteButton.hidden = true;
+    templateField.setEnabled(true);
   }
 
   function setModeEdit(eventId) {
@@ -288,6 +313,7 @@ export function createEventModal({
     state.editingId = eventId;
     heading.textContent = t("eventFormEditHeading");
     deleteButton.hidden = false;
+    templateField.setEnabled(false);
     toggleNoCalendarsCreateState(false);
   }
 

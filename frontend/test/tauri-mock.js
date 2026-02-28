@@ -127,9 +127,16 @@
       .map(function (event) {
         return {
           id: event.id,
+          calendar_id: event.calendarId,
           title: event.title,
           start_date: event.startDate,
-          location: event.location || null
+          end_date: event.endDate,
+          start_time: event.startTime,
+          end_time: event.endTime,
+          all_day: Boolean(event.allDay || !event.startTime || !event.endTime),
+          location: event.location || null,
+          description_private: event.descriptionPrivate || "",
+          description_public: event.descriptionPublic || ""
         };
       });
   }
@@ -161,175 +168,10 @@
   var fri = dateKey(addDays(monday, 4));
   var today = dateKey(now);
   var past = dateKey(addDays(monday, -14));
-
-  var state = {
-    settings: {
-      lang: "sv",
-      timezone: "Europe/Stockholm"
-    },
-    calendars: [
-      {
-        id: "cal-work",
-        name: "Work",
-        color: "#4a90d9",
-        group: "default",
-        visible: true,
-        created_at: ts,
-        updated_at: ts
-      },
-      {
-        id: "cal-personal",
-        name: "Personal",
-        color: "#14b8a6",
-        group: "default",
-        visible: true,
-        created_at: ts,
-        updated_at: ts
-      }
-    ],
-    events: [
-      {
-        id: "evt-1",
-        calendarId: "cal-work",
-        title: "Sprint Planning",
-        startDate: mon,
-        endDate: mon,
-        startTime: "09:00",
-        endTime: "10:30",
-        allDay: false,
-        location: "",
-        descriptionPrivate: "",
-        descriptionPublic: "",
-        updated_at: ts
-      },
-      {
-        id: "evt-2",
-        calendarId: "cal-work",
-        title: "Design Review",
-        startDate: tue,
-        endDate: tue,
-        startTime: "14:00",
-        endTime: "15:00",
-        allDay: false,
-        location: "Room 4B",
-        descriptionPrivate: "",
-        descriptionPublic: "",
-        updated_at: ts
-      },
-      {
-        id: "evt-night",
-        calendarId: "cal-work",
-        title: "Night Deploy",
-        startDate: mon,
-        endDate: mon,
-        startTime: "22:00",
-        endTime: "02:00",
-        allDay: false,
-        location: "",
-        descriptionPrivate: "",
-        descriptionPublic: "",
-        updated_at: ts
-      },
-      {
-        id: "evt-6",
-        calendarId: "cal-personal",
-        title: "Parallel Sync",
-        startDate: mon,
-        endDate: mon,
-        startTime: "09:15",
-        endTime: "10:00",
-        allDay: false,
-        location: "",
-        descriptionPrivate: "",
-        descriptionPublic: "",
-        updated_at: ts
-      },
-      {
-        id: "evt-7",
-        calendarId: "cal-work",
-        title: "Ops Check-in",
-        startDate: mon,
-        endDate: mon,
-        startTime: "09:30",
-        endTime: "10:15",
-        allDay: false,
-        location: "",
-        descriptionPrivate: "",
-        descriptionPublic: "",
-        updated_at: ts
-      },
-      {
-        id: "evt-3",
-        calendarId: "cal-work",
-        title: "Team Standup",
-        startDate: today,
-        endDate: today,
-        startTime: "10:00",
-        endTime: "11:30",
-        allDay: false,
-        location: "",
-        descriptionPrivate: "",
-        descriptionPublic: "",
-        updated_at: ts
-      },
-      {
-        id: "evt-4",
-        calendarId: "cal-personal",
-        title: "Dentist",
-        startDate: today,
-        endDate: today,
-        startTime: "15:00",
-        endTime: "16:00",
-        allDay: false,
-        location: "Clinic",
-        descriptionPrivate: "Bring insurance card",
-        descriptionPublic: "",
-        updated_at: ts
-      },
-      {
-        id: "evt-5",
-        calendarId: "cal-work",
-        title: "1:1 with Manager",
-        startDate: fri,
-        endDate: fri,
-        startTime: "11:00",
-        endTime: "12:00",
-        allDay: false,
-        location: "",
-        descriptionPrivate: "",
-        descriptionPublic: "",
-        updated_at: ts
-      },
-      {
-        id: "evt-ad-1",
-        calendarId: "cal-personal",
-        title: "Company Offsite",
-        startDate: wed,
-        endDate: wed,
-        startTime: null,
-        endTime: null,
-        allDay: true,
-        location: "",
-        descriptionPrivate: "",
-        descriptionPublic: "",
-        updated_at: ts
-      },
-      {
-        id: "evt-past-1",
-        calendarId: "cal-work",
-        title: "Archived Planning",
-        startDate: past,
-        endDate: past,
-        startTime: "08:00",
-        endTime: "09:00",
-        allDay: false,
-        location: "",
-        descriptionPrivate: "",
-        descriptionPublic: "",
-        updated_at: ts
-      }
-    ]
-  };
+  var createState = window.__createOrdningTauriMockState;
+  var state = typeof createState === "function"
+    ? createState({ ts: ts, mon: mon, tue: tue, wed: wed, fri: fri, today: today, past: past })
+    : { settings: { lang: "sv", timezone: "Europe/Stockholm" }, calendars: [], events: [] };
 
   function invoke(command, payload) {
     switch (command) {

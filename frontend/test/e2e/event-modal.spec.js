@@ -46,6 +46,57 @@ test("single click on empty slot does not open modal", async ({ page }) => {
   await expect(page.locator(".event-modal[open]")).toHaveCount(0);
 });
 
+test("template search pre-fills create modal while preserving chosen start date and time", async ({ page }) => {
+  await page.goto("/");
+
+  const [targetDate] = await page.locator(".day-column").evaluateAll((nodes) =>
+    nodes.slice(1, 2).map((node) => node.dataset.date)
+  );
+
+  await page.locator(".sidebar__new-event-btn").click();
+  await expect(page.locator(".event-modal[open]")).toBeVisible();
+
+  await page.locator(".event-modal__input[name='startDate']").fill(targetDate);
+  await page.locator(".event-modal__input[name='startTime']").fill("08:20");
+
+  const titleInput = page.locator(".event-modal__input[name='title']");
+  await titleInput.fill("Design");
+  await expect(page.locator(".event-modal__template-item")).toHaveCount(3);
+
+  await page.locator(".event-modal__template-item", { hasText: "Design Workshop" }).click();
+
+  await expect(titleInput).toHaveValue("Design Workshop");
+  await expect(titleInput).toBeFocused();
+  await expect(page.locator(".event-modal__input[name='location']")).toHaveValue("Studio");
+  await expect(page.locator(".event-modal__textarea[name='descriptionPrivate']")).toHaveValue("Bring sketches");
+  await expect(page.locator(".event-modal__textarea[name='descriptionPublic']")).toHaveValue("Review mockups");
+  await expect(page.locator(".event-modal__input[name='startDate']")).toHaveValue(targetDate);
+  await expect(page.locator(".event-modal__input[name='startTime']")).toHaveValue("08:20");
+  await expect(page.locator(".event-modal__input[name='endDate']")).toHaveValue(targetDate);
+  await expect(page.locator(".event-modal__input[name='endTime']")).toHaveValue("10:05");
+  await expect(page.locator(".event-modal__input[name='calendarId']")).toHaveValue("cal-personal");
+});
+
+test("clicking outside title suggestions collapses dropdown without changing typed title", async ({ page }) => {
+  await page.goto("/");
+
+  await page.locator(".sidebar__new-event-btn").click();
+  await expect(page.locator(".event-modal[open]")).toBeVisible();
+
+  const titleInput = page.locator(".event-modal__input[name='title']");
+  await titleInput.fill("Design Workshop");
+  await expect(page.locator(".event-modal__template-item")).toHaveCount(1);
+
+  await page.locator(".event-modal__title").click();
+  await expect(page.locator(".event-modal__template-dropdown")).toBeHidden();
+  await expect(titleInput).toHaveValue("Design Workshop");
+
+  const locationInput = page.locator(".event-modal__input[name='location']");
+  await locationInput.click();
+  await locationInput.fill("Custom venue");
+  await expect(locationInput).toHaveValue("Custom venue");
+});
+
 test("Delete key cancel keeps focused event", async ({ page }) => {
   await page.goto("/");
 
