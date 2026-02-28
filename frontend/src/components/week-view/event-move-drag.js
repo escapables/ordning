@@ -6,6 +6,7 @@ import {
   TIME_STEP_MINUTES,
   clamp,
   eventDurationMinutes,
+  parseTimeToMinutes,
   pointerToMinutes,
   readEventBlockRange,
   resolveColumnFromPoint,
@@ -430,6 +431,8 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     const range = readEventBlockRange(element);
     const startMinutes = range?.startMinutes ?? roundNearest(event.startMinutes ?? 0, TIME_STEP_MINUTES);
     const rawEndMinutes = range?.endMinutes ?? Math.min(MINUTES_PER_DAY, startMinutes + eventDurationMinutes(event));
+    const segmentDateValue = Date.parse(`${column.dataset.date ?? event.date ?? ""}T00:00:00`);
+    const startDateValue = Date.parse(`${event.startDate ?? ""}T00:00:00`);
     const absoluteEndMinutes = resolveAbsoluteEndMinutes(element, rawEndMinutes);
     const endMinutes = dragState.mode === "move"
       ? resolveDraggedEndMinutes(event, absoluteEndMinutes, startMinutes)
@@ -441,7 +444,11 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     );
     if (dragState.mode === "move") {
       const columnRect = column.getBoundingClientRect();
-      dragState.clickOffsetMinutes = pointerToMinutes(pointerEvent.clientY, columnRect, pixelsPerHour) - startMinutes;
+      const dayOffset = Number.isFinite(segmentDateValue) && Number.isFinite(startDateValue)
+        ? Math.round((segmentDateValue - startDateValue) / 86400000)
+        : 0;
+      const anchorStartMinutes = roundNearest(parseTimeToMinutes(event.startTime) - (dayOffset * MINUTES_PER_DAY), TIME_STEP_MINUTES);
+      dragState.clickOffsetMinutes = pointerToMinutes(pointerEvent.clientY, columnRect, pixelsPerHour) - anchorStartMinutes;
     }
     dragState.sourceColumn = column;
     dragState.targetColumn = column;
