@@ -36,6 +36,16 @@ function buildGroups(calendars) {
   return groups;
 }
 
+function listGroupNames(calendars) {
+  return Array.from(
+    new Set(
+      calendars
+        .map((calendar) => String(calendar.group || "").trim())
+        .filter(Boolean)
+    )
+  ).sort((left, right) => left.localeCompare(right));
+}
+
 export function renderCalendarList(calendars, handlers) {
   const {
     onCreate = () => {},
@@ -83,6 +93,12 @@ export function renderCalendarList(calendars, handlers) {
       name.className = "calendar-list__name";
       name.textContent = calendar.name;
 
+      const editButton = document.createElement("button");
+      editButton.type = "button";
+      editButton.className = "calendar-list__edit";
+      editButton.tabIndex = 2;
+      editButton.textContent = t("calendarEditButton");
+
       const deleteButton = document.createElement("button");
       deleteButton.type = "button";
       deleteButton.className = "calendar-list__delete";
@@ -95,10 +111,14 @@ export function renderCalendarList(calendars, handlers) {
         }
         onDelete(calendar);
       });
+      editButton.addEventListener("click", () => {
+        openDialog(calendar);
+      });
 
       row.appendChild(visibilityInput);
       row.appendChild(dot);
       row.appendChild(name);
+      row.appendChild(editButton);
       row.appendChild(deleteButton);
       group.appendChild(row);
     });
@@ -121,6 +141,7 @@ export function renderCalendarList(calendars, handlers) {
   const form = document.createElement("form");
   form.className = "calendar-create-dialog__form";
   form.method = "dialog";
+  let editingCalendarId = null;
 
   const title = document.createElement("h3");
   title.className = "calendar-create-dialog__title";
@@ -134,9 +155,58 @@ export function renderCalendarList(calendars, handlers) {
   input.placeholder = t("calendarCreatePlaceholder");
   input.className = "calendar-create-dialog__input";
 
+  const groupInput = document.createElement("input");
+  groupInput.type = "text";
+  groupInput.maxLength = 100;
+  groupInput.tabIndex = 2;
+  groupInput.placeholder = t("calendarGroupPlaceholder");
+  groupInput.className = "calendar-create-dialog__group";
+  groupInput.setAttribute("aria-label", t("calendarGroupLabel"));
+  groupInput.style.minHeight = "30px";
+  groupInput.style.border = "1px solid var(--color-border-muted)";
+  groupInput.style.borderRadius = "var(--radius-soft)";
+  groupInput.style.padding = "0 10px";
+  groupInput.style.font = "inherit";
+  groupInput.style.fontSize = "13px";
+  groupInput.style.background = "#fff";
+  groupInput.style.color = "var(--color-text-primary)";
+
+  const groupListId = "calendar-group-options";
+  groupInput.setAttribute("list", groupListId);
+
+  const groupSuggestions = document.createElement("datalist");
+  groupSuggestions.id = groupListId;
+  listGroupNames(calendars).forEach((groupName) => {
+    const option = document.createElement("option");
+    option.value = groupName;
+    groupSuggestions.appendChild(option);
+  });
+
   const colorGrid = document.createElement("div");
   colorGrid.className = "calendar-create-dialog__colors";
   let selectedColor = pickDefaultColor(calendars);
+
+  function syncSelectedColor() {
+    colorGrid.querySelectorAll(".calendar-create-dialog__color").forEach((element) => {
+      const color = element.dataset.color || "";
+      element.classList.toggle(
+        "calendar-create-dialog__color--selected",
+        color.toLowerCase() === selectedColor.toLowerCase()
+      );
+    });
+  }
+
+  function openDialog(calendar = null) {
+    editingCalendarId = calendar?.id ?? null;
+    title.textContent = editingCalendarId ? t("calendarEditDialogTitle") : t("calendarCreateDialogTitle");
+    submit.textContent = editingCalendarId ? t("saveButton") : t("calendarCreateButton");
+    input.value = calendar?.name ?? "";
+    groupInput.value = calendar?.group ?? "";
+    selectedColor = calendar?.color ?? pickDefaultColor(calendars);
+    syncSelectedColor();
+    dialog.showModal();
+    input.focus();
+  }
 
   CALENDAR_COLORS.forEach((color) => {
     const option = document.createElement("button");
@@ -179,26 +249,22 @@ export function renderCalendarList(calendars, handlers) {
   actions.appendChild(submit);
   form.appendChild(title);
   form.appendChild(input);
+  form.appendChild(groupInput);
+  form.appendChild(groupSuggestions);
   form.appendChild(colorGrid);
   form.appendChild(actions);
   dialog.appendChild(form);
 
   addButton.addEventListener("click", () => {
-    input.value = "";
-    selectedColor = pickDefaultColor(calendars);
-    colorGrid.querySelectorAll(".calendar-create-dialog__color").forEach((element) => {
-      const color = element.dataset.color || "";
-      element.classList.toggle(
-        "calendar-create-dialog__color--selected",
-        color.toLowerCase() === selectedColor.toLowerCase()
-      );
-    });
-    dialog.showModal();
-    input.focus();
+    openDialog();
   });
 
   cancel.addEventListener("click", () => {
+    editingCalendarId = null;
     dialog.close();
+  });
+  dialog.addEventListener("close", () => {
+    editingCalendarId = null;
   });
 
   form.addEventListener("submit", async (event) => {
@@ -210,9 +276,12 @@ export function renderCalendarList(calendars, handlers) {
     }
 
     await onCreate({
+      id: editingCalendarId,
       name,
-      color: selectedColor
+      color: selectedColor,
+      group: groupInput.value.trim() || null
     });
+    editingCalendarId = null;
     dialog.close();
   });
 

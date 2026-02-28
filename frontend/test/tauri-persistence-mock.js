@@ -9,6 +9,7 @@
   const baseInvoke = tauri.core.invoke.bind(tauri.core);
   const dirtyCommands = new Set([
     "create_calendar",
+    "update_calendar",
     "delete_calendar",
     "toggle_visibility",
     "create_event",

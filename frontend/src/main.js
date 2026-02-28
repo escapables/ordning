@@ -12,20 +12,18 @@ import { installCloseGuard } from "./main/close-guard.js";
 import { createEventHighlightHelpers } from "./main/event-highlight.js";
 import { invoke } from "./main/invoke.js";
 import { createManualSaveController } from "./main/manual-save.js";
+import { createEventCopyPasteController } from "./main/event-copy-paste.js";
 import { applySettings, getCurrentTimezone, initializeSettings } from "./main/settings.js";
 import { renderWeekSection } from "./main/week-render.js";
 import { getStartOfWeek } from "./utils/date-utils.js";
 import { setupKeyboardHandler } from "./utils/keyboard-handler.js";
 import { printWeek } from "./utils/print-week.js";
 import { addDays, getWeekBounds, mapAllDayEvents, mapBackendEvents, parseDateKey } from "./utils/week-view-events.js";
-import { copyEventToClipboard, getCopiedEventData, pasteCopiedEventAtSlot, purgePastEventsFlow } from "./utils/ui-actions.js";
+import { purgePastEventsFlow } from "./utils/ui-actions.js";
 import { getState, loadCalendars, loadWeekEvents, setCurrentWeekStart, subscribe } from "./state.js";
 let unsubscribeState = null;
 let keydownHandler = null;
-let teardownZoomGuards = null;
-let teardownPinchZoom = null;
-let teardownCloseGuard = null;
-let teardownManualSave = null;
+let teardownZoomGuards = null; let teardownPinchZoom = null; let teardownCloseGuard = null; let teardownManualSave = null; let teardownCopyPaste = null;
 let pendingWeekViewRenderOptions = null;
 async function renderAppShell() {
   if (unsubscribeState) {
@@ -52,6 +50,7 @@ async function renderAppShell() {
     teardownManualSave();
     teardownManualSave = null;
   }
+  if (teardownCopyPaste) { teardownCopyPaste(); teardownCopyPaste = null; }
   const app = document.querySelector("#app");
   if (!app) {
     return;
@@ -99,6 +98,8 @@ async function renderAppShell() {
   let activeHighlight = null;
   let currentPixelsPerHour = DEFAULT_PIXELS_PER_HOUR;
   const { clearEventSelection, highlightEventBlock } = createEventHighlightHelpers({ weekContainer, getState });
+  const copyPasteController = createEventCopyPasteController({ weekContainer, invoke, refresh: refreshAndRender, t, clearEventSelection });
+  teardownCopyPaste = copyPasteController.dispose;
   const currentWeekStartOrDefault = () => getState().currentWeekStart ?? getStartOfWeek(new Date(), 1);
   const navigateWeek = async (start) => { setCurrentWeekStart(start); await refreshCurrentWeekEvents(); };
   const goToPreviousWeek = () => navigateWeek(addDays(currentWeekStartOrDefault(), -7));
@@ -251,7 +252,7 @@ async function renderAppShell() {
       }
     },
     onEventCopy: async (eventData) => {
-      await copyEventToClipboard(eventData, t);
+      await copyPasteController.copyEvent(eventData);
     },
     onEventMove: async ({ eventId, date, startDate, endDate, startTime, endTime }) => {
       await updateTimedEventPosition({ eventId, date, startDate, endDate, startTime, endTime }, "move");
@@ -267,13 +268,13 @@ async function renderAppShell() {
     },
     onPasteFromContextMenu: async (prefill) => {
       try {
-        await pasteCopiedEventAtSlot({ invoke, refresh: refreshAndRender, date: prefill.date, startTime: prefill.startTime });
+        await copyPasteController.pasteAtPrefill(prefill);
       } catch (error) {
         window.alert(String(error));
         console.error("Failed to paste event from context menu", error);
       }
     },
-    canPasteFromContextMenu: () => Boolean(getCopiedEventData()?.id),
+    canPasteFromContextMenu: () => copyPasteController.canPaste(),
     onZoomChange: handleZoomChange
   };
   function handleZoomChange({ pixelsPerHour, preserveScrollTop }) {
@@ -281,18 +282,6 @@ async function renderAppShell() {
     renderWeekSection(weekContainer, getWeekBounds(currentWeekStartOrDefault()).weekDates, { ...weekViewHandlers,
       timezone: getCurrentTimezone(), pixelsPerHour: currentPixelsPerHour, preserveScrollTop, skipAutoScroll: true });
   }
-  weekContainer.addEventListener("click", (clickEvent) => {
-    const target = clickEvent.target;
-    if (!(target instanceof Element)) {
-      return;
-    }
-    if (target.closest(".event-block") || target.closest(".all-day-event")) {
-      return;
-    }
-    if (target.closest(".day-column") || target.closest(".all-day-bar__day")) {
-      clearEventSelection();
-    }
-  });
   app.addEventListener(
     "contextmenu",
     (contextMenuEvent) => {
@@ -334,13 +323,15 @@ async function renderAppShell() {
       lastRenderedCalendarsJson = calendarsJson;
       sidebarList.replaceChildren(
         renderCalendarList(calendars, {
-          onCreate: async ({ name, color }) => {
+          onCreate: async ({ id, name, color, group }) => {
             if (!name) {
               return;
             }
-            await invoke("create_calendar", {
+            await invoke(id ? "update_calendar" : "create_calendar", {
+              ...(id ? { id } : {}),
               name,
-              color
+              color,
+              group
             });
             await refreshAndRender();
           },
@@ -454,6 +445,11 @@ async function renderAppShell() {
     clearEventSelection: () => {
       clearEventSelection({ blurFocusedEvent: true });
     },
+    cancelPasteMode: () => {
+      copyPasteController.clear();
+    },
+    copySelectedEvent: () => copyPasteController.copySelectedEvent(),
+    pasteCopiedEvent: () => copyPasteController.pasteAtCurrentPointer(),
     goToPreviousWeek,
     goToNextWeek,
     goToToday,

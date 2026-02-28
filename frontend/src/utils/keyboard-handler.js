@@ -2,6 +2,9 @@ export function setupKeyboardHandler(options = {}) {
   const {
     closeOpenDialogs = () => {},
     clearEventSelection = () => {},
+    cancelPasteMode = () => {},
+    copySelectedEvent = async () => false,
+    pasteCopiedEvent = async () => false,
     goToPreviousWeek = async () => {},
     goToNextWeek = async () => {},
     goToToday = async () => {},
@@ -14,20 +17,51 @@ export function setupKeyboardHandler(options = {}) {
 
   let isDeletingFromKeyboard = false;
 
+  function isEditableTarget(target) {
+    if (!(target instanceof HTMLElement)) {
+      return false;
+    }
+    const tagName = target.tagName.toUpperCase();
+    return tagName === "INPUT"
+      || tagName === "TEXTAREA"
+      || tagName === "SELECT"
+      || target.isContentEditable;
+  }
+
   return async (keyboardEvent) => {
-    if (keyboardEvent.altKey || keyboardEvent.ctrlKey || keyboardEvent.metaKey) {
+    const editableTarget = isEditableTarget(keyboardEvent.target);
+    const hasCommandModifier = keyboardEvent.ctrlKey || keyboardEvent.metaKey;
+    const lowerKey = keyboardEvent.key.toLowerCase();
+
+    if (!keyboardEvent.altKey && !keyboardEvent.shiftKey && hasCommandModifier && !editableTarget) {
+      if (lowerKey === "c") {
+        if (await copySelectedEvent()) {
+          keyboardEvent.preventDefault();
+        }
+        return;
+      }
+
+      if (lowerKey === "v") {
+        if (await pasteCopiedEvent()) {
+          keyboardEvent.preventDefault();
+        }
+        return;
+      }
+    }
+
+    if (keyboardEvent.altKey || hasCommandModifier) {
       return;
     }
 
     if (keyboardEvent.key === "Escape") {
       keyboardEvent.preventDefault();
+      cancelPasteMode();
       closeOpenDialogs();
       clearEventSelection();
       return;
     }
 
-    const targetTagName = keyboardEvent.target?.tagName?.toUpperCase();
-    if (targetTagName === "INPUT" || targetTagName === "TEXTAREA" || targetTagName === "SELECT") {
+    if (editableTarget) {
       return;
     }
 
@@ -43,13 +77,13 @@ export function setupKeyboardHandler(options = {}) {
       return;
     }
 
-    if (keyboardEvent.key.toLowerCase() === "t") {
+    if (lowerKey === "t") {
       keyboardEvent.preventDefault();
       void goToToday();
       return;
     }
 
-    if (keyboardEvent.key.toLowerCase() === "n") {
+    if (lowerKey === "n") {
       keyboardEvent.preventDefault();
       openCreateEvent();
       return;

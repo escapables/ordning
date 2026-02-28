@@ -239,10 +239,10 @@
   color: var(--color-text-primary);
 }
 
-.calendar-list__delete {
+.calendar-list__delete,
+.calendar-list__edit {
   border: 0;
   background: transparent;
-  color: var(--color-text-secondary);
   font: inherit;
   font-size: 12px;
   padding: 4px 6px;
@@ -251,9 +251,22 @@
   transition: background-color 120ms ease, color 120ms ease;
 }
 
+.calendar-list__delete {
+  color: var(--color-text-secondary);
+}
+
 .calendar-list__delete:hover {
   background: rgb(255 59 48 / 0.1);
   color: #d92f24;
+}
+
+.calendar-list__edit {
+  color: var(--color-accent);
+}
+
+.calendar-list__edit:hover {
+  background: rgb(0 122 255 / 0.11);
+  color: var(--color-accent);
 }
 
 .calendar-list__add {
