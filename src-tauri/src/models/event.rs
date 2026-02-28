@@ -18,6 +18,7 @@ pub struct Event {
     pub description_public: String,
     pub location: Option<String>,
     pub recurrence: Option<RecurrenceRule>,
+    pub recurrence_parent_id: Option<Uuid>,
     pub created_at: String,
     pub updated_at: String,
 }

@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
 
-use crate::models::Event;
+use crate::models::{Event, RecurrenceRule, RecurrenceRuleInput};
 use crate::state::AppState;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -22,6 +22,10 @@ pub struct EventInput {
     #[serde(default)]
     pub description_public: String,
     pub location: Option<String>,
+    #[serde(default)]
+    pub recurrence: Option<RecurrenceRuleInput>,
+    #[serde(default)]
+    pub recurrence_parent_id: Option<Uuid>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -38,6 +42,8 @@ pub struct EventDto {
     pub description_private: String,
     pub description_public: String,
     pub location: Option<String>,
+    pub recurrence: Option<RecurrenceRule>,
+    pub recurrence_parent_id: Option<Uuid>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -58,6 +64,8 @@ impl From<&Event> for EventDto {
             description_private: event.description_private.clone(),
             description_public: event.description_public.clone(),
             location: event.location.clone(),
+            recurrence: event.recurrence.clone(),
+            recurrence_parent_id: event.recurrence_parent_id,
             created_at: event.created_at.clone(),
             updated_at: event.updated_at.clone(),
         }
@@ -231,6 +239,12 @@ fn build_event(
         (Some(start_time), Some(end_time))
     };
 
+    let recurrence = input
+        .recurrence
+        .as_ref()
+        .map(RecurrenceRuleInput::to_rule)
+        .transpose()?;
+
     Ok(Event {
         id,
         calendar_id: input.calendar_id,
@@ -243,16 +257,14 @@ fn build_event(
         description_private: input.description_private.trim().to_owned(),
         description_public: input.description_public.trim().to_owned(),
         location: sanitize_optional(input.location.clone()),
-        recurrence: None,
+        recurrence,
+        recurrence_parent_id: input.recurrence_parent_id,
         created_at,
         updated_at,
     })
 }
 
-fn parse_date(value: &str, field: &str) -> Result<NaiveDate, String> {
-    NaiveDate::parse_from_str(value, "%Y-%m-%d")
-        .map_err(|err| format!("invalid {field} '{value}': {err}"))
-}
+use crate::models::recurrence::parse_date;
 
 fn parse_required_time(value: Option<&str>, field: &str) -> Result<NaiveTime, String> {
     let raw = value.ok_or_else(|| format!("{field} is required when all_day is false"))?;
@@ -298,6 +310,7 @@ fn ensure_calendar_exists(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::recurrence::Frequency;
 
     fn sample_input(calendar_id: Uuid) -> EventInput {
         EventInput {
@@ -311,6 +324,8 @@ mod tests {
             description_private: "private".to_owned(),
             description_public: "public".to_owned(),
             location: Some("Room A".to_owned()),
+            recurrence: None,
+            recurrence_parent_id: None,
         }
     }
 
@@ -397,5 +412,72 @@ mod tests {
         let resolved =
             resolve_cutoff_date(Some("2026-03-01".to_owned())).expect("payload date should parse");
         assert_eq!(resolved, NaiveDate::from_ymd_opt(2026, 3, 1).unwrap());
+    }
+
+    #[test]
+    fn event_input_with_recurrence_deserializes() {
+        let json = r#"{
+            "calendarId": "00000000-0000-0000-0000-000000000001",
+            "title": "Weekly sync",
+            "startDate": "2026-03-01",
+            "endDate": "2026-03-01",
+            "startTime": "09:00",
+            "endTime": "10:00",
+            "allDay": false,
+            "descriptionPrivate": "",
+            "descriptionPublic": "",
+            "location": null,
+            "recurrence": {
+                "frequency": "weekly",
+                "interval": 1,
+                "daysOfWeek": ["mon", "wed"],
+                "endConditionType": "after_count",
+                "endConditionCount": 5,
+                "endConditionUntilDate": null,
+                "exceptionDates": ["2026-03-08"],
+                "weekOfMonth": null,
+                "dayOfWeek": null
+            },
+            "recurrenceParentId": null
+        }"#;
+
+        let input: EventInput = serde_json::from_str(json).unwrap();
+        assert!(input.recurrence.is_some());
+        let rec = input.recurrence.unwrap();
+        assert_eq!(rec.interval, 1);
+        assert_eq!(rec.days_of_week, vec!["mon", "wed"]);
+        assert_eq!(rec.end_condition_type, "after_count");
+        assert_eq!(rec.end_condition_count, Some(5));
+        assert_eq!(rec.exception_dates, vec!["2026-03-08"]);
+    }
+
+    #[test]
+    fn build_event_roundtrip_preserves_recurrence_via_dto() {
+        let calendar_id = Uuid::new_v4();
+        let parent_id = Uuid::new_v4();
+        let mut input = sample_input(calendar_id);
+        input.recurrence = Some(RecurrenceRuleInput {
+            frequency: Frequency::Monthly,
+            interval: 2,
+            days_of_week: vec![],
+            end_condition_type: "until_date".to_owned(),
+            end_condition_count: None,
+            end_condition_until_date: Some("2026-12-31".to_owned()),
+            exception_dates: vec!["2026-04-01".to_owned()],
+            week_of_month: Some(3),
+            day_of_week: Some("tue".to_owned()),
+        });
+        input.recurrence_parent_id = Some(parent_id);
+
+        let event = build_event(Uuid::new_v4(), &input, "c".to_owned(), "u".to_owned()).unwrap();
+        let dto = EventDto::from(&event);
+
+        let rec = dto.recurrence.unwrap();
+        assert_eq!(rec.frequency, Frequency::Monthly);
+        assert_eq!(rec.interval, 2);
+        assert_eq!(rec.week_of_month, Some(3));
+        assert_eq!(rec.day_of_week.as_deref(), Some("tue"));
+        assert_eq!(rec.exception_dates.len(), 1);
+        assert_eq!(dto.recurrence_parent_id, Some(parent_id));
     }
 }

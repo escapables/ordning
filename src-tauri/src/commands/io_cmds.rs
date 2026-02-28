@@ -261,6 +261,7 @@ mod tests {
             description_public: "public".to_owned(),
             location: None,
             recurrence: None,
+            recurrence_parent_id: None,
             created_at: "2026-02-24T00:00:00Z".to_owned(),
             updated_at: "2026-02-24T00:00:00Z".to_owned(),
         }
@@ -335,6 +336,7 @@ mod tests {
                 description_public: "public".to_owned(),
                 location: None,
                 recurrence: None,
+                recurrence_parent_id: None,
                 created_at: "2026-02-24T00:00:00Z".to_owned(),
                 updated_at: "2026-02-24T00:00:00Z".to_owned(),
             }],
