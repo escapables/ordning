@@ -24,11 +24,11 @@ function formatWeekRange(startDate, endDate) {
   const strip = (value) => value.replace(/\.$/, "");
 
   if (sameMonth) {
-    const startLabel = strip(new Intl.DateTimeFormat(locale, {
+    const startLabel = String(startDate.getDate());
+    const endLabel = strip(new Intl.DateTimeFormat(locale, {
       month: "short",
       day: "numeric"
-    }).format(startDate));
-    const endLabel = `${endDate.getDate()}, ${endDate.getFullYear()}`;
+    }).format(endDate));
     return `${startLabel} - ${endLabel}`;
   }
 

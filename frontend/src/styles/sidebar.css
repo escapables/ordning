@@ -5,7 +5,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  overflow-y: auto;
+  overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
 }
@@ -57,6 +57,7 @@
   background: rgb(255 255 255 / 0.62);
   min-height: 0;
   flex: 1 1 auto;
+  overflow: hidden;
 }
 
 .sidebar__mini-month {
@@ -175,6 +176,7 @@
   flex-direction: column;
   gap: 10px;
   min-height: 0;
+  flex: 1 1 auto;
 }
 
 .calendar-list__groups {
