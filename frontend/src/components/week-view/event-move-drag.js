@@ -16,10 +16,13 @@ import { layoutOverlapItems } from "./drag-overlap-layout.js";
 import {
   addDaysToDateKey,
   applyItemPosition,
+  computeEventSpans,
   ensurePreview,
+  ensureSpanGhost,
   findColumnByDate,
   rememberOriginalStyle,
-  restoreTemporaryStyles
+  restoreTemporaryStyles,
+  trimSpanGhosts
 } from "./drag-dom-helpers.js";
 import {
   buildResizePayload,
@@ -40,9 +43,11 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     eventClockStart: "00:00",
     eventClockEnd: "00:00",
     eventEndDate: null,
+    eventStartDate: null,
     eventColor: "#007aff",
     durationMinutes: MIN_SELECTION_MINUTES,
     draggedElements: [],
+    spanPreviews: [],
     sourceColumn: null,
     targetColumn: null,
     targetDate: null,
@@ -65,38 +70,27 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     originalStyles: new Map(),
     clickOffsetMinutes: 0
   };
-  function isResizeTop(pointerEvent, element) {
-    return pointerEvent.clientY - element.getBoundingClientRect().top <= 6;
-  }
-  function isResizeBottom(pointerEvent, element) {
-    return element.getBoundingClientRect().bottom - pointerEvent.clientY <= 6;
+  function resolveDayOffset(fromDate, toDate) {
+    const fromValue = Date.parse(`${fromDate ?? ""}T00:00:00`); const toValue = Date.parse(`${toDate ?? ""}T00:00:00`);
+    return Number.isFinite(fromValue) && Number.isFinite(toValue) ? Math.round((toValue - fromValue) / 86400000) : 0;
   }
   function resolveDragMode(pointerEvent, element) {
-    if (isResizeTop(pointerEvent, element)) {
-      return "resize-top";
-    }
-    if (isResizeBottom(pointerEvent, element)) {
-      return "resize-bottom";
-    }
-    return "move";
+    const rect = element.getBoundingClientRect();
+    return pointerEvent.clientY - rect.top <= 6 ? "resize-top" : rect.bottom - pointerEvent.clientY <= 6 ? "resize-bottom" : "move";
   }
   function previewRange() {
-    if (dragState.mode === "move") {
-      return {
-        startMinutes: Math.max(0, dragState.targetStartMinutes),
-        endMinutes: Math.min(MINUTES_PER_DAY, dragState.targetStartMinutes + dragState.durationMinutes)
-      };
-    }
-    return {
-      startMinutes: dragState.targetStartMinutes,
-      endMinutes: dragState.targetEndMinutes
-    };
+    if (dragState.mode === "move") return { startMinutes: Math.max(0, dragState.targetStartMinutes), endMinutes: Math.min(MINUTES_PER_DAY, dragState.targetStartMinutes + dragState.durationMinutes) };
+    const s = dragState.targetStartMinutes, e = dragState.targetEndMinutes;
+    if (s < 0) return { startMinutes: s + MINUTES_PER_DAY, endMinutes: MINUTES_PER_DAY };
+    if (e > MINUTES_PER_DAY) return { startMinutes: s, endMinutes: MINUTES_PER_DAY };
+    return { startMinutes: s, endMinutes: e };
   }
-  function neighborPreviewRange() {
-    return {
-      startMinutes: dragState.neighborTargetStartMinutes,
-      endMinutes: dragState.neighborTargetEndMinutes
-    };
+  function neighborPreviewRange() { return { startMinutes: dragState.neighborTargetStartMinutes, endMinutes: dragState.neighborTargetEndMinutes }; }
+  function positionGhost(ghost, startMin, endMin) {
+    ghost.style.top = `${(startMin / MINUTES_PER_HOUR) * pixelsPerHour}px`;
+    ghost.style.height = `${Math.max(((endMin - startMin) / MINUTES_PER_HOUR) * pixelsPerHour, 18)}px`;
+    ghost.dataset.startMinutes = String(startMin);
+    ghost.dataset.endMinutes = String(endMin);
   }
   function findLinkedNeighbor() {
     if (!(dragState.sourceColumn instanceof HTMLElement)) {
@@ -134,182 +128,180 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     }
     return null;
   }
-  function layoutColumnItems(targetColumn, { includeGhost = false } = {}) {
-    const blocks = Array.from(targetColumn.querySelectorAll(".event-block"));
-    const items = [];
-    blocks.forEach((block) => {
-      if (!(block instanceof HTMLElement)) {
-        return;
-      }
-      if (block.dataset.eventId === dragState.eventId || block.dataset.eventId === dragState.neighborEventId) {
-        return;
-      }
-      const range = readEventBlockRange(block);
-      if (!range) {
-        return;
-      }
-      items.push({
-        element: block,
-        startMinutes: range.startMinutes,
-        endMinutes: range.endMinutes
-      });
-    });
-    if (
-      includeGhost
-      && dragState.preview instanceof HTMLElement
-      && dragState.preview.parentElement === targetColumn
-    ) {
-      const ghost = previewRange();
-      items.push({
-        element: dragState.preview,
-        startMinutes: ghost.startMinutes,
-        endMinutes: ghost.endMinutes
-      });
+  function addGhostItem(items, ghost, rangeFn, col) {
+    if (ghost instanceof HTMLElement && ghost.parentElement === col) {
+      const r = rangeFn ? rangeFn() : readEventBlockRange(ghost);
+      if (r) items.push({ element: ghost, startMinutes: r.startMinutes, endMinutes: r.endMinutes });
     }
-    if (
-      includeGhost
-      && dragState.neighborPreview instanceof HTMLElement
-      && dragState.neighborPreview.parentElement === targetColumn
-    ) {
-      const ghost = neighborPreviewRange();
-      items.push({
-        element: dragState.neighborPreview,
-        startMinutes: ghost.startMinutes,
-        endMinutes: ghost.endMinutes
-      });
-    }
-    layoutOverlapItems(items).forEach((item) => {
-      applyItemPosition(dragState, item);
-    });
   }
-  function renderMovingLayout(clientX, clientY) {
-    const targetColumn = resolveColumnFromPoint(clientX, clientY) ?? dragState.sourceColumn;
-    if (!(targetColumn instanceof HTMLElement)) {
-      return;
+  function layoutColumnItems(targetColumn, { includeGhost = false } = {}) {
+    const items = [];
+    Array.from(targetColumn.querySelectorAll(".event-block")).forEach((block) => {
+      if (!(block instanceof HTMLElement)) return;
+      if (block.dataset.eventId === dragState.eventId || block.dataset.eventId === dragState.neighborEventId) return;
+      const range = readEventBlockRange(block);
+      if (range) items.push({ element: block, startMinutes: range.startMinutes, endMinutes: range.endMinutes });
+    });
+    if (includeGhost) {
+      addGhostItem(items, dragState.preview, previewRange, targetColumn);
+      addGhostItem(items, dragState.neighborPreview, neighborPreviewRange, targetColumn);
+      dragState.spanPreviews.forEach((g) => addGhostItem(items, g, null, targetColumn));
     }
-    const targetDate = targetColumn.dataset.date;
-    if (!targetDate) {
-      return;
-    }
-    const rect = targetColumn.getBoundingClientRect();
-    const rawStart = roundNearest(pointerToMinutes(clientY, rect, pixelsPerHour) - dragState.clickOffsetMinutes, TIME_STEP_MINUTES);
-    const startMinutes = clamp(rawStart, -MINUTES_PER_DAY + TIME_STEP_MINUTES, MINUTES_PER_DAY - TIME_STEP_MINUTES);
-    const absoluteEndMinutes = startMinutes + dragState.durationMinutes;
-    const hasOverflow = absoluteEndMinutes > MINUTES_PER_DAY;
-    const hasUnderflow = startMinutes < 0;
-    const overflowEndMinutes = hasOverflow ? Math.min(MINUTES_PER_DAY, absoluteEndMinutes - MINUTES_PER_DAY) : 0;
-    const underflowStartMinutes = hasUnderflow ? startMinutes + MINUTES_PER_DAY : 0;
-    const neighborDate = hasOverflow
-      ? addDaysToDateKey(targetDate, 1)
-      : hasUnderflow
-        ? addDaysToDateKey(targetDate, -1)
-        : null;
-    const neighborColumn = neighborDate ? findColumnByDate(column, neighborDate) : null;
-    dragState.targetColumn = targetColumn;
-    dragState.targetDate = targetDate;
-    dragState.targetStartMinutes = startMinutes;
-    const primaryTop = Math.max(startMinutes, 0);
-    const primaryBottom = Math.min(absoluteEndMinutes, MINUTES_PER_DAY);
-    const preview = ensurePreview(dragState, "preview", targetColumn);
-    preview.style.top = `${(primaryTop / MINUTES_PER_HOUR) * pixelsPerHour}px`;
-    preview.style.height = `${Math.max(((primaryBottom - primaryTop) / MINUTES_PER_HOUR) * pixelsPerHour, 18)}px`;
-    if (neighborColumn instanceof HTMLElement) {
-      if (hasOverflow) {
-        dragState.neighborTargetStartMinutes = 0;
-        dragState.neighborTargetEndMinutes = overflowEndMinutes;
-        const overflowPreview = ensurePreview(dragState, "neighborPreview", neighborColumn);
-        overflowPreview.style.top = "0px";
-        overflowPreview.style.height = `${Math.max((overflowEndMinutes / MINUTES_PER_HOUR) * pixelsPerHour, 18)}px`;
-      } else {
-        dragState.neighborTargetStartMinutes = underflowStartMinutes;
-        dragState.neighborTargetEndMinutes = MINUTES_PER_DAY;
-        const underflowPreview = ensurePreview(dragState, "neighborPreview", neighborColumn);
-        underflowPreview.style.top = `${(underflowStartMinutes / MINUTES_PER_HOUR) * pixelsPerHour}px`;
-        underflowPreview.style.height = `${Math.max(((MINUTES_PER_DAY - underflowStartMinutes) / MINUTES_PER_HOUR) * pixelsPerHour, 18)}px`;
-      }
+    layoutOverlapItems(items).forEach((item) => applyItemPosition(dragState, item));
+  }
+  function renderSpanGhosts(spans) {
+    const ghostCols = new Set();
+    spans.forEach((span, i) => {
+      const col = findColumnByDate(column, span.dateKey);
+      if (!(col instanceof HTMLElement)) return;
+      ghostCols.add(col);
+      const ghost = i < 2
+        ? ensurePreview(dragState, i === 0 ? "preview" : "neighborPreview", col)
+        : ensureSpanGhost(dragState, i - 2, col);
+      positionGhost(ghost, span.startMinutes, span.endMinutes);
+    });
+    if (spans.length < 2) dragState.neighborPreview?.remove();
+    trimSpanGhosts(dragState, Math.max(0, spans.length - 2));
+    if (spans.length > 1) {
+      dragState.neighborTargetStartMinutes = spans[1].startMinutes;
+      dragState.neighborTargetEndMinutes = spans[1].endMinutes;
     } else {
       dragState.neighborTargetStartMinutes = 0;
       dragState.neighborTargetEndMinutes = 0;
-      dragState.neighborPreview?.remove();
     }
+    return ghostCols;
+  }
+  function renderMovingLayout(clientX, clientY) {
+    const targetColumn = resolveColumnFromPoint(clientX, clientY) ?? dragState.sourceColumn;
+    if (!(targetColumn instanceof HTMLElement)) return;
+    const targetDate = targetColumn.dataset.date;
+    if (!targetDate) return;
+    const rect = targetColumn.getBoundingClientRect();
+    const rawStart = roundNearest(pointerToMinutes(clientY, rect, pixelsPerHour) - dragState.clickOffsetMinutes, TIME_STEP_MINUTES);
+    const minStart = -(dragState.durationMinutes - TIME_STEP_MINUTES);
+    const startMinutes = clamp(rawStart, minStart, MINUTES_PER_DAY - TIME_STEP_MINUTES);
+    dragState.targetColumn = targetColumn;
+    dragState.targetDate = targetDate;
+    dragState.targetStartMinutes = startMinutes;
+    const ghostColumns = renderSpanGhosts(computeEventSpans(targetDate, startMinutes, dragState.durationMinutes));
     restoreTemporaryStyles(dragState);
-    dragState.draggedElements.forEach((eventElement) => {
-      if (!(eventElement instanceof HTMLElement)) {
-        return;
-      }
-      rememberOriginalStyle(dragState, eventElement);
-      eventElement.style.visibility = "hidden";
+    dragState.draggedElements.forEach((el) => {
+      if (!(el instanceof HTMLElement)) return;
+      rememberOriginalStyle(dragState, el);
+      el.style.visibility = "hidden";
     });
     const columnsToLayout = new Set(
-      dragState.draggedElements
-        .map((eventElement) => eventElement.closest(".day-column"))
-        .filter((candidate) => candidate instanceof HTMLElement)
+      dragState.draggedElements.map((el) => el.closest(".day-column")).filter((c) => c instanceof HTMLElement)
     );
-    columnsToLayout.add(targetColumn);
-    if (neighborColumn instanceof HTMLElement) {
-      columnsToLayout.add(neighborColumn);
-    }
-    columnsToLayout.forEach((candidateColumn) => {
-      layoutColumnItems(candidateColumn, { includeGhost: true });
-    });
+    ghostColumns.forEach((c) => columnsToLayout.add(c));
+    columnsToLayout.forEach((c) => layoutColumnItems(c, { includeGhost: true }));
   }
-  function renderResizingLayout(clientY) {
-    const targetColumn = dragState.sourceColumn;
-    if (!(targetColumn instanceof HTMLElement)) {
-      return;
-    }
-    const targetDate = targetColumn.dataset.date;
-    if (!targetDate) {
-      return;
-    }
+  function renderResizingLayout(clientX, clientY) {
+    const sourceColumn = dragState.sourceColumn;
+    const sourceDate = sourceColumn?.dataset.date;
+    if (!(sourceColumn instanceof HTMLElement) || !sourceDate) return;
+    const pointedColumn = resolveColumnFromPoint(clientX, clientY);
+    const pointedDate = pointedColumn?.dataset.date ?? sourceDate;
+    const rawDayOffset = resolveDayOffset(sourceDate, pointedDate);
+    const isMultiDay = dragState.eventStartDate && dragState.eventEndDate
+      && dragState.eventStartDate !== dragState.eventEndDate;
+    const startDayBound = dragState.eventStartDate ? resolveDayOffset(sourceDate, dragState.eventStartDate) : 0;
+    const endDayBound = dragState.eventEndDate ? resolveDayOffset(sourceDate, dragState.eventEndDate) : 0;
+    const dayOffset = dragState.mode === "resize-top"
+      ? clamp(rawDayOffset, -6, Math.max(0, endDayBound))
+      : clamp(rawDayOffset, Math.min(0, startDayBound), 6);
+    const targetDate = dayOffset ? addDaysToDateKey(sourceDate, dayOffset) : sourceDate;
+    const targetColumn = dayOffset ? findColumnByDate(column, targetDate) ?? sourceColumn : sourceColumn;
     dragState.targetColumn = targetColumn;
     dragState.targetDate = targetDate;
     const rect = targetColumn.getBoundingClientRect();
-    const rawMinutes = roundNearest(pointerToMinutes(clientY, rect, pixelsPerHour), TIME_STEP_MINUTES);
+    const rawMinutes = roundNearest(pointerToMinutes(clientY, rect, pixelsPerHour), TIME_STEP_MINUTES) + (dayOffset * MINUTES_PER_DAY);
+    const keepLinkedNeighbor = Boolean(dragState.neighborEventId) && dayOffset === 0;
+    const sourceDayFromStart = isMultiDay ? resolveDayOffset(dragState.eventStartDate, sourceDate) : 0;
     if (dragState.mode === "resize-top") {
-      const minStart = dragState.neighborEventId
+      const minStart = keepLinkedNeighbor
         ? dragState.neighborStartMinutes + MIN_SELECTION_MINUTES
-        : 0;
-      const maxStart = Math.min(
-        dragState.targetEndMinutes - MIN_SELECTION_MINUTES,
-        MINUTES_PER_DAY - MIN_SELECTION_MINUTES
-      );
+        : dayOffset < 0 ? dayOffset * MINUTES_PER_DAY : 0;
+      const maxStart = isMultiDay && !keepLinkedNeighbor
+        ? endDayBound * MINUTES_PER_DAY + parseTimeToMinutes(dragState.eventClockEnd) - MIN_SELECTION_MINUTES
+        : dragState.targetEndMinutes - MIN_SELECTION_MINUTES;
       dragState.targetStartMinutes = clamp(rawMinutes, minStart, maxStart);
     } else {
-      const maxEnd = dragState.neighborEventId
+      const minEnd = isMultiDay && !keepLinkedNeighbor
+        ? -sourceDayFromStart * MINUTES_PER_DAY + parseTimeToMinutes(dragState.eventClockStart) + MIN_SELECTION_MINUTES
+        : dragState.targetStartMinutes + MIN_SELECTION_MINUTES;
+      const maxEnd = keepLinkedNeighbor
         ? dragState.neighborEndMinutes - MIN_SELECTION_MINUTES
-        : MINUTES_PER_DAY;
-      dragState.targetEndMinutes = clamp(rawMinutes, dragState.targetStartMinutes + MIN_SELECTION_MINUTES, maxEnd);
+        : dayOffset > 0 ? (1 + dayOffset) * MINUTES_PER_DAY : MINUTES_PER_DAY;
+      dragState.targetEndMinutes = clamp(rawMinutes, minEnd, maxEnd);
     }
-    if (dragState.neighborEventId) {
-      if (dragState.mode === "resize-top") {
-        dragState.neighborTargetStartMinutes = dragState.neighborStartMinutes;
-        dragState.neighborTargetEndMinutes = dragState.targetStartMinutes;
-      } else {
-        dragState.neighborTargetStartMinutes = dragState.targetEndMinutes;
-        dragState.neighborTargetEndMinutes = dragState.neighborEndMinutes;
+    if ((isMultiDay || Math.abs(dayOffset) > 0) && !keepLinkedNeighbor) {
+      const startClock = parseTimeToMinutes(dragState.eventClockStart);
+      const endAbs = resolveDayOffset(dragState.eventStartDate, dragState.eventEndDate) * MINUTES_PER_DAY
+        + parseTimeToMinutes(dragState.eventClockEnd);
+      const spanClock = dragState.mode === "resize-top"
+        ? sourceDayFromStart * MINUTES_PER_DAY + dragState.targetStartMinutes : startClock;
+      const spanEnd = dragState.mode === "resize-top"
+        ? endAbs : sourceDayFromStart * MINUTES_PER_DAY + dragState.targetEndMinutes;
+      renderSpanGhosts(computeEventSpans(dragState.eventStartDate, spanClock, Math.max(MIN_SELECTION_MINUTES, spanEnd - spanClock)));
+    } else {
+      if (keepLinkedNeighbor) {
+        if (dragState.mode === "resize-top") {
+          dragState.neighborTargetStartMinutes = dragState.neighborStartMinutes;
+          dragState.neighborTargetEndMinutes = dragState.targetStartMinutes;
+        } else {
+          dragState.neighborTargetStartMinutes = dragState.targetEndMinutes;
+          dragState.neighborTargetEndMinutes = dragState.neighborEndMinutes;
+        }
       }
+      const isCrossColumn = dayOffset !== 0;
+      if (isCrossColumn && !keepLinkedNeighbor) {
+        dragState.neighborTargetStartMinutes = 0;
+        dragState.neighborTargetEndMinutes = dragState.mode === "resize-bottom"
+          ? dragState.targetEndMinutes - MINUTES_PER_DAY : dragState.targetEndMinutes;
+      }
+      if (dragState.mode === "resize-top" && isCrossColumn) {
+        positionGhost(ensurePreview(dragState, "preview", targetColumn), dragState.targetStartMinutes + MINUTES_PER_DAY, MINUTES_PER_DAY);
+        positionGhost(ensurePreview(dragState, "neighborPreview", sourceColumn), 0, dragState.targetEndMinutes);
+      } else if (dragState.mode === "resize-bottom" && isCrossColumn) {
+        positionGhost(ensurePreview(dragState, "preview", sourceColumn), dragState.targetStartMinutes, MINUTES_PER_DAY);
+        positionGhost(ensurePreview(dragState, "neighborPreview", targetColumn), 0, dragState.targetEndMinutes - MINUTES_PER_DAY);
+      } else {
+        const range = previewRange();
+        positionGhost(ensurePreview(dragState, "preview", targetColumn), range.startMinutes, range.endMinutes);
+        if (keepLinkedNeighbor) {
+          const nr = neighborPreviewRange();
+          positionGhost(ensurePreview(dragState, "neighborPreview", targetColumn), nr.startMinutes, nr.endMinutes);
+        } else {
+          dragState.neighborPreview?.remove();
+        }
+      }
+      const ghostedCols = new Set([sourceColumn, targetColumn].filter((c) => c instanceof HTMLElement));
+      let spanIdx = 0;
+      dragState.draggedElements.forEach((el) => {
+        if (!(el instanceof HTMLElement)) return;
+        const col = el.closest(".day-column");
+        if (!(col instanceof HTMLElement) || ghostedCols.has(col)) return;
+        ghostedCols.add(col);
+        const range = readEventBlockRange(el);
+        if (!range) return;
+        positionGhost(ensureSpanGhost(dragState, spanIdx, col), range.startMinutes, range.endMinutes);
+        spanIdx += 1;
+      });
+      trimSpanGhosts(dragState, spanIdx);
     }
-    const preview = ensurePreview(dragState, "preview", targetColumn);
-    const range = previewRange();
-    preview.style.top = `${(range.startMinutes / MINUTES_PER_HOUR) * pixelsPerHour}px`;
-    preview.style.height = `${Math.max(((range.endMinutes - range.startMinutes) / MINUTES_PER_HOUR) * pixelsPerHour, 18)}px`;
     restoreTemporaryStyles(dragState);
-    if (dragState.draggedElement instanceof HTMLElement) {
-      rememberOriginalStyle(dragState, dragState.draggedElement);
-      dragState.draggedElement.style.visibility = "hidden";
-    }
-    if (dragState.neighborElement instanceof HTMLElement) {
+    dragState.draggedElements.forEach((el) => {
+      if (!(el instanceof HTMLElement)) return;
+      rememberOriginalStyle(dragState, el);
+      el.style.visibility = "hidden";
+    });
+    if (keepLinkedNeighbor && dragState.neighborElement instanceof HTMLElement) {
       rememberOriginalStyle(dragState, dragState.neighborElement);
       dragState.neighborElement.style.visibility = "hidden";
-      const neighborPreview = ensurePreview(dragState, "neighborPreview", targetColumn);
-      const neighborRange = neighborPreviewRange();
-      neighborPreview.style.top = `${(neighborRange.startMinutes / MINUTES_PER_HOUR) * pixelsPerHour}px`;
-      neighborPreview.style.height = `${Math.max(((neighborRange.endMinutes - neighborRange.startMinutes) / MINUTES_PER_HOUR) * pixelsPerHour, 18)}px`;
-    } else {
-      dragState.neighborPreview?.remove();
     }
-    layoutColumnItems(targetColumn, { includeGhost: true });
+    const layoutCols = [sourceColumn, targetColumn, ...dragState.draggedElements.map((el) => el.closest(".day-column"))].filter((c) => c instanceof HTMLElement);
+    new Set(layoutCols).forEach((col) => layoutColumnItems(col, { includeGhost: true }));
   }
   function stopDrag() {
     window.removeEventListener("pointermove", handlePointerMove, true);
@@ -321,35 +313,18 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     restoreTemporaryStyles(dragState);
     dragState.preview?.remove();
     dragState.neighborPreview?.remove();
-    dragState.pointerId = null;
-    dragState.dragging = false;
-    dragState.mode = "move";
-    dragState.eventId = null;
-    dragState.eventDate = null;
-    dragState.eventClockStart = "00:00";
-    dragState.eventClockEnd = "00:00";
-    dragState.eventEndDate = null;
-    dragState.sourceColumn = null;
-    dragState.targetColumn = null;
-    dragState.targetDate = null;
-    dragState.targetStartMinutes = 0;
-    dragState.targetEndMinutes = MIN_SELECTION_MINUTES;
-    dragState.initialStartMinutes = 0;
-    dragState.initialEndMinutes = MIN_SELECTION_MINUTES;
-    dragState.durationMinutes = MIN_SELECTION_MINUTES;
-    dragState.eventColor = "#007aff";
-    dragState.draggedElement = null;
-    dragState.draggedElements = [];
-    dragState.neighborEventId = null;
-    dragState.neighborEventDate = null;
-    dragState.neighborClockStart = "00:00";
-    dragState.neighborClockEnd = "00:00";
-    dragState.neighborStartMinutes = 0;
-    dragState.neighborEndMinutes = 0;
-    dragState.neighborTargetStartMinutes = 0;
-    dragState.neighborTargetEndMinutes = 0;
-    dragState.neighborElement = null;
-    dragState.clickOffsetMinutes = 0;
+    trimSpanGhosts(dragState, 0);
+    Object.assign(dragState, {
+      pointerId: null, dragging: false, mode: "move", eventId: null, eventDate: null,
+      eventClockStart: "00:00", eventClockEnd: "00:00", eventEndDate: null, eventStartDate: null,
+      eventColor: "#007aff", durationMinutes: MIN_SELECTION_MINUTES, draggedElement: null,
+      draggedElements: [], spanPreviews: [], sourceColumn: null, targetColumn: null,
+      targetDate: null, targetStartMinutes: 0, targetEndMinutes: MIN_SELECTION_MINUTES,
+      initialStartMinutes: 0, initialEndMinutes: MIN_SELECTION_MINUTES,
+      neighborEventId: null, neighborEventDate: null, neighborClockStart: "00:00", neighborClockEnd: "00:00",
+      neighborStartMinutes: 0, neighborEndMinutes: 0, neighborTargetStartMinutes: 0,
+      neighborTargetEndMinutes: 0, neighborElement: null, clickOffsetMinutes: 0
+    });
   }
   function handlePointerMove(pointerEvent) {
     if (pointerEvent.pointerId !== dragState.pointerId) {
@@ -370,7 +345,7 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
       renderMovingLayout(pointerEvent.clientX, pointerEvent.clientY);
       return;
     }
-    renderResizingLayout(pointerEvent.clientY);
+    renderResizingLayout(pointerEvent.clientX, pointerEvent.clientY);
   }
   async function handlePointerUp(pointerEvent) {
     if (pointerEvent.pointerId !== dragState.pointerId) {
@@ -389,20 +364,32 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
       }));
     }
     if (didDrag && dragState.mode !== "move") {
-      const payload = buildResizePayload({
-        eventId: dragState.eventId,
-        date: dragState.targetDate,
-        startMinutes: dragState.targetStartMinutes,
-        endMinutes: dragState.targetEndMinutes,
-        anchorDate: dragState.eventDate,
-        clockStart: dragState.eventClockStart,
-        clockEnd: dragState.eventClockEnd,
-        eventEndDate: dragState.eventEndDate
-      });
-      payload.linkedNeighbor = dragState.neighborEventId
+      const sourceDate = dragState.sourceColumn?.dataset.date ?? dragState.targetDate;
+      const keepLinkedNeighbor = dragState.neighborEventId && dragState.targetColumn === dragState.sourceColumn;
+      const payload = dragState.mode === "resize-top"
+        ? (() => {
+          const p = buildTimedPayload({ eventId: dragState.eventId, date: sourceDate, startMinutes: dragState.targetStartMinutes, endMinutes: dragState.targetEndMinutes });
+          if (dragState.eventEndDate && dragState.eventEndDate !== sourceDate) { p.endDate = dragState.eventEndDate; p.endTime = dragState.eventClockEnd; }
+          return p;
+        })()
+        : buildResizePayload({
+          eventId: dragState.eventId,
+          date: sourceDate,
+          startMinutes: dragState.targetStartMinutes,
+          endMinutes: dragState.targetEndMinutes,
+          anchorDate: dragState.eventDate,
+          clockStart: dragState.eventClockStart,
+          clockEnd: dragState.eventClockEnd,
+          eventEndDate: dragState.eventEndDate
+        });
+      if (dragState.mode !== "resize-top" && dragState.eventStartDate && dragState.eventStartDate !== sourceDate) {
+        payload.startDate = dragState.eventStartDate;
+        payload.startTime = dragState.eventClockStart;
+      }
+      payload.linkedNeighbor = keepLinkedNeighbor
         ? buildResizePayload({
           eventId: dragState.neighborEventId,
-          date: dragState.targetDate,
+          date: sourceDate,
           startMinutes: dragState.neighborTargetStartMinutes,
           endMinutes: dragState.neighborTargetEndMinutes,
           anchorDate: dragState.neighborEventDate,
@@ -427,6 +414,7 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     dragState.eventClockStart = event.startTime ?? "00:00";
     dragState.eventClockEnd = event.endTime ?? "00:00";
     dragState.eventEndDate = event.endDate ?? null;
+    dragState.eventStartDate = event.startDate ?? event.date ?? null;
     dragState.eventColor = event.color ?? "#007aff";
     const range = readEventBlockRange(element);
     const startMinutes = range?.startMinutes ?? roundNearest(event.startMinutes ?? 0, TIME_STEP_MINUTES);

@@ -52,3 +52,47 @@ export function applyItemPosition(dragState, item) {
   item.element.style.width = `calc(${widthPercent}% - 4px)`;
   item.element.style.left = `calc(${item.column * widthPercent}% + 2px)`;
 }
+
+const MINUTES_PER_DAY = 24 * 60;
+
+export function computeEventSpans(targetDate, startMinutes, durationMinutes) {
+  const dayShift = Math.floor(startMinutes / MINUTES_PER_DAY);
+  const baseDate = dayShift ? addDaysToDateKey(targetDate, dayShift) : targetDate;
+  const baseClock = startMinutes - dayShift * MINUTES_PER_DAY;
+  const spans = [];
+  let remaining = durationMinutes;
+  let segStart = baseClock;
+  let dayOffset = 0;
+  while (remaining > 0) {
+    const dateKey = dayOffset === 0 ? baseDate : addDaysToDateKey(baseDate, dayOffset);
+    const end = Math.min(segStart + remaining, MINUTES_PER_DAY);
+    if (end > segStart) {
+      spans.push({ dateKey, startMinutes: segStart, endMinutes: end });
+    }
+    remaining -= (end - segStart);
+    segStart = 0;
+    dayOffset += 1;
+  }
+  return spans;
+}
+
+export function ensureSpanGhost(dragState, index, parentColumn) {
+  while (dragState.spanPreviews.length <= index) {
+    const ghost = document.createElement("div");
+    ghost.className = "day-column__move-preview";
+    dragState.spanPreviews.push(ghost);
+  }
+  const ghost = dragState.spanPreviews[index];
+  ghost.style.setProperty("--event-color", dragState.eventColor);
+  if (ghost.parentElement !== parentColumn) {
+    parentColumn.appendChild(ghost);
+  }
+  return ghost;
+}
+
+export function trimSpanGhosts(dragState, needed) {
+  for (let i = needed; i < dragState.spanPreviews.length; i += 1) {
+    dragState.spanPreviews[i]?.remove();
+  }
+  dragState.spanPreviews.length = needed;
+}
