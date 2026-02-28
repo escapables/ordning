@@ -180,7 +180,7 @@
       {
         id: "cal-personal",
         name: "Personal",
-        color: "#e06c75",
+        color: "#14b8a6",
         group: "default",
         visible: true,
         created_at: ts,

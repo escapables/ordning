@@ -147,12 +147,14 @@ test("linked resize decreasing wrapped event keeps next-day span", async ({ page
   const column = page.locator(".day-column").first();
   const wrap = column.locator(".event-block", { hasText: "Wrap Block" });
   await expect(wrap).toHaveCount(1);
+  await wrap.scrollIntoViewIfNeeded();
 
   const wrapBox = await wrap.boundingBox();
   expect(wrapBox).not.toBeNull();
   await page.mouse.move(wrapBox.x + (wrapBox.width / 2), wrapBox.y + 2);
   await page.mouse.down();
-  await page.mouse.move(wrapBox.x + (wrapBox.width / 2), wrapBox.y + 10, { steps: 6 });
+  await page.mouse.move(wrapBox.x + (wrapBox.width / 2), wrapBox.y + 14, { steps: 6 });
+  await expect(page.locator(".day-column__move-preview")).toHaveCount(2);
   await page.mouse.up();
 
   await expect(column.locator(".event-block", { hasText: "Late Block" })).toContainText("22:00 - 23:45");

@@ -269,7 +269,7 @@
   border: 1px solid color-mix(in srgb, var(--event-color) 25%, transparent);
   border-left: 3px solid var(--event-color);
   border-radius: var(--radius-sm);
-  color: color-mix(in srgb, var(--event-color) 90%, #1c1c1e);
+  color: color-mix(in srgb, var(--event-color) 70%, #1c1c1e);
   overflow: hidden;
   cursor: pointer;
   pointer-events: auto;
@@ -316,7 +316,7 @@
   margin-top: 0;
   font-size: 11px;
   line-height: 1.2;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 
 .time-indicator {
