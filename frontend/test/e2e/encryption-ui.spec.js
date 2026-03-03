@@ -33,7 +33,7 @@ test("settings dialog enables encryption and shows the encrypted state on reopen
 
   await page.locator(".sidebar__settings-btn").click();
   await expect(page.locator(".settings-dialog__passwords")).toBeHidden();
-  await expect(page.locator(".settings-dialog__status")).toContainText("On");
+  await expect(page.locator(".settings-dialog__status")).toContainText("På");
   await expect(page.locator(".settings-dialog__description")).toContainText("Lokal data är krypterad.");
   await expect(page.locator(".settings-dialog__btn", { hasText: "Avaktivera kryptering" })).toBeVisible();
 

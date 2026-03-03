@@ -160,7 +160,7 @@ const STRINGS = {
     settingsEncryptCancel: "Avbryt",
     settingsEncryptPasswordMismatch: "Lösenorden matchar inte.",
     settingsEncryptPasswordRequired: "Lösenord krävs.",
-    settingsEncryptedStatus: "On",
+    settingsEncryptedStatus: "På",
     settingsDisableEncrypt: "Avaktivera kryptering",
     multiDeleteConfirm: "Ta bort {count} händelser?",
     multiDeleteRecurringNote: "Återkommande instanser tas bort enskilt.",
