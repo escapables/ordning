@@ -71,3 +71,82 @@ test("cross-midnight event survives export/import round-trip", async ({ page }) 
   await page.locator(".main-toolbar__today-btn").click();
   await expect(page.locator(".event-block", { hasText: "Roundtrip Wrap" })).toHaveCount(2);
 });
+
+test("encrypted export dialog round-trip restores event with password", async ({ page }) => {
+  await page.goto("/");
+
+  const calendarId = await page.evaluate(async () => {
+    const created = await window.__TAURI__.core.invoke("create_calendar", {
+      name: "Encrypted Roundtrip",
+      color: "#ff9500"
+    });
+
+    const { loadCalendars } = await import("/src/state.js");
+    await loadCalendars();
+    return created.id;
+  });
+
+  const firstDay = await page.locator(".day-column").first().getAttribute("data-date");
+  expect(firstDay).toBeTruthy();
+  const secondDay = nextDay(firstDay);
+
+  const original = await page.evaluate(async ({ calendarId, firstDay, secondDay }) => {
+    const result = await window.__TAURI__.core.invoke("create_event", {
+      event: {
+        calendarId,
+        title: "Encrypted Wrap",
+        startDate: firstDay,
+        endDate: secondDay,
+        startTime: "23:15",
+        endTime: "01:45",
+        allDay: false,
+        descriptionPrivate: "keep secret",
+        descriptionPublic: "share ok",
+        location: ""
+      }
+    });
+    return result.id;
+  }, { calendarId, firstDay, secondDay });
+
+  await page.locator(".main-toolbar__today-btn").click();
+  await expect(page.locator(".event-block", { hasText: "Encrypted Wrap" })).toHaveCount(2);
+
+  await page.locator(".calendar-list__io-btn", { hasText: /export/i }).click();
+  await page.locator(".export-dialog__encrypt-checkbox").check();
+  await page.locator(".export-dialog__password-input").fill("top secret");
+  await page.locator(".export-dialog__password-confirm-input").fill("top secret");
+  page.once("dialog", (dialog) => dialog.dismiss());
+  await page.locator(".export-dialog__btn--primary").click();
+
+  await page.evaluate(async (eventId) => {
+    await window.__TAURI__.core.invoke("delete_event", { id: eventId });
+  }, original);
+
+  await page.locator(".main-toolbar__today-btn").click();
+  await expect(page.locator(".event-block", { hasText: "Encrypted Wrap" })).toHaveCount(0);
+
+  await page.evaluate(async () => {
+    const preview = await window.__TAURI__.core.invoke("preview_import_json", {
+      strategy: "merge",
+      password: "top secret"
+    });
+    await window.__TAURI__.core.invoke("import_json", {
+      path: preview.path,
+      strategy: "merge",
+      password: "top secret"
+    });
+
+    const { loadWeekEvents } = await import("/src/state.js");
+    const columns = [...document.querySelectorAll(".day-column")];
+    const startDate = columns[0]?.getAttribute("data-date");
+    const endDate = columns.at(-1)?.getAttribute("data-date");
+    await loadWeekEvents(startDate, endDate);
+  });
+
+  const importedCount = await page.evaluate(() => {
+    return window.__ORDNING_TAURI_MOCK_STATE.events.filter((event) =>
+      event.title === "Encrypted Wrap"
+    ).length;
+  });
+  expect(importedCount).toBe(1);
+});

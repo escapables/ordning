@@ -8,7 +8,7 @@ use aes_gcm::{
 use anyhow::{anyhow, Context, Result};
 use argon2::{Algorithm, Argon2, ParamsBuilder, Version};
 use base64::{engine::general_purpose::STANDARD, Engine as _};
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use zeroize::Zeroize;
 
 use crate::models::AppData;
@@ -67,19 +67,54 @@ impl EncryptionContext {
             key_material,
             kdf: envelope.kdf.clone(),
         };
-        let app_data = context.decrypt(envelope)?;
+        let app_data = context.decrypt_json(envelope, "decrypted app data")?;
         Ok((context, app_data))
     }
 
     pub fn encrypt(&self, app_data: &AppData) -> Result<EncryptedEnvelope> {
+        self.encrypt_json(app_data, "encrypted app data")
+    }
+
+    pub fn encrypt_json<T: Serialize>(&self, value: &T, label: &str) -> Result<EncryptedEnvelope> {
+        let mut plaintext = serde_json::to_vec_pretty(value)
+            .with_context(|| format!("failed to serialize {label}"))?;
+        let envelope = self.encrypt_bytes(&plaintext)?;
+        plaintext.zeroize();
+        Ok(envelope)
+    }
+
+    pub fn decrypt_json<T: DeserializeOwned>(
+        &self,
+        envelope: &EncryptedEnvelope,
+        label: &str,
+    ) -> Result<T> {
+        let mut plaintext = self.decrypt_bytes(envelope)?;
+        let value = serde_json::from_slice::<T>(&plaintext)
+            .with_context(|| format!("failed to parse {label}"))?;
+        plaintext.zeroize();
+        Ok(value)
+    }
+
+    pub fn decrypt_json_with_password<T: DeserializeOwned>(
+        envelope: &EncryptedEnvelope,
+        password: &str,
+        label: &str,
+    ) -> Result<T> {
+        envelope.validate()?;
+        let key_material = derive_key_material(password, &envelope.kdf)?;
+        let context = Self {
+            key_material,
+            kdf: envelope.kdf.clone(),
+        };
+        context.decrypt_json(envelope, label)
+    }
+
+    fn encrypt_bytes(&self, plaintext: &[u8]) -> Result<EncryptedEnvelope> {
         let cipher = self.cipher()?;
         let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
-        let mut plaintext = serde_json::to_vec_pretty(app_data)
-            .context("failed to serialize encrypted app data")?;
         let ciphertext = cipher
-            .encrypt(&nonce, plaintext.as_ref())
-            .map_err(|_| anyhow!("failed to encrypt app data"))?;
-        plaintext.zeroize();
+            .encrypt(&nonce, plaintext)
+            .map_err(|_| anyhow!("failed to encrypt data"))?;
 
         Ok(EncryptedEnvelope {
             format: ENCRYPTED_FORMAT.to_owned(),
@@ -92,19 +127,15 @@ impl EncryptionContext {
         })
     }
 
-    fn decrypt(&self, envelope: &EncryptedEnvelope) -> Result<AppData> {
+    fn decrypt_bytes(&self, envelope: &EncryptedEnvelope) -> Result<Vec<u8>> {
         let cipher = self.cipher()?;
         let nonce = envelope.cipher.decode_nonce()?;
         let mut ciphertext = decode_base64(&envelope.ciphertext_b64, "ciphertext")?;
-        let mut plaintext = cipher
+        let plaintext = cipher
             .decrypt(Nonce::from_slice(&nonce), ciphertext.as_ref())
             .map_err(|_| anyhow!("invalid password or corrupted encrypted data"))?;
         ciphertext.zeroize();
-
-        let app_data = serde_json::from_slice::<AppData>(&plaintext)
-            .context("failed to parse decrypted app data")?;
-        plaintext.zeroize();
-        Ok(app_data)
+        Ok(plaintext)
     }
 
     fn cipher(&self) -> Result<Aes256Gcm> {

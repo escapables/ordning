@@ -27,6 +27,24 @@ function createRadio(name, value, checked, labelText) {
   return { label, input };
 }
 
+function createPasswordField(labelText) {
+  const row = document.createElement("label");
+  row.className = "import-dialog__field";
+
+  const label = document.createElement("span");
+  label.className = "import-dialog__field-label";
+  label.textContent = labelText;
+  row.appendChild(label);
+
+  const input = document.createElement("input");
+  input.type = "password";
+  input.className = "import-dialog__password-input";
+  input.autocomplete = "current-password";
+  row.appendChild(input);
+
+  return { row, input };
+}
+
 export function createImportDialog({ onImported = async () => {} } = {}) {
   const dialog = document.createElement("dialog");
   dialog.className = "import-dialog";
@@ -90,6 +108,13 @@ export function createImportDialog({ onImported = async () => {} } = {}) {
   previewSummary.hidden = true;
   previewBox.appendChild(previewSummary);
   form.appendChild(previewBox);
+
+  const passwordField = createPasswordField(t("importPasswordLabel"));
+  const passwordHint = document.createElement("p");
+  passwordHint.className = "import-dialog__hint";
+  passwordHint.textContent = t("importPasswordHint");
+  passwordField.row.appendChild(passwordHint);
+  form.appendChild(passwordField.row);
 
   const actions = document.createElement("div");
   actions.className = "import-dialog__actions";
@@ -156,6 +181,7 @@ export function createImportDialog({ onImported = async () => {} } = {}) {
       const defaultPath = await getDialogDefaultPath();
       const preview = await invoke("preview_import_json", {
         strategy: selectedStrategy(),
+        password: passwordField.input.value || undefined,
         defaultPath
       });
       state.filePath = preview.path;
@@ -173,6 +199,10 @@ export function createImportDialog({ onImported = async () => {} } = {}) {
 
   pickButton.addEventListener("click", () => {
     void pickFileAndPreview();
+  });
+
+  passwordField.input.addEventListener("input", () => {
+    clearError();
   });
 
   mergeStrategy.input.addEventListener("change", () => {
@@ -207,7 +237,8 @@ export function createImportDialog({ onImported = async () => {} } = {}) {
     try {
       const result = await invoke("import_json", {
         path: state.filePath,
-        strategy: selectedStrategy()
+        strategy: selectedStrategy(),
+        password: passwordField.input.value || undefined
       });
       dialog.close();
       await onImported();
@@ -229,6 +260,7 @@ export function createImportDialog({ onImported = async () => {} } = {}) {
     previewPath.textContent = t("importNoFileSelected");
     previewSummary.hidden = true;
     submitButton.disabled = true;
+    passwordField.input.value = "";
     dialog.showModal();
   }
 

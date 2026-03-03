@@ -24,8 +24,12 @@ pub struct ImportSummary {
 }
 
 pub fn parse_import_payload(raw: &str) -> Result<AppData, String> {
-    let parsed: ExportData =
-        serde_json::from_str(raw).map_err(|err| format!("invalid import JSON: {err}"))?;
+    let parsed = serde_json::from_str::<ExportData>(raw)
+        .map_err(|err| format!("invalid import JSON: {err}"))?;
+    parse_export_data(parsed)
+}
+
+pub fn parse_export_data(parsed: ExportData) -> Result<AppData, String> {
     if parsed.ordning_version != 1 {
         return Err(format!(
             "unsupported ordning_version '{}'",
