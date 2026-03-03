@@ -147,6 +147,18 @@ test("event block context menu supports delete action", async ({ page }) => {
   await expect(targetEvent).toHaveCount(0);
 });
 
+test("right-click replaces previous context menu instead of stacking", async ({ page }) => {
+  await page.goto("/");
+
+  const firstEvent = page.locator(".event-block").first();
+  await firstEvent.click({ button: "right" });
+  await expect(page.locator(".context-menu")).toHaveCount(1);
+
+  const secondEvent = page.locator(".event-block").nth(1);
+  await secondEvent.click({ button: "right" });
+  await expect(page.locator(".context-menu")).toHaveCount(1);
+});
+
 test("purge past events flow removes archived items after two-step confirm", async ({ page }) => {
   await page.goto("/");
 

@@ -84,9 +84,13 @@ pub fn run() {
             if let Some(main_webview) = app.get_webview_window("main") {
                 let _ = main_webview.with_webview(|webview| {
                     use gtk::prelude::WidgetExt;
-                    use webkit2gtk::WebViewExt;
+                    use webkit2gtk::{SettingsExt, WebViewExt};
 
                     let view = webview.inner();
+
+                    if let Some(settings) = WebViewExt::settings(&view) {
+                        settings.set_enable_developer_extras(false);
+                    }
 
                     // Disable WebKitGTK's built-in pinch-to-zoom which drives
                     // pageScaleFactor (visual magnification of the whole page).

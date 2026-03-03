@@ -1,8 +1,14 @@
 import { t } from "../../i18n/strings.js";
 
+let activeClose = null;
+
 function openContextMenu(event, items) {
   event.preventDefault();
   event.stopPropagation();
+
+  if (activeClose) {
+    activeClose();
+  }
 
   const menu = document.createElement("div");
   menu.className = "context-menu";
@@ -29,6 +35,9 @@ function openContextMenu(event, items) {
     document.removeEventListener("keydown", onKeyDown, true);
     window.removeEventListener("scroll", onScroll, true);
     window.removeEventListener("resize", close);
+    if (activeClose === close) {
+      activeClose = null;
+    }
   };
 
   const onDocumentClick = (clickEvent) => {
@@ -52,12 +61,14 @@ function openContextMenu(event, items) {
     close();
   };
 
+  menu.addEventListener("contextmenu", (e) => e.preventDefault());
   document.body.appendChild(menu);
   const x = Math.min(event.clientX, window.innerWidth - menu.offsetWidth - 8);
   const y = Math.min(event.clientY, window.innerHeight - menu.offsetHeight - 8);
   menu.style.left = `${Math.max(8, x)}px`;
   menu.style.top = `${Math.max(8, y)}px`;
 
+  activeClose = close;
   document.addEventListener("click", onDocumentClick, true);
   document.addEventListener("keydown", onKeyDown, true);
   window.addEventListener("scroll", onScroll, true);
