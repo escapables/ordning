@@ -31,7 +31,7 @@ Ordning is a desktop calendar application built for users who want full control 
 - Encrypted exports with password protection
 
 **Data Portability**
-- JSON-based storage — human-readable, version-controlled, portable
+- Plaintext JSON storage by default — human-readable and portable
 - Import/export with merge-by-UUID conflict resolution
 - Portable AppImage ships as a single file with no installation required
 
@@ -129,7 +129,7 @@ This applies software rendering defaults and removes GPU-specific libraries for 
 ### Running Tests
 
 ```bash
-# Rust unit tests (50+)
+# Rust unit tests
 cargo test --workspace
 
 # Lint
@@ -138,7 +138,10 @@ cargo clippy --workspace -- -D warnings
 # Format check
 cargo fmt --all -- --check
 
-# End-to-end tests (88+)
+# One-time browser install for fresh clones
+npx playwright install chromium
+
+# End-to-end tests
 npx playwright test
 ```
 
@@ -149,7 +152,8 @@ ordning/
 ├── frontend/                  # UI layer (vanilla JS + CSS)
 │   ├── index.html
 │   └── src/
-│       ├── main.js            # Application bootstrap
+│       ├── main.js            # Top-level entry point
+│       ├── main/              # Bootstrap, settings, render helpers
 │       ├── state.js           # Reactive pub/sub state store
 │       ├── i18n/              # Swedish + English string maps
 │       ├── components/        # UI components (week view, dialogs, sidebar)
@@ -171,9 +175,9 @@ ordning/
 
 ## Data Storage
 
-All data lives in a single `ordning-data.json` file located next to the application binary. No external databases, no hidden config directories, no cloud services.
+All data lives in a single `ordning-data.json` file located next to the application binary. By default it is stored as plaintext JSON. No external databases, no hidden config directories, no cloud services.
 
-When encryption is enabled, the file is stored as a versioned envelope (`ordning-encrypted-1`) containing an Argon2id-derived salt, AES-256-GCM nonce, and ciphertext. The password is held in memory only for the active session and zeroized on lock or exit.
+When encryption is enabled, the file is stored as a versioned envelope (`ordning-encrypted-1`) containing an Argon2id-derived salt, AES-256-GCM nonce, and ciphertext. The derived key material is kept only for the active unlocked session and zeroized when the encryption context is dropped (for example on shutdown or when switching back to plaintext storage).
 
 ## Contributing
 
