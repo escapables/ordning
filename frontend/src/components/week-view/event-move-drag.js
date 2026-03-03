@@ -39,7 +39,9 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     startX: 0,
     startY: 0,
     eventId: null,
+    actionEventId: null,
     eventDate: null,
+    isVirtual: false,
     eventClockStart: "00:00",
     eventClockEnd: "00:00",
     eventEndDate: null,
@@ -316,6 +318,7 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     trimSpanGhosts(dragState, 0);
     Object.assign(dragState, {
       pointerId: null, dragging: false, mode: "move", eventId: null, eventDate: null,
+      actionEventId: null, isVirtual: false,
       eventClockStart: "00:00", eventClockEnd: "00:00", eventEndDate: null, eventStartDate: null,
       eventColor: "#007aff", durationMinutes: MIN_SELECTION_MINUTES, draggedElement: null,
       draggedElements: [], spanPreviews: [], sourceColumn: null, targetColumn: null,
@@ -351,29 +354,38 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     if (pointerEvent.pointerId !== dragState.pointerId) {
       return;
     }
+    let movePayload = null;
+    let resizePayload = null;
     const didDrag = dragState.dragging
       && Boolean(dragState.eventId)
       && Boolean(dragState.targetDate);
     if (didDrag && dragState.mode === "move") {
       const endMinutes = dragState.targetStartMinutes + dragState.durationMinutes;
-      await onEventMove(buildTimedPayload({
-        eventId: dragState.eventId,
+      movePayload = buildTimedPayload({
+        eventId: dragState.actionEventId,
         date: dragState.targetDate,
         startMinutes: dragState.targetStartMinutes,
         endMinutes
-      }));
+      });
+      movePayload.instanceDate = dragState.eventDate;
+      movePayload.isVirtual = dragState.isVirtual;
     }
     if (didDrag && dragState.mode !== "move") {
       const sourceDate = dragState.sourceColumn?.dataset.date ?? dragState.targetDate;
       const keepLinkedNeighbor = dragState.neighborEventId && dragState.targetColumn === dragState.sourceColumn;
-      const payload = dragState.mode === "resize-top"
+      resizePayload = dragState.mode === "resize-top"
         ? (() => {
-          const p = buildTimedPayload({ eventId: dragState.eventId, date: sourceDate, startMinutes: dragState.targetStartMinutes, endMinutes: dragState.targetEndMinutes });
+          const p = buildTimedPayload({
+            eventId: dragState.actionEventId,
+            date: sourceDate,
+            startMinutes: dragState.targetStartMinutes,
+            endMinutes: dragState.targetEndMinutes
+          });
           if (dragState.eventEndDate && dragState.eventEndDate !== sourceDate) { p.endDate = dragState.eventEndDate; p.endTime = dragState.eventClockEnd; }
           return p;
         })()
         : buildResizePayload({
-          eventId: dragState.eventId,
+          eventId: dragState.actionEventId,
           date: sourceDate,
           startMinutes: dragState.targetStartMinutes,
           endMinutes: dragState.targetEndMinutes,
@@ -383,10 +395,10 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
           eventEndDate: dragState.eventEndDate
         });
       if (dragState.mode !== "resize-top" && dragState.eventStartDate && dragState.eventStartDate !== sourceDate) {
-        payload.startDate = dragState.eventStartDate;
-        payload.startTime = dragState.eventClockStart;
+        resizePayload.startDate = dragState.eventStartDate;
+        resizePayload.startTime = dragState.eventClockStart;
       }
-      payload.linkedNeighbor = keepLinkedNeighbor
+      resizePayload.linkedNeighbor = keepLinkedNeighbor
         ? buildResizePayload({
           eventId: dragState.neighborEventId,
           date: sourceDate,
@@ -397,9 +409,16 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
           clockEnd: dragState.neighborClockEnd
         })
         : null;
-      await onEventResize(payload);
+      resizePayload.instanceDate = dragState.eventDate;
+      resizePayload.isVirtual = dragState.isVirtual;
     }
     stopDrag();
+    if (movePayload) {
+      await onEventMove(movePayload);
+    }
+    if (resizePayload) {
+      await onEventResize(resizePayload);
+    }
   }
   return (pointerEvent, event, element) => {
     if (pointerEvent.button !== 0 || !(element instanceof HTMLElement)) {
@@ -410,7 +429,9 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
     dragState.startX = pointerEvent.clientX;
     dragState.startY = pointerEvent.clientY;
     dragState.eventId = event.id;
+    dragState.actionEventId = event.actionId ?? event.id;
     dragState.eventDate = event.date ?? null;
+    dragState.isVirtual = Boolean(event.isVirtual);
     dragState.eventClockStart = event.startTime ?? "00:00";
     dragState.eventClockEnd = event.endTime ?? "00:00";
     dragState.eventEndDate = event.endDate ?? null;

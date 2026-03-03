@@ -169,6 +169,7 @@
 
 .mini-month__day--current-week {
   background: rgb(0 122 255 / 0.11);
+  border-radius: calc(var(--radius-chip) * 0.8);
 }
 
 .calendar-list {

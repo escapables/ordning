@@ -10,6 +10,7 @@ import { renderToolbar } from "./components/toolbar/toolbar.js";
 import { DEFAULT_PIXELS_PER_HOUR, installPinchZoom, installZoomGuards } from "./components/week-view/week-zoom.js";
 import { installCloseGuard } from "./main/close-guard.js";
 import { createEventHighlightHelpers } from "./main/event-highlight.js";
+import { createEventMutationHandlers } from "./main/event-mutations.js";
 import { invoke } from "./main/invoke.js";
 import { createManualSaveController } from "./main/manual-save.js";
 import { createEventCopyPasteController } from "./main/event-copy-paste.js";
@@ -106,15 +107,22 @@ async function renderAppShell() {
   const goToNextWeek = () => navigateWeek(addDays(currentWeekStartOrDefault(), 7));
   const goToToday = () => navigateWeek(getStartOfWeek(new Date(), 1));
   let saveController = null;
-  const deleteEventById = async (eventId) => {
-    const confirmed = await confirmDialog.confirm(t("eventFormDeleteConfirm"));
-    if (!confirmed) {
-      return false;
+  const confirmDialog = createConfirmDialog();
+  app.appendChild(confirmDialog.element);
+  const { deleteEventById, updateTimedEventPosition } = createEventMutationHandlers({
+    invoke,
+    confirmDialog,
+    t,
+    weekContainer,
+    refreshAndRender,
+    refreshCurrentWeekEvents,
+    setPendingHighlightEvent: (value) => {
+      pendingHighlightEvent = value;
+    },
+    setPendingWeekViewRenderOptions: (value) => {
+      pendingWeekViewRenderOptions = value;
     }
-    await invoke("delete_event", { id: eventId });
-    await refreshAndRender();
-    return true;
-  };
+  });
   const eventModal = createEventModal({
     onPersist: refreshAndRender,
     onEnsureCalendars: loadCalendars,
@@ -142,8 +150,6 @@ async function renderAppShell() {
     onImported: refreshAndRender
   });
   app.appendChild(importDialog.element);
-  const confirmDialog = createConfirmDialog();
-  app.appendChild(confirmDialog.element);
   teardownCloseGuard = await installCloseGuard({
     invoke,
     t,
@@ -190,48 +196,6 @@ async function renderAppShell() {
     }
   });
   teardownManualSave = saveController.dispose;
-  async function updateTimedEventPosition({ eventId, date, startDate, endDate, startTime, endTime, linkedNeighbor }, actionName) {
-    try {
-      const weekBody = weekContainer.querySelector(".week-grid__body");
-      pendingWeekViewRenderOptions = {
-        preserveScrollTop: weekBody instanceof HTMLElement ? weekBody.scrollTop : null,
-        skipAutoScroll: true,
-        remainingRenders: 2
-      };
-      const updates = [{ eventId, date, startDate, endDate, startTime, endTime }];
-      if (linkedNeighbor?.eventId) {
-        updates.push(linkedNeighbor);
-      }
-      for (const update of updates) {
-        const existing = await invoke("get_event", { id: update.eventId });
-        if (!existing?.calendarId) {
-          pendingWeekViewRenderOptions = null;
-          return;
-        }
-        await invoke("update_event", {
-          id: update.eventId,
-          event: {
-            calendarId: existing.calendarId,
-            title: existing.title ?? "",
-            startDate: update.startDate ?? update.date,
-            endDate: update.endDate ?? update.date,
-            startTime: update.startTime,
-            endTime: update.endTime,
-            allDay: false,
-            descriptionPrivate: existing.descriptionPrivate ?? "",
-            descriptionPublic: existing.descriptionPublic ?? "",
-            location: existing.location ?? ""
-          }
-        });
-      }
-      pendingHighlightEvent = { eventId, skipScroll: true };
-      await refreshCurrentWeekEvents();
-    } catch (error) {
-      pendingWeekViewRenderOptions = null;
-      window.alert(String(error));
-      console.error(`Failed to ${actionName} event`, error);
-    }
-  }
   const weekViewHandlers = {
     onEventSelect: (eventId, element) => {
       clearEventSelection();
@@ -243,22 +207,31 @@ async function renderAppShell() {
     onEventClick: (eventId) => {
       eventModal.openEdit(eventId);
     },
-    onEventDelete: async (eventId) => {
-      try {
-        await deleteEventById(eventId);
-      } catch (error) {
-        window.alert(String(error));
-        console.error("Failed to delete event via context menu", error);
-      }
-    },
+    onEventDelete: deleteEventById,
     onEventCopy: async (eventData) => {
       await copyPasteController.copyEvent(eventData);
     },
-    onEventMove: async ({ eventId, date, startDate, endDate, startTime, endTime }) => {
-      await updateTimedEventPosition({ eventId, date, startDate, endDate, startTime, endTime }, "move");
+    onEventMove: async ({ eventId, date, startDate, endDate, startTime, endTime, instanceDate = null, isVirtual = false }) => {
+      await updateTimedEventPosition(
+        { eventId, date, startDate, endDate, startTime, endTime, instanceDate, isVirtual },
+        "move"
+      );
     },
-    onEventResize: async ({ eventId, date, startDate, endDate, startTime, endTime, linkedNeighbor = null }) => {
-      await updateTimedEventPosition({ eventId, date, startDate, endDate, startTime, endTime, linkedNeighbor }, "resize");
+    onEventResize: async ({
+      eventId,
+      date,
+      startDate,
+      endDate,
+      startTime,
+      endTime,
+      linkedNeighbor = null,
+      instanceDate = null,
+      isVirtual = false
+    }) => {
+      await updateTimedEventPosition(
+        { eventId, date, startDate, endDate, startTime, endTime, linkedNeighbor, instanceDate, isVirtual },
+        "resize"
+      );
     },
     onCreateSlot: (prefill) => {
       eventModal.openCreate(prefill);
@@ -468,13 +441,17 @@ async function renderAppShell() {
           : selectedEvent instanceof HTMLElement
             ? selectedEvent
             : null;
-      return targetEvent?.dataset.eventActionId ?? targetEvent?.dataset.eventId ?? null;
+      if (!(targetEvent instanceof HTMLElement)) {
+        return null;
+      }
+      return {
+        id: targetEvent.dataset.eventActionId ?? targetEvent.dataset.eventId ?? null,
+        date: targetEvent.dataset.eventDate ?? null,
+        isVirtual: targetEvent.dataset.eventIsVirtual === "true"
+      };
     },
     deleteEventById,
-    onDeleteError: (error) => {
-      window.alert(String(error));
-      console.error("Failed to delete event via keyboard shortcut", error);
-    }
+    onDeleteError: () => {}
   });
   document.addEventListener("keydown", keydownHandler);
   teardownZoomGuards = installZoomGuards();

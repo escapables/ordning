@@ -208,6 +208,10 @@
   flex-wrap: wrap;
 }
 
+.recurrence-picker [hidden] {
+  display: none !important;
+}
+
 .recurrence-picker__row .event-modal__input {
   width: auto;
 }

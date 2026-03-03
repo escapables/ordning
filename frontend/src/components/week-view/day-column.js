@@ -170,6 +170,8 @@ function wireEventContextMenu(column, handlers) {
       contextMenuEvent,
       {
         id: eventId,
+        date: eventBlock.dataset.eventDate ?? null,
+        isVirtual: eventBlock.dataset.eventIsVirtual === "true",
         title,
         time
       },

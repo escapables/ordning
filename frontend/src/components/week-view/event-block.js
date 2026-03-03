@@ -172,9 +172,6 @@ function createEventElement(event, pixelsPerMinute, handlers) {
       return;
     }
     select(pointerEvent);
-    if (event.isVirtual) {
-      return;
-    }
     onEventPointerDown(pointerEvent, event, element);
   });
   element.addEventListener("pointermove", (pointerEvent) => {

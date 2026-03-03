@@ -181,6 +181,24 @@
     );
   }
 
+  function collectOverrides(state) {
+    var overridesByParent = new Map();
+
+    state.events.forEach(function (event) {
+      if (event.recurrence || !event.recurrenceParentId) {
+        return;
+      }
+
+      if (!overridesByParent.has(event.recurrenceParentId)) {
+        overridesByParent.set(event.recurrenceParentId, new Map());
+      }
+
+      overridesByParent.get(event.recurrenceParentId).set(event.startDate, event);
+    });
+
+    return overridesByParent;
+  }
+
   function nthWeekdayOfMonth(year, monthIndex, weekOrdinal, dayKeyValue) {
     var targetIndex = DAY_KEYS.indexOf(dayKeyValue);
     if (targetIndex < 0) {
@@ -291,7 +309,7 @@
     return weeklyOccurrenceDates(event, recurrence, expansionEnd);
   }
 
-  function expandRecurringEvent(event, rangeStart, rangeEnd) {
+  function expandRecurringEvent(event, rangeStart, rangeEnd, overridesByDate, consumedOverrideIds) {
     if (!event.recurrence) {
       return [];
     }
@@ -317,7 +335,18 @@
       var occurrenceDate = dates[index];
       scheduledCount += 1;
 
-      if (!exceptionDates.has(occurrenceDate)) {
+      var overrideEvent = overridesByDate ? overridesByDate.get(occurrenceDate) : null;
+      if (overrideEvent) {
+        consumedOverrideIds.add(overrideEvent.id);
+        if (overlapsRange(overrideEvent.startDate, overrideEvent.endDate, rangeStart, rangeEnd)) {
+          expanded.push({
+            ...overrideEvent,
+            displayId: overrideEvent.id,
+            sourceId: overrideEvent.id,
+            isVirtual: false
+          });
+        }
+      } else if (!exceptionDates.has(occurrenceDate)) {
         var occurrenceEndDate = addDaysToKey(occurrenceDate, spanDays);
         if (overlapsRange(occurrenceDate, occurrenceEndDate, rangeStart, rangeEnd)) {
           expanded.push({
@@ -350,6 +379,8 @@
         })
     );
     var recurringIds = recurringParentIds(state);
+    var overridesByParent = collectOverrides(state);
+    var consumedOverrideIds = new Set();
     var expanded = [];
 
     state.events.forEach(function (event) {
@@ -358,7 +389,13 @@
       }
 
       if (event.recurrence && !event.recurrenceParentId) {
-        expandRecurringEvent(event, startDate, endDate).forEach(function (instance) {
+        expandRecurringEvent(
+          event,
+          startDate,
+          endDate,
+          overridesByParent.get(event.id),
+          consumedOverrideIds
+        ).forEach(function (instance) {
           expanded.push(instance);
         });
         return;
@@ -373,6 +410,29 @@
           ...event,
           displayId: event.id,
           sourceId: null,
+          isVirtual: false
+        });
+      }
+    });
+
+    state.events.forEach(function (event) {
+      if (event.recurrence || !event.recurrenceParentId) {
+        return;
+      }
+
+      if (!visibleIds.has(event.calendarId)) {
+        return;
+      }
+
+      if (!recurringIds.has(event.recurrenceParentId) || consumedOverrideIds.has(event.id)) {
+        return;
+      }
+
+      if (overlapsRange(event.startDate, event.endDate, startDate, endDate)) {
+        expanded.push({
+          ...event,
+          displayId: event.id,
+          sourceId: event.id,
           isVirtual: false
         });
       }

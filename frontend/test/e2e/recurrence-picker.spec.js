@@ -162,6 +162,61 @@ test("weekly recurrence picker creates recurring instances and shows repeat icon
   expect(stored?.recurrence?.endConditionCount).toBe(4);
 });
 
+test("recurrence picker hides inactive controls as the mode changes", async ({ page }) => {
+  await page.goto("/");
+  await openCreateModal(page);
+
+  const repeatSelect = page.locator("select[name='recurrenceRepeat']");
+  const endsSelect = page.locator("select[name='recurrenceEnds']");
+  const intervalInput = page.locator("input[name='recurrenceInterval']");
+  const weeklyChip = page.locator(".recurrence-picker__chip[data-value='mon']");
+  const weekOfMonth = page.locator("select[name='recurrenceWeekOfMonth']");
+  const dayOfWeek = page.locator("select[name='recurrenceDayOfWeek']");
+  const occurrences = page.locator("input[name='recurrenceOccurrences']");
+  const untilDate = page.locator("input[name='recurrenceUntilDate']");
+
+  await expect(intervalInput).toBeHidden();
+  await expect(weeklyChip).toBeHidden();
+  await expect(weekOfMonth).toBeHidden();
+  await expect(dayOfWeek).toBeHidden();
+  await expect(endsSelect).toBeHidden();
+  await expect(occurrences).toBeHidden();
+  await expect(untilDate).toBeHidden();
+
+  await repeatSelect.selectOption("weekly");
+  await expect(intervalInput).toBeVisible();
+  await expect(weeklyChip).toBeVisible();
+  await expect(weekOfMonth).toBeHidden();
+  await expect(dayOfWeek).toBeHidden();
+  await expect(endsSelect).toBeVisible();
+  await expect(occurrences).toBeHidden();
+  await expect(untilDate).toBeHidden();
+
+  await endsSelect.selectOption("after");
+  await expect(occurrences).toBeVisible();
+  await expect(untilDate).toBeHidden();
+
+  await repeatSelect.selectOption("monthly");
+  await expect(weeklyChip).toBeHidden();
+  await expect(weekOfMonth).toBeVisible();
+  await expect(dayOfWeek).toBeVisible();
+  await expect(occurrences).toBeVisible();
+  await expect(untilDate).toBeHidden();
+
+  await endsSelect.selectOption("on_date");
+  await expect(occurrences).toBeHidden();
+  await expect(untilDate).toBeVisible();
+
+  await repeatSelect.selectOption("none");
+  await expect(intervalInput).toBeHidden();
+  await expect(weeklyChip).toBeHidden();
+  await expect(weekOfMonth).toBeHidden();
+  await expect(dayOfWeek).toBeHidden();
+  await expect(endsSelect).toBeHidden();
+  await expect(occurrences).toBeHidden();
+  await expect(untilDate).toBeHidden();
+});
+
 test("monthly recurrence picker expands nth weekday into a future week", async ({ page }) => {
   await page.goto("/");
 

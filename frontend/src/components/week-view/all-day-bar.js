@@ -13,6 +13,8 @@ function renderAllDayEvent(event, handlers = {}) {
   element.classList.toggle("all-day-event--recurring", Boolean(event.isVirtual));
   element.dataset.eventId = event.id;
   element.dataset.eventActionId = event.actionId ?? event.id;
+  element.dataset.eventDate = event.date ?? "";
+  element.dataset.eventIsVirtual = event.isVirtual ? "true" : "false";
   element.tabIndex = 3;
   element.style.setProperty("--event-color", event.color);
   element.textContent = event.title;
@@ -48,6 +50,8 @@ function renderAllDayEvent(event, handlers = {}) {
       contextMenuEvent,
       {
         id: event.actionId ?? event.id,
+        date: event.date ?? null,
+        isVirtual: Boolean(event.isVirtual),
         title: event.title,
         time: ""
       },
