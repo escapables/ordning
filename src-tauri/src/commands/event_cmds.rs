@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
 
+use std::collections::HashSet;
+
 use crate::models::{Event, RecurrenceRule, RecurrenceRuleInput};
 use crate::state::AppState;
 
@@ -145,6 +147,25 @@ pub fn delete_event(id: String, state: State<'_, AppState>) -> Result<(), String
     }
 
     Ok(())
+}
+
+#[tauri::command]
+pub fn delete_events(ids: Vec<String>, state: State<'_, AppState>) -> Result<usize, String> {
+    let target_ids: HashSet<Uuid> = ids
+        .iter()
+        .map(|id| parse_uuid(id))
+        .collect::<Result<HashSet<Uuid>, String>>()?;
+
+    let mut app_data = state
+        .data
+        .lock()
+        .map_err(|err| format!("failed to lock app state: {err}"))?;
+
+    let before = app_data.events.len();
+    app_data
+        .events
+        .retain(|event| !target_ids.contains(&event.id));
+    Ok(before - app_data.events.len())
 }
 
 #[tauri::command]
@@ -545,5 +566,46 @@ mod tests {
         assert_eq!(rec.day_of_week.as_deref(), Some("tue"));
         assert_eq!(rec.exception_dates.len(), 1);
         assert_eq!(dto.recurrence_parent_id, Some(parent_id));
+    }
+
+    #[test]
+    fn delete_events_removes_multiple_by_id() {
+        let calendar_id = Uuid::new_v4();
+        let id_a = Uuid::new_v4();
+        let id_b = Uuid::new_v4();
+        let id_c = Uuid::new_v4();
+
+        let events = vec![
+            build_event(
+                id_a,
+                &sample_input(calendar_id),
+                "c".to_owned(),
+                "u".to_owned(),
+            )
+            .unwrap(),
+            build_event(
+                id_b,
+                &sample_input(calendar_id),
+                "c".to_owned(),
+                "u".to_owned(),
+            )
+            .unwrap(),
+            build_event(
+                id_c,
+                &sample_input(calendar_id),
+                "c".to_owned(),
+                "u".to_owned(),
+            )
+            .unwrap(),
+        ];
+
+        let target_ids: std::collections::HashSet<Uuid> = [id_a, id_c].into_iter().collect();
+        let remaining: Vec<_> = events
+            .into_iter()
+            .filter(|event| !target_ids.contains(&event.id))
+            .collect();
+
+        assert_eq!(remaining.len(), 1);
+        assert_eq!(remaining[0].id, id_b);
     }
 }

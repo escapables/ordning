@@ -78,6 +78,18 @@ export function openEventContextMenu(event, detail, handlers = {}) {
   ]);
 }
 
+export function openMultiSelectContextMenu(event, count, handlers = {}) {
+  const { onDelete = () => {} } = handlers;
+
+  openContextMenu(event, [
+    {
+      label: t("contextMenuDeleteCount").replace("{count}", String(count)),
+      danger: true,
+      action: () => onDelete()
+    }
+  ]);
+}
+
 export function openSlotContextMenu(event, detail, handlers = {}) {
   const {
     onCreate = () => {},

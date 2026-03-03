@@ -301,6 +301,8 @@
 
 .event-block--selected {
   background-color: color-mix(in srgb, var(--event-color) 35%, #fff);
+  outline: 2px solid color-mix(in srgb, var(--event-color) 60%, transparent);
+  outline-offset: -2px;
 }
 
 .event-block:focus-visible {

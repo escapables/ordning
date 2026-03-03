@@ -10,6 +10,8 @@ export function setupKeyboardHandler(options = {}) {
     goToToday = async () => {},
     openCreateEvent = () => {},
     hasOpenDialog = () => false,
+    getSelectedEventTargets = () => [],
+    deleteMultipleEvents = async () => false,
     getDeleteEventId = () => null,
     deleteEventById = async () => {},
     onDeleteError = () => {}
@@ -98,6 +100,20 @@ export function setupKeyboardHandler(options = {}) {
     }
 
     if (hasOpenDialog()) {
+      return;
+    }
+
+    const multiTargets = getSelectedEventTargets();
+    if (multiTargets.length > 1) {
+      keyboardEvent.preventDefault();
+      isDeletingFromKeyboard = true;
+      try {
+        await deleteMultipleEvents(multiTargets);
+      } catch (error) {
+        onDeleteError(error);
+      } finally {
+        isDeletingFromKeyboard = false;
+      }
       return;
     }
 

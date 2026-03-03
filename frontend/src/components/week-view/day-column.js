@@ -1,6 +1,6 @@
 import { tDayShort } from "../../i18n/strings.js";
 import { formatDateKey, formatMonthDay } from "../../utils/date-utils.js";
-import { openEventContextMenu, openSlotContextMenu } from "./context-menu.js";
+import { openEventContextMenu, openMultiSelectContextMenu, openSlotContextMenu } from "./context-menu.js";
 import { installCreateInteractions } from "./drag-create.js";
 import { createEventMovePointerDownHandler } from "./event-move-drag.js";
 import { renderEventBlocks } from "./event-block.js";
@@ -80,7 +80,9 @@ export function renderDayColumn(date, events, pixelsPerHour, options = {}) {
     onCreateSlot = () => {},
     onCreateFromContextMenu = () => {},
     onPasteFromContextMenu = () => {},
-    canPasteFromContextMenu = () => false
+    canPasteFromContextMenu = () => false,
+    getSelectedEventTargets = () => [],
+    onMultiDelete = async () => {}
   } = options;
   const column = document.createElement("div");
   column.className = "day-column";
@@ -113,6 +115,8 @@ export function renderDayColumn(date, events, pixelsPerHour, options = {}) {
     onCreateFromContextMenu,
     onPasteFromContextMenu,
     canPasteFromContextMenu,
+    getSelectedEventTargets,
+    onMultiDelete,
     pixelsPerHour
   });
   installCreateInteractions(column, pixelsPerHour, onCreateSlot);
@@ -127,6 +131,8 @@ function wireEventContextMenu(column, handlers) {
     onCreateFromContextMenu = () => {},
     onPasteFromContextMenu = () => {},
     canPasteFromContextMenu = () => false,
+    getSelectedEventTargets = () => [],
+    onMultiDelete = async () => {},
     pixelsPerHour = 42
   } = handlers;
 
@@ -161,6 +167,16 @@ function wireEventContextMenu(column, handlers) {
     const eventId = eventBlock.dataset.eventActionId ?? eventBlock.dataset.eventId;
     if (!eventId) {
       return;
+    }
+
+    if (eventBlock.classList.contains("event-block--selected")) {
+      const targets = getSelectedEventTargets();
+      if (targets.length > 1) {
+        openMultiSelectContextMenu(contextMenuEvent, targets.length, {
+          onDelete: () => onMultiDelete(targets)
+        });
+        return;
+      }
     }
 
     const title = eventBlock.querySelector(".event-block__title")?.textContent ?? "";

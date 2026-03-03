@@ -1,12 +1,14 @@
 import { formatDateKey } from "../../utils/date-utils.js";
-import { openEventContextMenu } from "./context-menu.js";
+import { openEventContextMenu, openMultiSelectContextMenu } from "./context-menu.js";
 
 function renderAllDayEvent(event, handlers = {}) {
   const {
     onEventSelect = () => {},
     onEventClick = () => {},
     onEventDelete = () => {},
-    onEventCopy = () => {}
+    onEventCopy = () => {},
+    getSelectedEventTargets = () => [],
+    onMultiDelete = async () => {}
   } = handlers;
   const element = document.createElement("article");
   element.className = "all-day-event";
@@ -21,7 +23,7 @@ function renderAllDayEvent(event, handlers = {}) {
 
   const select = (uiEvent) => {
     uiEvent.stopPropagation();
-    onEventSelect(event.id, element);
+    onEventSelect(event.id, element, { ctrlKey: uiEvent.ctrlKey || uiEvent.metaKey });
   };
 
   element.addEventListener("pointerdown", (pointerEvent) => {
@@ -46,6 +48,15 @@ function renderAllDayEvent(event, handlers = {}) {
     onEventClick(event.actionId ?? event.id);
   });
   element.addEventListener("contextmenu", (contextMenuEvent) => {
+    if (element.classList.contains("event-block--selected")) {
+      const targets = getSelectedEventTargets();
+      if (targets.length > 1) {
+        openMultiSelectContextMenu(contextMenuEvent, targets.length, {
+          onDelete: () => onMultiDelete(targets)
+        });
+        return;
+      }
+    }
     openEventContextMenu(
       contextMenuEvent,
       {

@@ -109,7 +109,7 @@ async function renderAppShell() {
   let saveController = null;
   const confirmDialog = createConfirmDialog();
   app.appendChild(confirmDialog.element);
-  const { deleteEventById, updateTimedEventPosition } = createEventMutationHandlers({
+  const { deleteEventById, deleteMultipleEvents, updateTimedEventPosition } = createEventMutationHandlers({
     invoke,
     confirmDialog,
     t,
@@ -197,13 +197,38 @@ async function renderAppShell() {
     }
   });
   teardownManualSave = saveController.dispose;
-  const weekViewHandlers = {
-    onEventSelect: (eventId, element) => {
-      clearEventSelection();
-      const scope = element.closest(".week-grid") ?? weekContainer;
-      scope.querySelectorAll(`[data-event-id="${eventId}"]`).forEach((block) => {
-        block.classList.add("event-block--selected");
+  const getSelectedEventTargets = () => {
+    const seen = new Set();
+    const targets = [];
+    weekContainer.querySelectorAll(".event-block--selected").forEach((block) => {
+      if (!(block instanceof HTMLElement)) return;
+      const id = block.dataset.eventActionId ?? block.dataset.eventId;
+      if (!id || seen.has(id)) return;
+      seen.add(id);
+      targets.push({
+        id,
+        date: block.dataset.eventDate ?? null,
+        isVirtual: block.dataset.eventIsVirtual === "true"
       });
+    });
+    return targets;
+  };
+  const weekViewHandlers = {
+    onEventSelect: (eventId, element, { ctrlKey = false } = {}) => {
+      if (ctrlKey) {
+        const scope = element.closest(".week-grid") ?? weekContainer;
+        const segments = scope.querySelectorAll(`[data-event-id="${eventId}"]`);
+        const alreadySelected = [...segments].every((s) => s.classList.contains("event-block--selected"));
+        segments.forEach((block) => {
+          block.classList.toggle("event-block--selected", !alreadySelected);
+        });
+      } else {
+        clearEventSelection();
+        const scope = element.closest(".week-grid") ?? weekContainer;
+        scope.querySelectorAll(`[data-event-id="${eventId}"]`).forEach((block) => {
+          block.classList.add("event-block--selected");
+        });
+      }
     },
     onEventClick: (eventId) => {
       eventModal.openEdit(eventId);
@@ -249,6 +274,8 @@ async function renderAppShell() {
       }
     },
     canPasteFromContextMenu: () => copyPasteController.canPaste(),
+    getSelectedEventTargets,
+    onMultiDelete: deleteMultipleEvents,
     onZoomChange: handleZoomChange
   };
   function handleZoomChange({ pixelsPerHour, preserveScrollTop }) {
@@ -432,6 +459,8 @@ async function renderAppShell() {
       eventModal.openCreate();
     },
     hasOpenDialog: () => Boolean(document.querySelector("dialog[open]")),
+    getSelectedEventTargets,
+    deleteMultipleEvents,
     getDeleteEventId: () => {
       const focusedEvent = document.activeElement;
       const selectedEvent = weekContainer.querySelector(".event-block--selected");

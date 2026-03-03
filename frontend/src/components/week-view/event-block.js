@@ -157,7 +157,18 @@ function createEventElement(event, pixelsPerMinute, handlers) {
   element.appendChild(time);
   const select = (uiEvent) => {
     uiEvent.stopPropagation();
-    onEventSelect(event.id, element);
+    onEventSelect(event.id, element, { ctrlKey: uiEvent.ctrlKey || uiEvent.metaKey });
+  };
+
+  const countSelectedEventIds = () => {
+    const scope = element.closest(".week-grid") ?? element.ownerDocument;
+    const ids = new Set();
+    scope.querySelectorAll(".event-block--selected").forEach((block) => {
+      if (block instanceof HTMLElement && block.dataset.eventId) {
+        ids.add(block.dataset.eventId);
+      }
+    });
+    return ids.size;
   };
 
   const updateCursor = (clientY) => {
@@ -167,11 +178,18 @@ function createEventElement(event, pixelsPerMinute, handlers) {
     element.style.cursor = nearTop || nearBottom ? "ns-resize" : "pointer";
   };
 
+  let pointerDownHandledSelect = false;
   element.addEventListener("pointerdown", (pointerEvent) => {
     if (pointerEvent.button !== 0) {
       return;
     }
+    const isCtrl = pointerEvent.ctrlKey || pointerEvent.metaKey;
+    const wasMulti = countSelectedEventIds() > 1;
     select(pointerEvent);
+    pointerDownHandledSelect = true;
+    if (isCtrl || wasMulti) {
+      return;
+    }
     onEventPointerDown(pointerEvent, event, element);
   });
   element.addEventListener("pointermove", (pointerEvent) => {
@@ -181,6 +199,11 @@ function createEventElement(event, pixelsPerMinute, handlers) {
     element.style.cursor = "pointer";
   });
   element.addEventListener("click", (clickEvent) => {
+    if (pointerDownHandledSelect) {
+      pointerDownHandledSelect = false;
+      clickEvent.stopPropagation();
+      return;
+    }
     select(clickEvent);
   });
   element.addEventListener("dblclick", (doubleClickEvent) => {

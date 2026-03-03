@@ -14,8 +14,8 @@ use crate::commands::calendar_cmds::{
     create_calendar, delete_calendar, list_calendars, toggle_visibility, update_calendar,
 };
 use crate::commands::event_cmds::{
-    bulk_update_descriptions, count_events_by_title, create_event, delete_event, get_event,
-    get_past_events_count, purge_past_events, update_event,
+    bulk_update_descriptions, count_events_by_title, create_event, delete_event, delete_events,
+    get_event, get_past_events_count, purge_past_events, update_event,
 };
 use crate::commands::io_cmds::{
     export_json, get_export_event_count, get_launch_directory, import_json, preview_import_json,
@@ -158,6 +158,7 @@ pub fn run() {
             create_event,
             update_event,
             delete_event,
+            delete_events,
             get_event,
             get_past_events_count,
             purge_past_events,

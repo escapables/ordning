@@ -260,6 +260,15 @@
         return Promise.resolve(null);
       }
 
+      case "delete_events": {
+        var idsToDelete = new Set((payload && payload.ids) || []);
+        var beforeCount = state.events.length;
+        state.events = state.events.filter(function (event) {
+          return !idsToDelete.has(event.id);
+        });
+        return Promise.resolve(beforeCount - state.events.length);
+      }
+
       case "count_events_by_title": {
         var countTitle = String((payload && payload.title) || "").trim().toLowerCase();
         var countCalendarId = payload && payload.calendarId;

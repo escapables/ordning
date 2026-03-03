@@ -134,6 +134,9 @@ const STRINGS = {
     settingsTimezoneLabel: "Tidszon",
     settingsLanguageSwedish: "Svenska",
     settingsLanguageEnglish: "English",
+    multiDeleteConfirm: "Ta bort {count} händelser?",
+    multiDeleteRecurringNote: "Återkommande instanser tas bort enskilt.",
+    contextMenuDeleteCount: "Ta bort ({count})",
     closeUnsavedPrompt: "Du har osparade ändringar. Vad vill du göra?",
     closeUnsavedSave: "Spara",
     closeUnsavedDontSave: "Spara inte"
@@ -273,6 +276,9 @@ const STRINGS = {
     settingsTimezoneLabel: "Timezone",
     settingsLanguageSwedish: "Svenska",
     settingsLanguageEnglish: "English",
+    multiDeleteConfirm: "Delete {count} events?",
+    multiDeleteRecurringNote: "Recurring instances will be removed individually.",
+    contextMenuDeleteCount: "Delete ({count})",
     closeUnsavedPrompt: "You have unsaved changes. What do you want to do?",
     closeUnsavedSave: "Save",
     closeUnsavedDontSave: "Don't save"
