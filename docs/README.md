@@ -32,6 +32,7 @@ Internal process documentation:
 1. `docs/HANDOFF.md` - Current session state (ephemeral)
 2. `docs/ARCHITECTURE.md` - System architecture and design decisions
 3. `docs/APPIMAGE_PORTABILITY.md` - Linux AppImage compatibility baseline
+4. `docs/ENCRYPTION_FEASIBILITY.md` - Encryption design findings for local data and exports
 
 Agent working docs (local, unversioned): TODO.md, PRIMARY_TODO.md, WORKFLOW.md, ARCHIVE.md
 
@@ -41,5 +42,6 @@ Agent working docs (local, unversioned): TODO.md, PRIMARY_TODO.md, WORKFLOW.md, 
 |----------|----------|---------|
 | `docs/ARCHITECTURE.md` | Repository | System architecture, modules, schemas, design decisions |
 | `docs/APPIMAGE_PORTABILITY.md` | Repository | AppImage portability profile, release matrix, GL/EGL policy |
+| `docs/ENCRYPTION_FEASIBILITY.md` | Repository | Encryption crate evaluation, file format proposal, UX tradeoffs |
 | `README.md` | Repository | User-facing overview and quick start |
 | `CONTRIBUTING.md` | Repository | Contributor guidelines |

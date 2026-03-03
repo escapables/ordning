@@ -23,11 +23,13 @@ use crate::commands::io_cmds::{
 use crate::commands::persistence_cmds::{
     discard_unsaved_changes, has_unsaved_changes, persist_snapshot, request_app_close,
 };
-use crate::commands::settings_cmds::{get_settings, set_settings};
+use crate::commands::settings_cmds::{
+    enable_encryption, get_settings, set_settings, unlock_encrypted_data,
+};
 use crate::commands::view_cmds::{get_week_events, search_events};
-use crate::models::Calendar;
+use crate::models::{AppData, Calendar};
 use crate::state::AppState;
-use crate::storage::json_store::JsonStore;
+use crate::storage::json_store::{JsonStore, LoadState};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -47,26 +49,33 @@ pub fn run() {
     }
 
     let store = JsonStore::new().expect("failed to initialize JSON store");
-    let mut app_data = store
+    let app_data = match store
         .load_or_create()
-        .expect("failed to load initial app data");
-    app_data.normalize_settings();
+        .expect("failed to load initial app data")
+    {
+        LoadState::Ready(mut app_data) => {
+            app_data.normalize_settings();
 
-    if app_data.calendars.is_empty() {
-        let now = Utc::now().to_rfc3339();
-        app_data.calendars.push(Calendar {
-            id: Uuid::new_v4(),
-            name: "Personal".to_owned(),
-            color: "#007aff".to_owned(),
-            group: None,
-            visible: true,
-            created_at: now.clone(),
-            updated_at: now,
-        });
-        store
-            .save(&app_data)
-            .expect("failed to seed default calendar");
-    }
+            if app_data.calendars.is_empty() {
+                let now = Utc::now().to_rfc3339();
+                app_data.calendars.push(Calendar {
+                    id: Uuid::new_v4(),
+                    name: "Personal".to_owned(),
+                    color: "#007aff".to_owned(),
+                    group: None,
+                    visible: true,
+                    created_at: now.clone(),
+                    updated_at: now,
+                });
+                store
+                    .save(&app_data)
+                    .expect("failed to seed default calendar");
+            }
+
+            app_data
+        }
+        LoadState::Locked => AppData::default(),
+    };
 
     let launch_directory = std::env::current_dir().unwrap_or_else(|_| std::env::temp_dir());
     let state = AppState {
@@ -175,6 +184,8 @@ pub fn run() {
             import_json,
             get_settings,
             set_settings,
+            unlock_encrypted_data,
+            enable_encryption,
             has_unsaved_changes,
             persist_snapshot,
             discard_unsaved_changes,
