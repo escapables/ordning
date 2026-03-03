@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="src-tauri/icons/128x128@2x.png" width="128" height="128" alt="Ordning">
-</p>
-
 <h1 align="center">Ordning</h1>
 
 <p align="center">
@@ -186,3 +182,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, quality gates, and
 ## License
 
 This project is licensed under the [GNU General Public License v3.0](LICENSE).
+
+---
+
+<sub>Ordning is built using a three-agent workflow: [Claude Code](https://claude.ai) (reviewer, designer, committer), [Codex](https://openai.com/codex) (implementation), and a human orchestrator (testing, ideas, final decisions). The workflow template is at [escapables/template](https://github.com/escapables/template).</sub>
