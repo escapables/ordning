@@ -198,7 +198,6 @@
 .recurrence-picker {
   display: grid;
   gap: 8px;
-  padding-top: 4px;
 }
 
 .recurrence-picker__row {
@@ -206,6 +205,19 @@
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.recurrence-picker__row--top {
+  padding-top: 4px;
+}
+
+.recurrence-picker__sub {
+  display: grid;
+  gap: 8px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--color-accent);
+  background: #f8f9fb;
+  border-radius: 0 var(--radius-chip) var(--radius-chip) 0;
 }
 
 .recurrence-picker [hidden] {
@@ -216,17 +228,58 @@
   width: auto;
 }
 
-.recurrence-picker__chip {
-  min-width: 34px;
-  height: 28px;
+.recurrence-picker select.event-modal__input {
+  min-width: 140px;
+  min-height: 30px;
+  padding: 6px 8px;
   border: 1px solid var(--color-border-muted);
   border-radius: var(--radius-chip);
+  font: inherit;
+  color: var(--color-text-primary);
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23636366'/%3E%3C/svg%3E") no-repeat right 8px center;
+  background-size: 10px 6px;
+  padding-right: 24px;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+.recurrence-picker input[type="number"].event-modal__input {
+  width: 60px;
+  min-height: 30px;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border-muted);
+  border-radius: var(--radius-chip);
+  font: inherit;
+  color: var(--color-text-primary);
+  background: #fff;
+  -moz-appearance: textfield;
+}
+
+.recurrence-picker input[type="number"].event-modal__input::-webkit-inner-spin-button,
+.recurrence-picker input[type="number"].event-modal__input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.recurrence-picker__chip {
+  min-width: 36px;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--color-border-muted);
+  border-radius: var(--radius-pill);
   background: #fff;
   color: var(--color-text-secondary);
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.recurrence-picker__chip:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 .recurrence-picker__chip[aria-pressed="true"] {

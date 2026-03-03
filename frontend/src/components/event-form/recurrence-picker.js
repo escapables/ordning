@@ -72,7 +72,7 @@ export function createRecurrencePicker({ startDateInput } = {}) {
   element.className = "recurrence-picker";
 
   const repeatRow = document.createElement("div");
-  repeatRow.className = "recurrence-picker__row";
+  repeatRow.className = "recurrence-picker__row recurrence-picker__row--top";
 
   const repeatLabel = document.createElement("span");
   repeatLabel.className = "event-modal__label";
@@ -96,6 +96,9 @@ export function createRecurrencePicker({ startDateInput } = {}) {
   repeatRow.append(repeatLabel, repeatSelect);
   element.appendChild(repeatRow);
 
+  const subGroup = document.createElement("div");
+  subGroup.className = "recurrence-picker__sub";
+
   const intervalRow = document.createElement("div");
   intervalRow.className = "recurrence-picker__row";
 
@@ -112,7 +115,7 @@ export function createRecurrencePicker({ startDateInput } = {}) {
 
   const intervalUnit = document.createElement("span");
   intervalRow.append(intervalPrefix, intervalInput, intervalUnit);
-  element.appendChild(intervalRow);
+  subGroup.appendChild(intervalRow);
 
   const weeklyRow = document.createElement("div");
   weeklyRow.className = "recurrence-picker__row";
@@ -135,7 +138,7 @@ export function createRecurrencePicker({ startDateInput } = {}) {
     weeklyRow.appendChild(chip);
     return chip;
   });
-  element.appendChild(weeklyRow);
+  subGroup.appendChild(weeklyRow);
 
   const monthlyRow = document.createElement("div");
   monthlyRow.className = "recurrence-picker__row";
@@ -164,7 +167,7 @@ export function createRecurrencePicker({ startDateInput } = {}) {
   });
 
   monthlyRow.append(monthlyPrefix, weekOfMonthSelect, dayOfWeekSelect);
-  element.appendChild(monthlyRow);
+  subGroup.appendChild(monthlyRow);
 
   const endsRow = document.createElement("div");
   endsRow.className = "recurrence-picker__row";
@@ -209,7 +212,8 @@ export function createRecurrencePicker({ startDateInput } = {}) {
     afterCountLabel,
     untilDateInput
   );
-  element.appendChild(endsRow);
+  subGroup.appendChild(endsRow);
+  element.appendChild(subGroup);
 
   let exceptionDates = [];
 
@@ -249,6 +253,7 @@ export function createRecurrencePicker({ startDateInput } = {}) {
     const frequency = repeatSelect.value;
     const endsMode = endsSelect.value;
 
+    subGroup.hidden = frequency === "none";
     intervalRow.hidden = frequency === "none";
     weeklyRow.hidden = frequency !== "weekly";
     monthlyRow.hidden = frequency !== "monthly";
