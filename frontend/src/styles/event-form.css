@@ -6,6 +6,7 @@
   background: #fff;
   box-shadow: 0 22px 48px rgb(0 0 0 / 0.22);
   transition: box-shadow 200ms ease, transform 200ms ease;
+  overflow: visible;
 }
 
 .event-modal::backdrop {
@@ -16,6 +17,8 @@
   display: grid;
   gap: 8px;
   padding: 14px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
 }
 
 .event-modal__title {
@@ -80,6 +83,15 @@
   font: inherit;
   color: var(--color-text-primary);
   background: #fff;
+}
+
+select.event-modal__input {
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23636366'/%3E%3C/svg%3E") no-repeat right 8px center;
+  background-size: 10px 6px;
+  padding-right: 24px;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
 }
 
 .event-modal__input--error {
@@ -230,18 +242,6 @@
 
 .recurrence-picker select.event-modal__input {
   min-width: 140px;
-  min-height: 30px;
-  padding: 6px 8px;
-  border: 1px solid var(--color-border-muted);
-  border-radius: var(--radius-chip);
-  font: inherit;
-  color: var(--color-text-primary);
-  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23636366'/%3E%3C/svg%3E") no-repeat right 8px center;
-  background-size: 10px 6px;
-  padding-right: 24px;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
 }
 
 .recurrence-picker input[type="number"].event-modal__input {

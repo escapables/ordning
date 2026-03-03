@@ -12,12 +12,11 @@ test("keyboard copy enters paste mode, Escape cancels, and Ctrl+V pastes at curs
   const sourceEvent = page.locator(".day-column").nth(0).locator(".event-block", { hasText: "Sprint Planning" });
   const targetHour = page.locator(".day-column").nth(2).locator(".day-column__hour").nth(13);
   await expect(sourceEvent).toHaveCount(1);
-  await targetHour.scrollIntoViewIfNeeded();
-
-  const targetBox = await targetHour.boundingBox();
-  expect(targetBox).not.toBeNull();
 
   await sourceEvent.click();
+  await targetHour.scrollIntoViewIfNeeded();
+  let targetBox = await targetHour.boundingBox();
+  expect(targetBox).not.toBeNull();
   await page.mouse.move(targetBox.x + 20, targetBox.y + Math.round(targetBox.height / 2));
   await pressShortcut(page, "c");
   await expect(page.locator(".day-column__move-preview")).toHaveCount(1);
@@ -28,6 +27,8 @@ test("keyboard copy enters paste mode, Escape cancels, and Ctrl+V pastes at curs
   await expect(page.locator(".event-block", { hasText: "Sprint Planning" })).toHaveCount(1);
 
   await sourceEvent.click();
+  await targetHour.scrollIntoViewIfNeeded();
+  targetBox = await targetHour.boundingBox();
   await page.mouse.move(targetBox.x + 20, targetBox.y + Math.round(targetBox.height / 2));
   await pressShortcut(page, "c");
   await expect(page.locator(".day-column__move-preview")).toHaveCount(1);
