@@ -3,6 +3,7 @@ import path from "node:path";
 import { test as base, expect } from "@playwright/test";
 
 const tauriMockPath = path.resolve(process.cwd(), "frontend/test/tauri-mock.js");
+const tauriMockRecurrencePath = path.resolve(process.cwd(), "frontend/test/tauri-mock-recurrence.js");
 const tauriMockSeedPath = path.resolve(process.cwd(), "frontend/test/tauri-mock-seed.js");
 const tauriCalendarGroupMockPath = path.resolve(process.cwd(), "frontend/test/tauri-calendar-group-mock.js");
 const tauriPersistenceMockPath = path.resolve(process.cwd(), "frontend/test/tauri-persistence-mock.js");
@@ -12,6 +13,7 @@ const tauriWeekSpanMockPath = path.resolve(process.cwd(), "frontend/test/tauri-w
 export const test = base.extend({
   page: async ({ page }, use) => {
     await page.addInitScript({ path: tauriMockSeedPath });
+    await page.addInitScript({ path: tauriMockRecurrencePath });
     await page.addInitScript({ path: tauriMockPath });
     await page.addInitScript({ path: tauriCalendarGroupMockPath });
     await page.addInitScript({ path: tauriPersistenceMockPath });

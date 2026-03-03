@@ -82,6 +82,8 @@ pub struct ExportEvent {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub recurrence: Option<RecurrenceRule>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub recurrence_parent_id: Option<Uuid>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub created_at: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub updated_at: Option<String>,
@@ -109,6 +111,7 @@ impl ExportEvent {
             description_private,
             location: event.location.clone(),
             recurrence: event.recurrence.clone(),
+            recurrence_parent_id: event.recurrence_parent_id,
             created_at: Some(event.created_at.clone()),
             updated_at: Some(event.updated_at.clone()),
         }

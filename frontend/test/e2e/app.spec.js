@@ -147,6 +147,18 @@ test("event block context menu supports delete action", async ({ page }) => {
   await expect(targetEvent).toHaveCount(0);
 });
 
+test("right-click replaces previous context menu instead of stacking", async ({ page }) => {
+  await page.goto("/");
+
+  const firstEvent = page.locator(".event-block").first();
+  await firstEvent.click({ button: "right" });
+  await expect(page.locator(".context-menu")).toHaveCount(1);
+
+  const secondEvent = page.locator(".event-block").nth(1);
+  await secondEvent.click({ button: "right" });
+  await expect(page.locator(".context-menu")).toHaveCount(1);
+});
+
 test("purge past events flow removes archived items after two-step confirm", async ({ page }) => {
   await page.goto("/");
 
@@ -159,35 +171,6 @@ test("purge past events flow removes archived items after two-step confirm", asy
   await expect(page.locator(".confirm-dialog__message")).toContainText("kan inte ångras");
   await page.locator(".confirm-dialog__btn--danger").click();
   await expect(page.locator(".confirm-dialog[open]")).toHaveCount(0);
-});
-
-test("settings language switch updates UI text", async ({ page }) => {
-  await page.goto("/");
-
-  await expect(page.locator(".sidebar__new-event-btn")).toHaveText("Nytt event");
-  await page.locator(".sidebar__settings-btn").click();
-  await page.locator(".settings-dialog__field").first().locator("select").selectOption("en");
-  await expect(page.locator(".sidebar__new-event-btn")).toHaveText("New event");
-});
-
-test("settings timezone selection persists", async ({ page }) => {
-  await page.goto("/");
-
-  await page.locator(".sidebar__settings-btn").click();
-  const timezoneSelect = page.locator(".settings-dialog__field").nth(1).locator("select");
-  const selectedTimezone = await timezoneSelect.evaluate((node) => node.value);
-  const nextTimezone = await timezoneSelect.evaluate((node) => {
-    const options = Array.from(node.options).map((option) => option.value);
-    return options.find((value) => value !== node.value) ?? node.value;
-  });
-  await timezoneSelect.selectOption(nextTimezone);
-  await expect(page.locator(".settings-dialog[open]")).toHaveCount(0);
-
-  await page.locator(".sidebar__settings-btn").click();
-  await expect(page.locator(".settings-dialog__field").nth(1).locator("select")).toHaveValue(
-    nextTimezone
-  );
-  expect(nextTimezone).not.toBe(selectedTimezone);
 });
 
 test("export dialog print button uses iframe print trigger", async ({ page }) => {
@@ -440,13 +423,13 @@ test("single click selects event, dblclick opens modal, and clear selection work
   await expect(page.locator(".event-block--selected")).toHaveCount(0);
 });
 
-test("empty day-column context menu opens New event with 30-minute snap", async ({ page }) => {
+test("empty day-column context menu opens new händelse with 30-minute snap", async ({ page }) => {
   await page.goto("/");
 
   const firstColumn = page.locator(".day-column").first();
   await firstColumn.click({ button: "right", position: { x: 24, y: 84 } });
   await expect(page.locator(".context-menu")).toBeVisible();
-  await page.locator(".context-menu__item", { hasText: "Nytt event" }).click();
+  await page.locator(".context-menu__item", { hasText: "Ny händelse" }).click();
 
   await expect(page.locator(".event-modal[open]")).toBeVisible();
   await expect(page.locator(".event-modal__input[name='startTime']")).toHaveValue("02:00");

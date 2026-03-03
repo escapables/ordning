@@ -1,23 +1,29 @@
 import { formatDateKey } from "../../utils/date-utils.js";
-import { openEventContextMenu } from "./context-menu.js";
+import { openEventContextMenu, openMultiSelectContextMenu } from "./context-menu.js";
 
 function renderAllDayEvent(event, handlers = {}) {
   const {
     onEventSelect = () => {},
     onEventClick = () => {},
     onEventDelete = () => {},
-    onEventCopy = () => {}
+    onEventCopy = () => {},
+    getSelectedEventTargets = () => [],
+    onMultiDelete = async () => {}
   } = handlers;
   const element = document.createElement("article");
   element.className = "all-day-event";
+  element.classList.toggle("all-day-event--recurring", Boolean(event.isVirtual));
   element.dataset.eventId = event.id;
+  element.dataset.eventActionId = event.actionId ?? event.id;
+  element.dataset.eventDate = event.date ?? "";
+  element.dataset.eventIsVirtual = event.isVirtual ? "true" : "false";
   element.tabIndex = 3;
   element.style.setProperty("--event-color", event.color);
   element.textContent = event.title;
 
   const select = (uiEvent) => {
     uiEvent.stopPropagation();
-    onEventSelect(event.id, element);
+    onEventSelect(event.id, element, { ctrlKey: uiEvent.ctrlKey || uiEvent.metaKey });
   };
 
   element.addEventListener("pointerdown", (pointerEvent) => {
@@ -31,7 +37,7 @@ function renderAllDayEvent(event, handlers = {}) {
   });
   element.addEventListener("dblclick", (doubleClickEvent) => {
     doubleClickEvent.stopPropagation();
-    onEventClick(event.id);
+    onEventClick(event.actionId ?? event.id, { instanceDate: event.date, isVirtual: Boolean(event.isVirtual) });
   });
   element.addEventListener("keydown", (keyboardEvent) => {
     if (keyboardEvent.key !== "Enter" && keyboardEvent.key !== " ") {
@@ -39,13 +45,24 @@ function renderAllDayEvent(event, handlers = {}) {
     }
     keyboardEvent.preventDefault();
     keyboardEvent.stopPropagation();
-    onEventClick(event.id);
+    onEventClick(event.actionId ?? event.id, { instanceDate: event.date, isVirtual: Boolean(event.isVirtual) });
   });
   element.addEventListener("contextmenu", (contextMenuEvent) => {
+    if (element.classList.contains("event-block--selected")) {
+      const targets = getSelectedEventTargets();
+      if (targets.length > 1) {
+        openMultiSelectContextMenu(contextMenuEvent, targets.length, {
+          onDelete: () => onMultiDelete(targets)
+        });
+        return;
+      }
+    }
     openEventContextMenu(
       contextMenuEvent,
       {
-        id: event.id,
+        id: event.actionId ?? event.id,
+        date: event.date ?? null,
+        isVirtual: Boolean(event.isVirtual),
         title: event.title,
         time: ""
       },

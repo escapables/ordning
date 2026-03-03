@@ -134,8 +134,11 @@ function createEventElement(event, pixelsPerMinute, handlers) {
   element.style.width = `calc(${widthPercent}% - 4px)`;
   element.style.left = `calc(${event.column * widthPercent}% + 2px)`;
   element.style.setProperty("--event-color", event.color);
+  element.classList.toggle("event-block--recurring", Boolean(event.isVirtual));
   element.dataset.eventId = event.id;
+  element.dataset.eventActionId = event.actionId ?? event.id;
   element.dataset.eventDate = event.date ?? "";
+  element.dataset.eventIsVirtual = event.isVirtual ? "true" : "false";
   element.dataset.startMinutes = String(event.startMinutes);
   element.dataset.endMinutes = String(event.endMinutes);
   element.dataset.clockStart = event.startTime ?? "";
@@ -154,7 +157,18 @@ function createEventElement(event, pixelsPerMinute, handlers) {
   element.appendChild(time);
   const select = (uiEvent) => {
     uiEvent.stopPropagation();
-    onEventSelect(event.id, element);
+    onEventSelect(event.id, element, { ctrlKey: uiEvent.ctrlKey || uiEvent.metaKey });
+  };
+
+  const countSelectedEventIds = () => {
+    const scope = element.closest(".week-grid") ?? element.ownerDocument;
+    const ids = new Set();
+    scope.querySelectorAll(".event-block--selected").forEach((block) => {
+      if (block instanceof HTMLElement && block.dataset.eventId) {
+        ids.add(block.dataset.eventId);
+      }
+    });
+    return ids.size;
   };
 
   const updateCursor = (clientY) => {
@@ -164,11 +178,18 @@ function createEventElement(event, pixelsPerMinute, handlers) {
     element.style.cursor = nearTop || nearBottom ? "ns-resize" : "pointer";
   };
 
+  let pointerDownHandledSelect = false;
   element.addEventListener("pointerdown", (pointerEvent) => {
     if (pointerEvent.button !== 0) {
       return;
     }
+    const isCtrl = pointerEvent.ctrlKey || pointerEvent.metaKey;
+    const wasMulti = countSelectedEventIds() > 1;
     select(pointerEvent);
+    pointerDownHandledSelect = true;
+    if (isCtrl || wasMulti) {
+      return;
+    }
     onEventPointerDown(pointerEvent, event, element);
   });
   element.addEventListener("pointermove", (pointerEvent) => {
@@ -178,11 +199,16 @@ function createEventElement(event, pixelsPerMinute, handlers) {
     element.style.cursor = "pointer";
   });
   element.addEventListener("click", (clickEvent) => {
+    if (pointerDownHandledSelect) {
+      pointerDownHandledSelect = false;
+      clickEvent.stopPropagation();
+      return;
+    }
     select(clickEvent);
   });
   element.addEventListener("dblclick", (doubleClickEvent) => {
     doubleClickEvent.stopPropagation();
-    onEventOpen(event.id);
+    onEventOpen(event.actionId ?? event.id, { instanceDate: event.date, isVirtual: Boolean(event.isVirtual) });
   });
   element.addEventListener("mouseenter", () => {
     toggleSyncedHover(element, true);
@@ -197,7 +223,7 @@ function createEventElement(event, pixelsPerMinute, handlers) {
 
     keyboardEvent.preventDefault();
     keyboardEvent.stopPropagation();
-    onEventOpen(event.id);
+    onEventOpen(event.actionId ?? event.id, { instanceDate: event.date, isVirtual: Boolean(event.isVirtual) });
   });
 
   return element;

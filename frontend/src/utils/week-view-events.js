@@ -5,6 +5,8 @@ const MINUTES_PER_HOUR = 60;
 export function mapBackendEvents(events) {
   return events.map((event) => ({
     id: event.id,
+    actionId: event.source_id ?? event.id,
+    isVirtual: Boolean(event.is_virtual),
     date: event.date,
     startDate: event.start_date ?? event.date,
     endDate: event.end_date ?? event.date,
@@ -18,6 +20,8 @@ export function mapBackendEvents(events) {
 export function mapAllDayEvents(events) {
   return events.map((event) => ({
     id: event.id,
+    actionId: event.source_id ?? event.id,
+    isVirtual: Boolean(event.is_virtual),
     date: event.date,
     title: event.title,
     color: event.color

@@ -101,6 +101,8 @@ Swedish default, English toggle. Two-language only.
         │   ├── event.rs          # Event { ..., description_private, description_public }
         │   ├── recurrence.rs     # RecurrenceRule, Frequency, EndCondition
         │   └── app_data.rs       # AppData { version, settings, calendars, events }
+        ├── recurrence/
+        │   └── mod.rs            # expand_recurring_events — weekly/monthly expansion
         ├── storage/
         │   └── json_store.rs     # Load/save w/ atomic write
         └── import_export/
@@ -118,6 +120,7 @@ Swedish default, English toggle. Two-language only.
 - `description_private: String` — personal notes, never in public export
 - `description_public: String` — shareable, all exports
 - `location: Option<String>`, `recurrence: Option<RecurrenceRule>`
+- `recurrence_parent_id: Option<Uuid>` — links override instances to parent recurring event
 - `created_at/updated_at: String` (ISO 8601, merge conflict resolution)
 
 ### Calendar
@@ -126,7 +129,10 @@ Swedish default, English toggle. Two-language only.
 
 ### RecurrenceRule
 
-- `frequency (daily/weekly/monthly/yearly), interval, days_of_week, end_condition (never/after_count/until_date)`
+- `frequency (weekly/monthly), interval, days_of_week, end_condition (never/after_count/until_date)`
+- `exception_dates: Vec<NaiveDate>` — dates to skip during expansion
+- `week_of_month: Option<u8>` (1–5) — for Monthly Nth weekday
+- `day_of_week: Option<String>` — for Monthly Nth weekday
 
 Dates timezone-naive (NaiveDate/NaiveTime) — single-user, local timezone, no remote conversion.
 
@@ -151,8 +157,12 @@ Dates timezone-naive (NaiveDate/NaiveTime) — single-user, local timezone, no r
       "recurrence": {
         "frequency": "weekly", "interval": 1,
         "days_of_week": ["mon","tue","wed","thu","fri"],
-        "end_condition": { "type": "never" }
-      }
+        "end_condition": { "type": "never" },
+        "exception_dates": ["2026-03-05"],
+        "week_of_month": null,
+        "day_of_week": null
+      },
+      "recurrence_parent_id": null
     }
   ]
 }

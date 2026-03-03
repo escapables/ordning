@@ -120,6 +120,8 @@ export function renderWeekGrid(dates, events = [], allDayEvents = [], options = 
     onCreateFromContextMenu = () => {},
     onPasteFromContextMenu = () => {},
     canPasteFromContextMenu = () => false,
+    getSelectedEventTargets = () => [],
+    onMultiDelete = async () => {},
     timezone = "UTC",
     preserveScrollTop = null,
     skipAutoScroll = false,
@@ -184,7 +186,9 @@ export function renderWeekGrid(dates, events = [], allDayEvents = [], options = 
         onCreateSlot,
         onCreateFromContextMenu,
         onPasteFromContextMenu,
-        canPasteFromContextMenu
+        canPasteFromContextMenu,
+        getSelectedEventTargets,
+        onMultiDelete
       })
     );
   });
@@ -202,7 +206,9 @@ export function renderWeekGrid(dates, events = [], allDayEvents = [], options = 
         onEventSelect,
         onEventClick,
         onEventDelete,
-        onEventCopy
+        onEventCopy,
+        getSelectedEventTargets,
+        onMultiDelete
       })
     );
   }

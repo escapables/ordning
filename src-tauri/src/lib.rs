@@ -1,6 +1,7 @@
 mod commands;
 mod import_export;
 mod models;
+mod recurrence;
 mod state;
 mod storage;
 
@@ -13,7 +14,8 @@ use crate::commands::calendar_cmds::{
     create_calendar, delete_calendar, list_calendars, toggle_visibility, update_calendar,
 };
 use crate::commands::event_cmds::{
-    create_event, delete_event, get_event, get_past_events_count, purge_past_events, update_event,
+    bulk_update_descriptions, count_events_by_title, create_event, delete_event, delete_events,
+    get_event, get_past_events_count, purge_past_events, update_event,
 };
 use crate::commands::io_cmds::{
     export_json, get_export_event_count, get_launch_directory, import_json, preview_import_json,
@@ -82,9 +84,13 @@ pub fn run() {
             if let Some(main_webview) = app.get_webview_window("main") {
                 let _ = main_webview.with_webview(|webview| {
                     use gtk::prelude::WidgetExt;
-                    use webkit2gtk::WebViewExt;
+                    use webkit2gtk::{SettingsExt, WebViewExt};
 
                     let view = webview.inner();
+
+                    if let Some(settings) = WebViewExt::settings(&view) {
+                        settings.set_enable_developer_extras(false);
+                    }
 
                     // Disable WebKitGTK's built-in pinch-to-zoom which drives
                     // pageScaleFactor (visual magnification of the whole page).
@@ -156,9 +162,12 @@ pub fn run() {
             create_event,
             update_event,
             delete_event,
+            delete_events,
             get_event,
             get_past_events_count,
             purge_past_events,
+            count_events_by_title,
+            bulk_update_descriptions,
             export_json,
             get_export_event_count,
             get_launch_directory,

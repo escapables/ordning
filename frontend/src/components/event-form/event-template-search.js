@@ -317,6 +317,7 @@ export function createEventTemplateSearch({
       && Array.from(calendarSelect.options).some((option) => option.value === templateCalendarId)
     ) {
       calendarSelect.value = templateCalendarId;
+      calendarSelect.dispatchEvent(new Event("change", { bubbles: true }));
     }
 
     startDateInput.value = preservedStartDate;

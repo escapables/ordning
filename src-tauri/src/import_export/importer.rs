@@ -77,6 +77,7 @@ pub fn parse_import_payload(raw: &str) -> Result<AppData, String> {
             description_public: event.description_public.clone(),
             location: sanitize_optional(event.location.clone()),
             recurrence: event.recurrence.clone(),
+            recurrence_parent_id: event.recurrence_parent_id,
             created_at: event
                 .created_at
                 .clone()
@@ -321,6 +322,7 @@ mod tests {
             description_public: String::new(),
             location: None,
             recurrence: None,
+            recurrence_parent_id: None,
             created_at: "2026-02-24T00:00:00Z".to_owned(),
             updated_at: updated_at.to_owned(),
         }
