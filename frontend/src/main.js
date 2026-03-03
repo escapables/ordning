@@ -230,8 +230,8 @@ async function renderAppShell() {
         });
       }
     },
-    onEventClick: (eventId) => {
-      eventModal.openEdit(eventId);
+    onEventClick: (eventId, ctx) => {
+      eventModal.openEdit(eventId, ctx);
     },
     onEventDelete: deleteEventById,
     onEventCopy: async (eventData) => {

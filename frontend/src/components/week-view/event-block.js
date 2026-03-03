@@ -208,7 +208,7 @@ function createEventElement(event, pixelsPerMinute, handlers) {
   });
   element.addEventListener("dblclick", (doubleClickEvent) => {
     doubleClickEvent.stopPropagation();
-    onEventOpen(event.actionId ?? event.id);
+    onEventOpen(event.actionId ?? event.id, { instanceDate: event.date, isVirtual: Boolean(event.isVirtual) });
   });
   element.addEventListener("mouseenter", () => {
     toggleSyncedHover(element, true);
@@ -223,7 +223,7 @@ function createEventElement(event, pixelsPerMinute, handlers) {
 
     keyboardEvent.preventDefault();
     keyboardEvent.stopPropagation();
-    onEventOpen(event.actionId ?? event.id);
+    onEventOpen(event.actionId ?? event.id, { instanceDate: event.date, isVirtual: Boolean(event.isVirtual) });
   });
 
   return element;

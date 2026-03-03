@@ -5,6 +5,13 @@ import { createTimePicker } from "../pickers/time-picker.js";
 import { positionDropdown } from "../pickers/position-dropdown.js";
 import { createRecurrencePicker } from "./recurrence-picker.js";
 import { createEventTemplateSearch } from "./event-template-search.js";
+import {
+  toRecurrenceInput,
+  buildEventInput,
+  appendExceptionDate,
+  chooseRecurringScope,
+  createStoredEvent
+} from "../../main/event-mutations.js";
 
 function invoke(command, payload = {}) {
   const invokeFn = window.__TAURI__?.core?.invoke;
@@ -233,7 +240,9 @@ export function createEventModal({
     mode: "create",
     editingId: null,
     originalDescriptionPrivate: "",
-    originalDescriptionPublic: ""
+    originalDescriptionPublic: "",
+    instanceDate: null,
+    isVirtual: false
   };
 
   function toggleNoCalendarsCreateState(enabled) {
@@ -412,6 +421,8 @@ export function createEventModal({
     recurrencePicker.reset();
     applyAllDayState();
     setTitleValidationError(false);
+    state.instanceDate = null;
+    state.isVirtual = false;
   }
 
   function setModeCreate() {
@@ -484,9 +495,11 @@ export function createEventModal({
     }
   }
 
-  async function openEdit(eventId) {
+  async function openEdit(eventId, instanceContext = {}) {
     clearError();
     setModeEdit(eventId);
+    state.instanceDate = instanceContext.instanceDate ?? null;
+    state.isVirtual = Boolean(instanceContext.isVirtual);
 
     try {
       await ensureCalendarsLoaded();
@@ -552,7 +565,10 @@ export function createEventModal({
     }
 
     try {
-      const deleted = await onDelete(state.editingId);
+      const deleteTarget = state.isVirtual && state.instanceDate
+        ? { id: state.editingId, date: state.instanceDate, isVirtual: true }
+        : state.editingId;
+      const deleted = await onDelete(deleteTarget);
       if (!deleted) {
         return;
       }
@@ -633,11 +649,42 @@ export function createEventModal({
 
     try {
       if (state.mode === "edit" && state.editingId) {
-        const proceed = await maybeBulkUpdateDescriptions(payload);
-        if (!proceed) {
-          return;
+        if (descriptionChanged(payload) && payload.recurrence != null && state.isVirtual && state.instanceDate) {
+          const choice = await chooseRecurringScope(confirmDialog, t, "success");
+          if (!choice) {
+            return;
+          }
+          if (choice === "alternate") {
+            const existing = await invoke("get_event", { id: state.editingId });
+            const recurrence = toRecurrenceInput(existing.recurrence);
+            await invoke("update_event", {
+              id: state.editingId,
+              event: buildEventInput(existing, {
+                recurrence: appendExceptionDate(recurrence, state.instanceDate)
+              })
+            });
+            await createStoredEvent(invoke, buildEventInput(existing, {
+              descriptionPrivate: payload.descriptionPrivate,
+              descriptionPublic: payload.descriptionPublic,
+              startDate: state.instanceDate,
+              endDate: state.instanceDate,
+              recurrence: null,
+              recurrenceParentId: state.editingId
+            }));
+          } else {
+            const proceed = await maybeBulkUpdateDescriptions(payload);
+            if (!proceed) {
+              return;
+            }
+            await invoke("update_event", { id: state.editingId, event: payload });
+          }
+        } else {
+          const proceed = await maybeBulkUpdateDescriptions(payload);
+          if (!proceed) {
+            return;
+          }
+          await invoke("update_event", { id: state.editingId, event: payload });
         }
-        await invoke("update_event", { id: state.editingId, event: payload });
       } else {
         await invoke("create_event", { event: payload });
       }

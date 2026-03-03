@@ -161,11 +161,11 @@ test("deleting a recurring instance as all future truncates the parent series", 
   expect(stored[0].recurrence?.endConditionUntilDate).toBe(addDaysToDateKey(monday, -1));
 });
 
-test("moving a recurring instance as all future updates the parent series", async ({ page }) => {
+test("moving a recurring instance as all future on first instance updates in-place", async ({ page }) => {
   await page.goto("/");
 
   const [monday, tuesday] = await getWeekDates(page);
-  const title = "Recurring Future Move";
+  const title = "Recurring Future Move First";
   await createWeeklyRecurringEvent(page, { title, startDate: monday });
 
   const recurringBlock = page.locator(`.day-column[data-date='${monday}'] .event-block--recurring`, {
@@ -188,4 +188,126 @@ test("moving a recurring instance as all future updates the parent series", asyn
   expect(stored[0].startTime).toBe("10:00");
   expect(stored[0].endTime).toBe("10:30");
   expect(stored[0].recurrence?.daysOfWeek ?? []).toEqual(["tue"]);
+});
+
+test("moving a recurring instance as all future on later instance splits the chain", async ({ page }) => {
+  await page.goto("/");
+
+  const [monday, tuesday] = await getWeekDates(page);
+  const previousMonday = addDaysToDateKey(monday, -7);
+  const title = "Recurring Future Move Split";
+  await createWeeklyRecurringEvent(page, { title, startDate: previousMonday });
+
+  const recurringBlock = page.locator(`.day-column[data-date='${monday}'] .event-block--recurring`, {
+    hasText: title
+  });
+  const targetHour = page.locator(`.day-column[data-date='${tuesday}'] .day-column__hour`).nth(10);
+
+  await dragEventToHour(page, recurringBlock, targetHour);
+  await expect(page.locator(".confirm-dialog[open]")).toHaveCount(1);
+  await page.locator(".confirm-dialog__btn", { hasText: "Alla framtida" }).click();
+  await expect(page.locator(".confirm-dialog[open]")).toHaveCount(0);
+
+  await expect(
+    page.locator(`.day-column[data-date='${tuesday}'] .event-block--recurring`, { hasText: title })
+  ).toHaveCount(1);
+
+  const stored = await readStoredEventsByTitle(page, title);
+  expect(stored).toHaveLength(2);
+
+  const parent = stored.find((event) => event.startDate === previousMonday);
+  const newChain = stored.find((event) => event.startDate !== previousMonday);
+  expect(parent?.recurrence?.endConditionType).toBe("until_date");
+  expect(parent?.recurrence?.endConditionUntilDate).toBe(addDaysToDateKey(monday, -1));
+  expect(newChain?.startDate).toBe(tuesday);
+  expect(newChain?.startTime).toBe("10:00");
+  expect(newChain?.endTime).toBe("10:30");
+  expect(newChain?.recurrence?.daysOfWeek ?? []).toEqual(["tue"]);
+  expect(newChain?.recurrenceParentId).toBeNull();
+});
+
+test("editing recurring instance description as just this one creates override", async ({ page }) => {
+  await page.goto("/");
+
+  const [monday] = await getWeekDates(page);
+  const title = "Recurring Desc Override";
+  await createWeeklyRecurringEvent(page, { title, startDate: monday });
+
+  const recurringBlock = page.locator(`.day-column[data-date='${monday}'] .event-block--recurring`, {
+    hasText: title
+  });
+  await recurringBlock.dblclick();
+  await expect(page.locator("dialog.event-modal[open]")).toHaveCount(1);
+
+  await page.locator("textarea[name='descriptionPrivate']").fill("new private note");
+  await page.locator(".event-modal__btn--primary", { hasText: "Spara" }).click();
+
+  await expect(page.locator(".confirm-dialog[open]")).toHaveCount(1);
+  await page.locator(".confirm-dialog__btn", { hasText: "Bara den här" }).click();
+  await expect(page.locator(".confirm-dialog[open]")).toHaveCount(0);
+  await expect(page.locator("dialog.event-modal[open]")).toHaveCount(0);
+
+  const stored = await readStoredEventsByTitle(page, title);
+  expect(stored).toHaveLength(2);
+
+  const parent = stored.find((event) => event.recurrence);
+  const override = stored.find((event) => !event.recurrence);
+  expect(parent?.recurrence?.exceptionDates ?? []).toContain(monday);
+  expect(override?.recurrenceParentId).toBe(parent?.id);
+  expect(override?.startDate).toBe(monday);
+  expect(override?.descriptionPrivate).toBe("new private note");
+});
+
+test("editing recurring instance description as all future updates parent", async ({ page }) => {
+  await page.goto("/");
+
+  const [monday] = await getWeekDates(page);
+  const title = "Recurring Desc Future";
+  await createWeeklyRecurringEvent(page, { title, startDate: monday });
+
+  const recurringBlock = page.locator(`.day-column[data-date='${monday}'] .event-block--recurring`, {
+    hasText: title
+  });
+  await recurringBlock.dblclick();
+  await expect(page.locator("dialog.event-modal[open]")).toHaveCount(1);
+
+  await page.locator("textarea[name='descriptionPrivate']").fill("updated for all");
+  await page.locator(".event-modal__btn--primary", { hasText: "Spara" }).click();
+
+  await expect(page.locator(".confirm-dialog[open]")).toHaveCount(1);
+  await page.locator(".confirm-dialog__btn", { hasText: "Alla framtida" }).click();
+  await expect(page.locator("dialog.event-modal[open]")).toHaveCount(0);
+
+  const stored = await readStoredEventsByTitle(page, title);
+  expect(stored).toHaveLength(1);
+  expect(stored[0].descriptionPrivate).toBe("updated for all");
+  expect(stored[0].recurrence).toBeTruthy();
+});
+
+test("deleting from modal on virtual instance shows scope dialog", async ({ page }) => {
+  await page.goto("/");
+
+  const [monday] = await getWeekDates(page);
+  const title = "Recurring Modal Delete";
+  await createWeeklyRecurringEvent(page, { title, startDate: monday });
+
+  const recurringBlock = page.locator(`.day-column[data-date='${monday}'] .event-block--recurring`, {
+    hasText: title
+  });
+  await recurringBlock.dblclick();
+  await expect(page.locator("dialog.event-modal[open]")).toHaveCount(1);
+
+  await page.locator(".event-modal__btn--danger", { hasText: "Ta bort" }).click();
+  await expect(page.locator(".confirm-dialog[open]")).toHaveCount(1);
+  await page.locator(".confirm-dialog__btn", { hasText: "Bara den här" }).click();
+  await expect(page.locator(".confirm-dialog[open]")).toHaveCount(0);
+  await expect(page.locator("dialog.event-modal[open]")).toHaveCount(0);
+
+  await expect(
+    page.locator(`.day-column[data-date='${monday}'] .event-block`, { hasText: title })
+  ).toHaveCount(0);
+
+  const stored = await readStoredEventsByTitle(page, title);
+  expect(stored).toHaveLength(1);
+  expect(stored[0].recurrence?.exceptionDates ?? []).toContain(monday);
 });

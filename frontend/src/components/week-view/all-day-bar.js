@@ -37,7 +37,7 @@ function renderAllDayEvent(event, handlers = {}) {
   });
   element.addEventListener("dblclick", (doubleClickEvent) => {
     doubleClickEvent.stopPropagation();
-    onEventClick(event.actionId ?? event.id);
+    onEventClick(event.actionId ?? event.id, { instanceDate: event.date, isVirtual: Boolean(event.isVirtual) });
   });
   element.addEventListener("keydown", (keyboardEvent) => {
     if (keyboardEvent.key !== "Enter" && keyboardEvent.key !== " ") {
@@ -45,7 +45,7 @@ function renderAllDayEvent(event, handlers = {}) {
     }
     keyboardEvent.preventDefault();
     keyboardEvent.stopPropagation();
-    onEventClick(event.actionId ?? event.id);
+    onEventClick(event.actionId ?? event.id, { instanceDate: event.date, isVirtual: Boolean(event.isVirtual) });
   });
   element.addEventListener("contextmenu", (contextMenuEvent) => {
     if (element.classList.contains("event-block--selected")) {

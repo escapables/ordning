@@ -59,7 +59,7 @@ function hasOwn(overrides, key) {
   return Object.prototype.hasOwnProperty.call(overrides, key);
 }
 
-function toRecurrenceInput(rule) {
+export function toRecurrenceInput(rule) {
   if (!rule) {
     return null;
   }
@@ -88,7 +88,7 @@ function toRecurrenceInput(rule) {
   };
 }
 
-function buildEventInput(existing, overrides = {}) {
+export function buildEventInput(existing, overrides = {}) {
   return {
     calendarId: hasOwn(overrides, "calendarId") ? overrides.calendarId : existing.calendarId,
     title: hasOwn(overrides, "title") ? overrides.title : (existing.title ?? ""),
@@ -113,7 +113,7 @@ function buildEventInput(existing, overrides = {}) {
   };
 }
 
-function appendExceptionDate(recurrence, dateKey) {
+export function appendExceptionDate(recurrence, dateKey) {
   if (!recurrence) {
     return null;
   }
@@ -204,7 +204,7 @@ function normalizeDeleteTarget(target) {
   };
 }
 
-async function chooseRecurringScope(confirmDialog, t, confirmTone) {
+export async function chooseRecurringScope(confirmDialog, t, confirmTone) {
   return confirmDialog.choose(t("recurrenceEditPrompt"), {
     confirmLabel: t("recurrenceEditAllFuture"),
     confirmTone,
@@ -227,7 +227,7 @@ async function getStoredEvent(invoke, eventId) {
   return invoke("get_event", { id: eventId });
 }
 
-async function createStoredEvent(invoke, payload) {
+export async function createStoredEvent(invoke, payload) {
   return invoke("create_event", {
     event: payload
   });
@@ -380,25 +380,60 @@ export function createEventMutationHandlers({
         return;
       }
 
-      await updateStoredEvent(
-        invoke,
-        eventId,
-        buildEventInput(existing, {
-          startDate: resolvedStartDate,
-          endDate: resolvedEndDate,
-          startTime,
-          endTime,
-          allDay: false,
-          recurrence: adjustRecurringRuleForDate(recurrence, instanceDate, resolvedStartDate)
-        })
-      );
-      if (linkedUpdates.length > 0) {
-        await applyTimedUpdates(invoke, linkedUpdates);
+      if (instanceDate === existing.startDate) {
+        await updateStoredEvent(
+          invoke,
+          eventId,
+          buildEventInput(existing, {
+            startDate: resolvedStartDate,
+            endDate: resolvedEndDate,
+            startTime,
+            endTime,
+            allDay: false,
+            recurrence: adjustRecurringRuleForDate(recurrence, instanceDate, resolvedStartDate)
+          })
+        );
+        if (linkedUpdates.length > 0) {
+          await applyTimedUpdates(invoke, linkedUpdates);
+        }
+        setPendingHighlightEvent({
+          eventId: `${eventId}_${resolvedStartDate}`,
+          skipScroll: true
+        });
+      } else {
+        await updateStoredEvent(
+          invoke,
+          eventId,
+          buildEventInput(existing, {
+            recurrence: truncateRecurringSeries(recurrence, instanceDate)
+          })
+        );
+        const newRecurrence = adjustRecurringRuleForDate(
+          { ...recurrence, exceptionDates: [] },
+          instanceDate,
+          resolvedStartDate
+        );
+        const created = await createStoredEvent(
+          invoke,
+          buildEventInput(existing, {
+            startDate: resolvedStartDate,
+            endDate: resolvedEndDate,
+            startTime,
+            endTime,
+            allDay: false,
+            recurrence: newRecurrence,
+            recurrenceParentId: null
+          })
+        );
+        if (linkedUpdates.length > 0) {
+          await applyTimedUpdates(invoke, linkedUpdates);
+        }
+        if (created?.id) {
+          setPendingHighlightEvent({ eventId: created.id, skipScroll: true });
+        } else {
+          setPendingHighlightEvent(null);
+        }
       }
-      setPendingHighlightEvent({
-        eventId: `${eventId}_${resolvedStartDate}`,
-        skipScroll: true
-      });
       await refreshCurrentWeekEvents();
     } catch (error) {
       setPendingWeekViewRenderOptions(null);

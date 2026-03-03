@@ -83,7 +83,7 @@ export function openEventContextMenu(event, detail, handlers = {}) {
   } = handlers;
 
   openContextMenu(event, [
-    { label: t("contextMenuOpen"), action: () => onOpen(detail.id) },
+    { label: t("contextMenuOpen"), action: () => onOpen(detail.id, { instanceDate: detail.date, isVirtual: detail.isVirtual }) },
     { label: t("contextMenuDelete"), danger: true, action: () => onDelete(detail) },
     { label: t("contextMenuCopy"), action: () => onCopy(detail) }
   ]);
