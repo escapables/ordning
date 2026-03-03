@@ -154,6 +154,40 @@ pub fn enable_encryption(
     Ok(build_encryption_status(&state))
 }
 
+#[tauri::command]
+pub fn disable_encryption(
+    password: String,
+    state: State<'_, AppState>,
+) -> Result<EncryptionStatusResponse, String> {
+    let mut password = password;
+    if password.trim().is_empty() {
+        password.zeroize();
+        return Err("password is required".to_owned());
+    }
+    if state.store.status().locked {
+        password.zeroize();
+        return Err("unlock encrypted data before disabling encryption".to_owned());
+    }
+
+    let snapshot = state
+        .data
+        .lock()
+        .map_err(|err| format!("failed to lock app state: {err}"))?
+        .clone();
+
+    let disable_result = state.store.disable_encryption(&snapshot, &password);
+    password.zeroize();
+    disable_result.map_err(|err| format!("failed to disable encryption: {err}"))?;
+
+    let mut persisted = state
+        .persisted
+        .lock()
+        .map_err(|err| format!("failed to lock persisted state: {err}"))?;
+    *persisted = snapshot;
+
+    Ok(build_encryption_status(&state))
+}
+
 fn build_settings_response(app_data: &AppData, state: &State<'_, AppState>) -> SettingsResponse {
     let status = state.store.status();
     SettingsResponse {

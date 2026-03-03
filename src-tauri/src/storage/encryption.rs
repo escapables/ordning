@@ -109,6 +109,13 @@ impl EncryptionContext {
         context.decrypt_json(envelope, label)
     }
 
+    pub fn verify_password(&self, password: &str) -> Result<bool> {
+        let mut candidate = derive_key_material(password, &self.kdf)?;
+        let is_match = candidate == self.key_material;
+        candidate.zeroize();
+        Ok(is_match)
+    }
+
     fn encrypt_bytes(&self, plaintext: &[u8]) -> Result<EncryptedEnvelope> {
         let cipher = self.cipher()?;
         let nonce = Aes256Gcm::generate_nonce(&mut OsRng);

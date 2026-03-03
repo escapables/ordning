@@ -4,12 +4,19 @@
 
   window.__createOrdningTauriMockState = function (dates) {
     var ts = dates.ts;
+    var params = new URLSearchParams(window.location.search);
+    var locked = params.get("locked") === "1";
+    var encrypted = locked || params.get("encrypted") === "1";
+    var encryptionPassword = params.get("unlockPassword") || "top secret";
 
     return {
       settings: {
         lang: "sv",
-        timezone: "Europe/Stockholm"
+        timezone: "Europe/Stockholm",
+        storageEncrypted: encrypted,
+        storageLocked: locked
       },
+      encryptionPassword: encryptionPassword,
       calendars: [
         {
           id: "cal-work",

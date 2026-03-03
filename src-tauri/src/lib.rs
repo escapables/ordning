@@ -24,7 +24,7 @@ use crate::commands::persistence_cmds::{
     discard_unsaved_changes, has_unsaved_changes, persist_snapshot, request_app_close,
 };
 use crate::commands::settings_cmds::{
-    enable_encryption, get_settings, set_settings, unlock_encrypted_data,
+    disable_encryption, enable_encryption, get_settings, set_settings, unlock_encrypted_data,
 };
 use crate::commands::view_cmds::{get_week_events, search_events};
 use crate::models::{AppData, Calendar};
@@ -186,6 +186,7 @@ pub fn run() {
             set_settings,
             unlock_encrypted_data,
             enable_encryption,
+            disable_encryption,
             has_unsaved_changes,
             persist_snapshot,
             discard_unsaved_changes,

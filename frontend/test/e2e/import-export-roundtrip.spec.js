@@ -111,11 +111,12 @@ test("encrypted export dialog round-trip restores event with password", async ({
   await page.locator(".main-toolbar__today-btn").click();
   await expect(page.locator(".event-block", { hasText: "Encrypted Wrap" })).toHaveCount(2);
 
+  page.once("dialog", (dialog) => dialog.dismiss());
   await page.locator(".calendar-list__io-btn", { hasText: /export/i }).click();
+  await expect(page.locator(".export-dialog__passwords")).toBeHidden();
   await page.locator(".export-dialog__encrypt-checkbox").check();
   await page.locator(".export-dialog__password-input").fill("top secret");
   await page.locator(".export-dialog__password-confirm-input").fill("top secret");
-  page.once("dialog", (dialog) => dialog.dismiss());
   await page.locator(".export-dialog__btn--primary").click();
 
   await page.evaluate(async (eventId) => {
@@ -125,23 +126,19 @@ test("encrypted export dialog round-trip restores event with password", async ({
   await page.locator(".main-toolbar__today-btn").click();
   await expect(page.locator(".event-block", { hasText: "Encrypted Wrap" })).toHaveCount(0);
 
-  await page.evaluate(async () => {
-    const preview = await window.__TAURI__.core.invoke("preview_import_json", {
-      strategy: "merge",
-      password: "top secret"
-    });
-    await window.__TAURI__.core.invoke("import_json", {
-      path: preview.path,
-      strategy: "merge",
-      password: "top secret"
-    });
+  await page.locator(".calendar-list__io-btn", { hasText: /import/i }).click();
+  await expect(page.locator(".import-dialog__field")).toBeHidden();
+  await page.locator(".import-dialog__btn--pick").click();
+  await expect(page.locator(".import-dialog__status--locked")).toContainText("Krypterad fil");
+  await expect(page.locator(".import-dialog__btn--primary")).toBeDisabled();
 
-    const { loadWeekEvents } = await import("/src/state.js");
-    const columns = [...document.querySelectorAll(".day-column")];
-    const startDate = columns[0]?.getAttribute("data-date");
-    const endDate = columns.at(-1)?.getAttribute("data-date");
-    await loadWeekEvents(startDate, endDate);
-  });
+  await page.locator(".import-dialog__password-input").fill("top secret");
+  await page.locator(".import-dialog__btn--unlock").click();
+  await expect(page.locator(".import-dialog__status--unlocked")).toContainText("Upplåst");
+  await expect(page.locator(".import-dialog__summary")).toBeVisible();
+
+  page.once("dialog", (dialog) => dialog.dismiss());
+  await page.locator(".import-dialog__btn--primary").click();
 
   const importedCount = await page.evaluate(() => {
     return window.__ORDNING_TAURI_MOCK_STATE.events.filter((event) =>

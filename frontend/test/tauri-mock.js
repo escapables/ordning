@@ -143,6 +143,9 @@
         return Promise.resolve({ ...state.settings });
 
       case "set_settings": {
+        if (state.settings.storageLocked) {
+          return Promise.reject("unlock encrypted data before changing settings");
+        }
         var nextLang = payload && payload.settings && payload.settings.lang;
         var nextTimezone = payload && payload.settings && payload.settings.timezone;
         if (nextLang !== "sv" && nextLang !== "en") {
@@ -154,6 +157,54 @@
         state.settings.lang = nextLang;
         state.settings.timezone = String(nextTimezone);
         return Promise.resolve({ ...state.settings });
+      }
+
+      case "unlock_encrypted_data": {
+        var unlockPassword = payload && payload.password;
+        if (!unlockPassword || !String(unlockPassword).trim()) {
+          return Promise.reject("password is required");
+        }
+        if (!state.settings.storageEncrypted || !state.settings.storageLocked) {
+          return Promise.resolve({ ...state.settings });
+        }
+        if (unlockPassword !== state.encryptionPassword) {
+          return Promise.reject(
+            "failed to unlock data file: invalid password or corrupted encrypted data"
+          );
+        }
+        state.settings.storageLocked = false;
+        return Promise.resolve({ ...state.settings });
+      }
+
+      case "enable_encryption": {
+        var enablePassword = payload && payload.password;
+        if (!enablePassword || !String(enablePassword).trim()) {
+          return Promise.reject("password is required");
+        }
+        state.encryptionPassword = String(enablePassword);
+        state.settings.storageEncrypted = true;
+        state.settings.storageLocked = false;
+        return Promise.resolve({ encrypted: true, locked: false });
+      }
+
+      case "disable_encryption": {
+        var disablePassword = payload && payload.password;
+        if (!disablePassword || !String(disablePassword).trim()) {
+          return Promise.reject("password is required");
+        }
+        if (state.settings.storageLocked) {
+          return Promise.reject("unlock encrypted data before disabling encryption");
+        }
+        if (!state.settings.storageEncrypted) {
+          return Promise.reject("data file is not encrypted");
+        }
+        if (String(disablePassword) !== state.encryptionPassword) {
+          return Promise.reject("failed to disable encryption: invalid password");
+        }
+        state.settings.storageEncrypted = false;
+        state.settings.storageLocked = false;
+        state.encryptionPassword = null;
+        return Promise.resolve({ encrypted: false, locked: false });
       }
 
       case "list_calendars":
@@ -335,6 +386,7 @@
       case "preview_import_json":
         return Promise.resolve({
           path: "/tmp/import-sample.json",
+          encrypted: false,
           summary: {
             calendarCount: 1,
             eventCount: 3,
@@ -360,6 +412,12 @@
   }
 
   window.__TAURI__ = {
-    core: { invoke: invoke }
+    core: { invoke: invoke },
+    process: {
+      exit: function (code) {
+        state.lastExitCode = code;
+        return Promise.resolve();
+      }
+    }
   };
 })();

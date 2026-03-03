@@ -1,21 +1,23 @@
+mod import_file;
+
 use std::collections::HashSet;
 use std::fs;
 use std::path::PathBuf;
 
 use serde::Serialize;
-use serde_json::Value;
 use tauri::{AppHandle, State};
 use tauri_plugin_dialog::{DialogExt, FilePath};
 use uuid::Uuid;
 use zeroize::Zeroize;
 
+use self::import_file::{preview_import_file, read_import_file};
+
 use crate::import_export::importer::{
-    apply_import, parse_export_data, parse_import_payload, summarize_import, ImportStrategy,
-    ImportSummary,
+    apply_import, summarize_import, ImportStrategy, ImportSummary,
 };
 use crate::models::{AppData, ExportCalendar, ExportData, ExportEvent, ExportMode};
 use crate::state::AppState;
-use crate::storage::encryption::{EncryptedEnvelope, EncryptionContext, ENCRYPTED_FORMAT};
+use crate::storage::encryption::EncryptionContext;
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -29,7 +31,8 @@ pub struct ExportResult {
 #[serde(rename_all = "camelCase")]
 pub struct ImportPreview {
     pub path: String,
-    pub summary: ImportSummary,
+    pub summary: Option<ImportSummary>,
+    pub encrypted: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -93,27 +96,24 @@ pub fn get_launch_directory(state: State<'_, AppState>) -> Result<String, String
 pub async fn preview_import_json(
     strategy: ImportStrategy,
     password: Option<String>,
+    path: Option<String>,
     default_path: Option<String>,
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<ImportPreview, String> {
-    let file_path = app
-        .dialog()
-        .file()
-        .set_title("Import Ordning JSON")
-        .set_directory(resolve_dialog_directory(&state, default_path))
-        .add_filter("JSON", &["json"])
-        .blocking_pick_file()
-        .ok_or_else(|| "import canceled".to_owned())?;
-
-    let path = to_path_buf(file_path)?;
-    let imported = read_import_file(&path, password)?;
-    let current = snapshot_data(&state)?;
-    let summary = summarize_import(&current, &imported, strategy);
+    let path = resolve_import_path(path, default_path, &app, &state)?;
+    let (imported, encrypted) = preview_import_file(&path, password)?;
+    let summary = if let Some(imported_data) = imported {
+        let current = snapshot_data(&state)?;
+        Some(summarize_import(&current, &imported_data, strategy))
+    } else {
+        None
+    };
 
     Ok(ImportPreview {
         path: path.display().to_string(),
         summary,
+        encrypted,
     })
 }
 
@@ -169,6 +169,31 @@ fn resolve_dialog_directory(state: &State<'_, AppState>, default_path: Option<St
         .filter(|path| !path.is_empty())
         .map(PathBuf::from)
         .unwrap_or_else(|| state.launch_directory.clone())
+}
+
+fn resolve_import_path(
+    selected_path: Option<String>,
+    default_path: Option<String>,
+    app: &AppHandle,
+    state: &State<'_, AppState>,
+) -> Result<PathBuf, String> {
+    if let Some(path) = selected_path
+        .map(|path| path.trim().to_owned())
+        .filter(|path| !path.is_empty())
+    {
+        return Ok(PathBuf::from(path));
+    }
+
+    let file_path = app
+        .dialog()
+        .file()
+        .set_title("Import Ordning JSON")
+        .set_directory(resolve_dialog_directory(state, default_path))
+        .add_filter("JSON", &["json"])
+        .blocking_pick_file()
+        .ok_or_else(|| "import canceled".to_owned())?;
+
+    to_path_buf(file_path)
 }
 
 fn parse_calendar_ids(raw: Option<Vec<String>>) -> Result<Option<HashSet<Uuid>>, String> {
@@ -251,40 +276,6 @@ fn serialize_export_payload(
             let envelope = envelope?;
             serde_json::to_vec_pretty(&envelope).map_err(|err| format!("serialize export: {err}"))
         }
-    }
-}
-
-fn read_import_file(path: &PathBuf, password: Option<String>) -> Result<AppData, String> {
-    let content = fs::read_to_string(path).map_err(|err| format!("read import file: {err}"))?;
-    parse_import_content(&content, password)
-}
-
-fn parse_import_content(content: &str, password: Option<String>) -> Result<AppData, String> {
-    let parsed = serde_json::from_str::<Value>(content)
-        .map_err(|err| format!("invalid import JSON: {err}"))?;
-
-    match parsed.get("format").and_then(Value::as_str) {
-        Some(ENCRYPTED_FORMAT) => {
-            let envelope = serde_json::from_value::<EncryptedEnvelope>(parsed)
-                .map_err(|err| format!("invalid encrypted import JSON: {err}"))?;
-            let mut password = password.unwrap_or_default();
-            if password.trim().is_empty() {
-                password.zeroize();
-                return Err("password is required for encrypted import".to_owned());
-            }
-
-            let export_data = EncryptionContext::decrypt_json_with_password::<ExportData>(
-                &envelope,
-                &password,
-                "encrypted export data",
-            )
-            .map_err(|err| format!("failed to decrypt import file: {err}"));
-            password.zeroize();
-
-            parse_export_data(export_data?)
-        }
-        Some(other) => Err(format!("unsupported import format '{other}'")),
-        None => parse_import_payload(content),
     }
 }
 
@@ -460,9 +451,15 @@ mod tests {
             .expect("encrypted export payload");
         let content = String::from_utf8(payload).expect("utf8 export payload");
 
-        let imported =
-            parse_import_content(&content, Some("top secret".to_owned())).expect("import works");
+        let (imported, encrypted) = super::import_file::parse_import_content(
+            &content,
+            Some("top secret".to_owned()),
+            false,
+        )
+        .expect("import works");
+        let imported = imported.expect("imported app data");
 
+        assert!(encrypted);
         assert_eq!(imported.calendars.len(), 1);
         assert_eq!(imported.events.len(), 1);
         assert_eq!(imported.events[0].title, "Encrypted");
@@ -475,7 +472,7 @@ mod tests {
             .expect("encrypted export payload");
         let content = String::from_utf8(payload).expect("utf8 export payload");
 
-        let error = parse_import_content(&content, None)
+        let error = super::import_file::parse_import_content(&content, None, false)
             .expect_err("encrypted import should require password");
 
         assert!(error.contains("password is required"));

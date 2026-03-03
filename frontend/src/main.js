@@ -1,6 +1,5 @@
 import { t } from "./i18n/strings.js";
 import { createConfirmDialog } from "./components/dialogs/confirm-dialog.js";
-import { createSettingsDialog } from "./components/dialogs/settings-dialog.js";
 import { createEventModal } from "./components/event-form/event-modal.js";
 import { createExportDialog } from "./components/export-dialog/export-dialog.js";
 import { createImportDialog } from "./components/import-dialog/import-dialog.js";
@@ -9,12 +8,14 @@ import { renderMiniMonth } from "./components/sidebar/mini-month.js";
 import { renderToolbar } from "./components/toolbar/toolbar.js";
 import { DEFAULT_PIXELS_PER_HOUR, installPinchZoom, installZoomGuards } from "./components/week-view/week-zoom.js";
 import { installCloseGuard } from "./main/close-guard.js";
+import { bootstrapApp } from "./main/bootstrap.js";
 import { createEventHighlightHelpers } from "./main/event-highlight.js";
 import { createEventMutationHandlers } from "./main/event-mutations.js";
 import { invoke } from "./main/invoke.js";
 import { createManualSaveController } from "./main/manual-save.js";
 import { createEventCopyPasteController } from "./main/event-copy-paste.js";
-import { applySettings, getCurrentTimezone, initializeSettings } from "./main/settings.js";
+import { mountSettingsDialog } from "./main/settings-dialog.js";
+import { getCurrentTimezone, initializeSettings } from "./main/settings.js";
 import { renderWeekSection } from "./main/week-render.js";
 import { getStartOfWeek } from "./utils/date-utils.js";
 import { setupKeyboardHandler } from "./utils/keyboard-handler.js";
@@ -26,7 +27,7 @@ let unsubscribeState = null;
 let keydownHandler = null;
 let teardownZoomGuards = null; let teardownPinchZoom = null; let teardownCloseGuard = null; let teardownManualSave = null; let teardownCopyPaste = null;
 let pendingWeekViewRenderOptions = null;
-async function renderAppShell() {
+export async function renderAppShell() {
   if (unsubscribeState) {
     unsubscribeState();
     unsubscribeState = null;
@@ -157,16 +158,7 @@ async function renderAppShell() {
     choose: confirmDialog.choose,
     onDiscard: refreshAndRender
   });
-  const settingsDialog = createSettingsDialog({
-    getTimezone: getCurrentTimezone,
-    onChangeSettings: async (nextSettings) => {
-      await applySettings({ invoke, nextSettings, onApplied: renderAppShell });
-    }
-  });
-  app.appendChild(settingsDialog.element);
-  settingsButton.addEventListener("click", () => {
-    settingsDialog.open();
-  });
+  mountSettingsDialog({ app, settingsButton, invoke, renderAppShell });
   const renderToolbarSection = (weekStart) => {
     toolbarContainer.innerHTML = "";
     toolbarContainer.appendChild(
@@ -493,8 +485,7 @@ async function renderAppShell() {
   await refreshAndRender();
   await saveController.sync();
 }
-async function bootstrap() {
-  await initializeSettings({ invoke });
-  await renderAppShell();
-}
-bootstrap();
+void bootstrapApp({
+  initializeSettings: () => initializeSettings({ invoke }),
+  renderAppShell
+});

@@ -114,6 +114,30 @@ impl JsonStore {
         Ok(())
     }
 
+    pub fn disable_encryption(&self, app_data: &AppData, password: &str) -> Result<()> {
+        {
+            let mode = self
+                .mode
+                .lock()
+                .map_err(|_| anyhow!("failed to lock store mode"))?;
+            match &*mode {
+                StoreMode::Plaintext => return Err(anyhow!("data file is not encrypted")),
+                StoreMode::Locked(_) => {
+                    return Err(anyhow!("unlock encrypted data before disabling encryption"));
+                }
+                StoreMode::Encrypted(context) => {
+                    if !context.verify_password(password)? {
+                        return Err(anyhow!("invalid password"));
+                    }
+                }
+            }
+        }
+
+        self.write_plaintext(app_data)?;
+        self.set_mode(StoreMode::Plaintext)?;
+        Ok(())
+    }
+
     pub fn unlock(&self, password: &str) -> Result<AppData> {
         let envelope = {
             let mode = self
@@ -342,6 +366,39 @@ mod tests {
             .unlock("wrong password")
             .expect_err("wrong password should fail");
         assert!(error.to_string().contains("invalid password"));
+
+        cleanup(&path);
+    }
+
+    #[test]
+    fn disable_encryption_restores_plaintext_round_trip() {
+        let path = unique_temp_file();
+        let store = JsonStore::from_path(path.clone());
+        let original = match store.load_or_create().expect("bootstrap should succeed") {
+            LoadState::Ready(app_data) => app_data,
+            LoadState::Locked => panic!("new file should not start locked"),
+        };
+        store
+            .enable_encryption(&original, "top secret")
+            .expect("encrypt store");
+        store
+            .disable_encryption(&original, "top secret")
+            .expect("disable encryption");
+
+        assert_eq!(
+            store.status(),
+            StorageStatus {
+                encrypted: false,
+                locked: false,
+            }
+        );
+
+        let reloaded = JsonStore::from_path(path.clone());
+        let loaded = reloaded.load_or_create().expect("reload should succeed");
+        match loaded {
+            LoadState::Ready(app_data) => assert_eq!(app_data, original),
+            LoadState::Locked => panic!("disabled encryption should restore plaintext storage"),
+        }
 
         cleanup(&path);
     }
