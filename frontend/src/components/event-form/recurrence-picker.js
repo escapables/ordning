@@ -1,4 +1,5 @@
 import { t, tDayShort } from "../../i18n/strings.js";
+import { createDatePicker } from "../pickers/date-picker.js";
 
 const WEEKDAY_OPTIONS = [
   { value: "mon", dayIndex: 1 },
@@ -200,17 +201,15 @@ export function createRecurrencePicker({ startDateInput } = {}) {
   const afterCountLabel = document.createElement("span");
   afterCountLabel.textContent = t("recurrenceOccurrences");
 
-  const untilDateInput = document.createElement("input");
-  untilDateInput.className = "event-modal__input";
-  untilDateInput.type = "date";
-  untilDateInput.name = "recurrenceUntilDate";
+  const untilDatePicker = createDatePicker({ name: "recurrenceUntilDate" });
+  const untilDateInput = untilDatePicker.input;
 
   endsRow.append(
     endsLabel,
     endsSelect,
     afterCountInput,
     afterCountLabel,
-    untilDateInput
+    untilDatePicker.container
   );
   subGroup.appendChild(endsRow);
   element.appendChild(subGroup);
@@ -260,7 +259,7 @@ export function createRecurrencePicker({ startDateInput } = {}) {
     endsRow.hidden = frequency === "none";
     afterCountInput.hidden = endsRow.hidden || endsMode !== "after";
     afterCountLabel.hidden = afterCountInput.hidden;
-    untilDateInput.hidden = endsRow.hidden || endsMode !== "on_date";
+    untilDatePicker.container.hidden = endsRow.hidden || endsMode !== "on_date";
     intervalUnit.textContent = frequency === "monthly"
       ? t("recurrenceMonths")
       : t("recurrenceWeeks");

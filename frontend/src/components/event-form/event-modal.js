@@ -1,5 +1,8 @@
 import { t } from "../../i18n/strings.js";
 import { getState } from "../../state.js";
+import { createDatePicker } from "../pickers/date-picker.js";
+import { createTimePicker } from "../pickers/time-picker.js";
+import { positionDropdown } from "../pickers/position-dropdown.js";
 import { createRecurrencePicker } from "./recurrence-picker.js";
 import { createEventTemplateSearch } from "./event-template-search.js";
 
@@ -109,26 +112,41 @@ export function createEventModal({
   calendarSelect.className = "event-modal__input";
   calendarSelect.name = "calendarId";
   calendarSelect.required = true;
-  form.appendChild(createField(t("eventFormCalendar"), calendarSelect));
+  calendarSelect.style.cssText = "position:absolute;opacity:0;pointer-events:none;width:0;height:0";
+
+  const calendarContainer = document.createElement("div");
+  calendarContainer.className = "picker picker--calendar";
+
+  const calendarTrigger = document.createElement("button");
+  calendarTrigger.type = "button";
+  calendarTrigger.className = "event-modal__input picker__trigger";
+  const calendarDot = document.createElement("span");
+  calendarDot.className = "picker__dot";
+  const calendarLabel = document.createElement("span");
+  calendarLabel.className = "picker__trigger-label";
+  calendarTrigger.append(calendarDot, calendarLabel);
+
+  calendarContainer.append(calendarSelect, calendarTrigger);
+  form.appendChild(createField(t("eventFormCalendar"), calendarContainer));
 
   const dateRow = document.createElement("div");
   dateRow.className = "event-modal__row";
-  const startDateInput = createInput("date", "startDate");
-  startDateInput.required = true;
-  const endDateInput = createInput("date", "endDate");
-  endDateInput.required = true;
-  dateRow.appendChild(createField(t("eventFormStartDate"), startDateInput));
-  dateRow.appendChild(createField(t("eventFormEndDate"), endDateInput));
+  const startDatePicker = createDatePicker({ name: "startDate", required: true });
+  const startDateInput = startDatePicker.input;
+  const endDatePicker = createDatePicker({ name: "endDate", required: true });
+  const endDateInput = endDatePicker.input;
+  dateRow.appendChild(createField(t("eventFormStartDate"), startDatePicker.container));
+  dateRow.appendChild(createField(t("eventFormEndDate"), endDatePicker.container));
   form.appendChild(dateRow);
 
   const timeRow = document.createElement("div");
   timeRow.className = "event-modal__row";
-  const startTimeInput = createInput("time", "startTime");
-  startTimeInput.required = true;
-  const endTimeInput = createInput("time", "endTime");
-  endTimeInput.required = true;
-  timeRow.appendChild(createField(t("eventFormStartTime"), startTimeInput));
-  timeRow.appendChild(createField(t("eventFormEndTime"), endTimeInput));
+  const startTimePicker = createTimePicker({ name: "startTime", required: true });
+  const startTimeInput = startTimePicker.input;
+  const endTimePicker = createTimePicker({ name: "endTime", required: true });
+  const endTimeInput = endTimePicker.input;
+  timeRow.appendChild(createField(t("eventFormStartTime"), startTimePicker.container));
+  timeRow.appendChild(createField(t("eventFormEndTime"), endTimePicker.container));
   form.appendChild(timeRow);
 
   const allDayLabel = document.createElement("label");
@@ -257,17 +275,104 @@ export function createEventModal({
 
   function setCalendarAvailability(hasCalendars) {
     calendarSelect.disabled = !hasCalendars;
+    calendarTrigger.disabled = !hasCalendars;
     saveButton.disabled = !hasCalendars;
   }
 
+  let calendarDropdown = null;
+  let calendarLastCloseTime = 0;
+
+  function syncCalendarDisplay() {
+    const calendars = getState().calendars;
+    const selected = calendars.find((c) => c.id === calendarSelect.value);
+    if (selected) {
+      calendarDot.style.backgroundColor = selected.color || "#007aff";
+      calendarLabel.textContent = selected.name;
+    } else {
+      calendarDot.style.backgroundColor = "transparent";
+      calendarLabel.textContent = "";
+    }
+  }
+
+  function openCalendarDropdown() {
+    if (calendarDropdown || calendarTrigger.disabled) {
+      return;
+    }
+    calendarDropdown = document.createElement("div");
+    calendarDropdown.className = "picker__dropdown picker__dropdown--select";
+
+    const calendars = getState().calendars;
+    calendars.forEach((calendar) => {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "picker__select-item";
+      if (calendar.id === calendarSelect.value) {
+        item.classList.add("picker__select-item--selected");
+      }
+
+      const dot = document.createElement("span");
+      dot.className = "picker__dot";
+      dot.style.backgroundColor = calendar.color || "#007aff";
+
+      const name = document.createElement("span");
+      name.textContent = calendar.name;
+
+      item.append(dot, name);
+      item.addEventListener("click", (clickEvent) => {
+        clickEvent.stopPropagation();
+        calendarSelect.value = calendar.id;
+        syncCalendarDisplay();
+        closeCalendarDropdown();
+      });
+      calendarDropdown.appendChild(item);
+    });
+
+    positionDropdown(calendarDropdown, calendarTrigger);
+    document.addEventListener("pointerdown", onCalendarOutsideClick, true);
+    document.addEventListener("keydown", onCalendarEscape);
+  }
+
+  function closeCalendarDropdown() {
+    if (!calendarDropdown) {
+      return;
+    }
+    calendarDropdown.remove();
+    calendarDropdown = null;
+    calendarLastCloseTime = Date.now();
+    document.removeEventListener("pointerdown", onCalendarOutsideClick, true);
+    document.removeEventListener("keydown", onCalendarEscape);
+  }
+
+  function onCalendarOutsideClick(pointerEvent) {
+    if (!calendarContainer.contains(pointerEvent.target)
+      && (!calendarDropdown || !calendarDropdown.contains(pointerEvent.target))) {
+      closeCalendarDropdown();
+    }
+  }
+
+  function onCalendarEscape(keyEvent) {
+    if (keyEvent.key === "Escape") {
+      keyEvent.stopPropagation();
+      closeCalendarDropdown();
+    }
+  }
+
+  calendarTrigger.addEventListener("click", () => {
+    if (!calendarDropdown && Date.now() - calendarLastCloseTime > 100) {
+      openCalendarDropdown();
+    }
+  });
+
   function fillCalendarOptions(selectedCalendarId, preferVisibleDefault = false) {
-    calendarSelect.innerHTML = "";
+    while (calendarSelect.firstChild) {
+      calendarSelect.removeChild(calendarSelect.firstChild);
+    }
     const calendars = getState().calendars;
 
     calendars.forEach((calendar) => {
       const option = document.createElement("option");
       option.value = calendar.id;
-      option.textContent = `● ${calendar.name}`;
+      option.textContent = calendar.name;
       calendarSelect.appendChild(option);
     });
 
@@ -281,6 +386,7 @@ export function createEventModal({
     }
 
     setCalendarAvailability(calendars.length > 0);
+    syncCalendarDisplay();
     return calendars.length > 0;
   }
 
@@ -410,6 +516,7 @@ export function createEventModal({
     }
   }
 
+  calendarSelect.addEventListener("change", syncCalendarDisplay);
   allDayInput.addEventListener("change", applyAllDayState);
   [startDateInput, endDateInput, startTimeInput, endTimeInput].forEach(input => {
     input.addEventListener("change", () => input.blur());
@@ -426,6 +533,7 @@ export function createEventModal({
   });
 
   cancelButton.addEventListener("click", () => {
+    closeCalendarDropdown();
     dialog.close();
   });
 
