@@ -40,6 +40,26 @@
   const isWrappedClock = (startTime, endTime) =>
     String(endTime ?? "").localeCompare(String(startTime ?? "")) <= 0;
 
+  const resolveVirtualFile = (file, password) => {
+    if (!file) {
+      throw "read import file: not found";
+    }
+
+    if (file.format !== "ordning-encrypted-1") {
+      return file;
+    }
+
+    if (!password) {
+      throw "password is required for encrypted import";
+    }
+
+    if (password !== file.__password) {
+      throw "failed to decrypt import file: invalid password or corrupted encrypted data";
+    }
+
+    return file.__snapshot;
+  };
+
   tauri.core.invoke = function patchedInvoke(command, payload = {}) {
     if (command === "create_calendar") {
       return Promise.resolve(baseInvoke(command, payload)).then((created) => {
@@ -116,6 +136,10 @@
       const exportEvents = [...events.values()].filter((event) =>
         selectedIds.has(event.calendarId)
       );
+      const password = payload?.password;
+      if (typeof password === "string" && !password.trim()) {
+        return Promise.reject("export password is required");
+      }
       exportCounter += 1;
       const path = `/tmp/ordning-export-${exportCounter}.json`;
       const serialized = {
@@ -126,7 +150,16 @@
           ...event
         }))
       };
-      virtualFiles.set(path, serialized);
+      virtualFiles.set(
+        path,
+        typeof password === "string"
+          ? {
+              format: "ordning-encrypted-1",
+              __password: password,
+              __snapshot: serialized
+            }
+          : serialized
+      );
       lastPath = path;
       return Promise.resolve({
         path,
@@ -137,13 +170,29 @@
 
     if (command === "preview_import_json") {
       window.__ORDNING_DIALOG_DEFAULTS.importDefaultPath = payload?.defaultPath ?? null;
-      const snapshot = virtualFiles.get(lastPath);
-      if (!snapshot) {
-        return Promise.reject("import canceled");
+      const path = payload?.path ?? lastPath;
+      const file = virtualFiles.get(path);
+      if (!file) {
+        return Promise.reject("read import file: not found");
+      }
+      if (file.format === "ordning-encrypted-1" && !payload?.password) {
+        return Promise.resolve({
+          path,
+          summary: null,
+          encrypted: true
+        });
+      }
+
+      let snapshot;
+      try {
+        snapshot = resolveVirtualFile(file, payload?.password);
+      } catch (error) {
+        return Promise.reject(error);
       }
 
       return Promise.resolve({
-        path: lastPath,
+        path,
+        encrypted: file.format === "ordning-encrypted-1",
         summary: {
           calendarCount: snapshot.calendars.length,
           eventCount: snapshot.events.length,
@@ -155,9 +204,14 @@
     }
 
     if (command === "import_json") {
-      const snapshot = virtualFiles.get(payload?.path ?? "");
-      if (!snapshot) {
-        return Promise.reject("read import file: not found");
+      let snapshot;
+      try {
+        snapshot = resolveVirtualFile(
+          virtualFiles.get(payload?.path ?? ""),
+          payload?.password
+        );
+      } catch (error) {
+        return Promise.reject(error);
       }
 
       return Promise.all(
@@ -168,7 +222,7 @@
             ?? (isWrappedClock(event.startTime, event.endTime)
               ? addDays(startDate, 1)
               : startDate);
-          return baseInvoke("create_event", {
+          return tauri.core.invoke("create_event", {
             event: {
               calendarId: event.calendarId,
               title: event.title,
@@ -180,14 +234,6 @@
               descriptionPrivate: event.descriptionPrivate ?? "",
               descriptionPublic: event.descriptionPublic ?? "",
               location: event.location ?? ""
-            }
-          }).then((created) => {
-            if (created?.id) {
-              events.set(created.id, {
-                ...event,
-                id: created.id,
-                endDate
-              });
             }
           });
         })

@@ -39,6 +39,24 @@ function createRadio(name, value, checked, labelText, subtitleText) {
   return { label, input };
 }
 
+function createPasswordField(className, labelText) {
+  const row = document.createElement("label");
+  row.className = "export-dialog__field";
+
+  const label = document.createElement("span");
+  label.className = "export-dialog__field-label";
+  label.textContent = labelText;
+  row.appendChild(label);
+
+  const input = document.createElement("input");
+  input.type = "password";
+  input.className = className;
+  input.autocomplete = "new-password";
+  row.appendChild(input);
+
+  return { row, input };
+}
+
 export function createExportDialog({ onPrint } = {}) {
   const dialog = document.createElement("dialog");
   dialog.className = "export-dialog";
@@ -69,6 +87,50 @@ export function createExportDialog({ onPrint } = {}) {
   modeSection.appendChild(fullMode.label);
   modeSection.appendChild(publicMode.label);
   form.appendChild(modeSection);
+
+  const encryptSection = document.createElement("fieldset");
+  encryptSection.className = "export-dialog__fieldset";
+
+  const encryptToggle = document.createElement("label");
+  encryptToggle.className = "export-dialog__toggle";
+
+  const encryptInput = document.createElement("input");
+  encryptInput.type = "checkbox";
+  encryptInput.className = "export-dialog__encrypt-checkbox";
+  encryptToggle.appendChild(encryptInput);
+
+  const encryptCopy = document.createElement("span");
+  encryptCopy.className = "export-dialog__radio-copy";
+
+  const encryptLabel = document.createElement("span");
+  encryptLabel.className = "export-dialog__radio-label";
+  encryptLabel.textContent = t("exportEncryptLabel");
+  encryptCopy.appendChild(encryptLabel);
+
+  const encryptHint = document.createElement("span");
+  encryptHint.className = "export-dialog__radio-subtitle";
+  encryptHint.textContent = t("exportEncryptHint");
+  encryptCopy.appendChild(encryptHint);
+
+  encryptToggle.appendChild(encryptCopy);
+  encryptSection.appendChild(encryptToggle);
+
+  const passwordFields = document.createElement("div");
+  passwordFields.className = "export-dialog__passwords";
+  passwordFields.hidden = true;
+
+  const passwordField = createPasswordField(
+    "export-dialog__password-input",
+    t("exportPasswordLabel")
+  );
+  const passwordConfirmField = createPasswordField(
+    "export-dialog__password-confirm-input",
+    t("exportPasswordConfirmLabel")
+  );
+  passwordFields.appendChild(passwordField.row);
+  passwordFields.appendChild(passwordConfirmField.row);
+  encryptSection.appendChild(passwordFields);
+  form.appendChild(encryptSection);
 
   const calendarSection = document.createElement("fieldset");
   calendarSection.className = "export-dialog__fieldset";
@@ -204,16 +266,47 @@ export function createExportDialog({ onPrint } = {}) {
     return publicMode.input.checked ? "public" : "full";
   }
 
+  function isEncryptedExport() {
+    return encryptInput.checked;
+  }
+
+  function resetPasswordFields() {
+    passwordField.input.value = "";
+    passwordConfirmField.input.value = "";
+  }
+
+  function syncPasswordVisibility() {
+    passwordFields.hidden = !isEncryptedExport();
+    if (!isEncryptedExport()) {
+      resetPasswordFields();
+    }
+  }
+
   async function open() {
     clearError();
     defaultPath = await getDialogDefaultPath();
     buildCalendarList();
     await refreshPreview();
+    encryptInput.checked = false;
+    syncPasswordVisibility();
     dialog.showModal();
   }
 
   cancelButton.addEventListener("click", () => {
     dialog.close();
+  });
+
+  encryptInput.addEventListener("change", () => {
+    clearError();
+    syncPasswordVisibility();
+  });
+
+  passwordField.input.addEventListener("input", () => {
+    clearError();
+  });
+
+  passwordConfirmField.input.addEventListener("input", () => {
+    clearError();
   });
 
   form.addEventListener("submit", async (event) => {
@@ -226,12 +319,30 @@ export function createExportDialog({ onPrint } = {}) {
       return;
     }
 
+    let password;
+    if (isEncryptedExport()) {
+      if (!passwordField.input.value.trim() || !passwordConfirmField.input.value.trim()) {
+        showError(t("exportPasswordRequired"));
+        return;
+      }
+      if (passwordField.input.value !== passwordConfirmField.input.value) {
+        showError(t("exportPasswordMismatch"));
+        return;
+      }
+      password = passwordField.input.value;
+    }
+
     try {
-      const result = await invoke("export_json", {
+      const payload = {
         mode: selectedMode(),
         calendarIds,
         defaultPath
-      });
+      };
+      if (password) {
+        payload.password = password;
+      }
+      const result = await invoke("export_json", payload);
+      resetPasswordFields();
       dialog.close();
       window.alert(t("exportSuccessMessage").replace("{path}", result.path));
     } catch (exportError) {

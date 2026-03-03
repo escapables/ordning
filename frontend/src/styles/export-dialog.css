@@ -57,6 +57,13 @@
   gap: 6px;
 }
 
+.export-dialog__toggle {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+}
+
 .export-dialog__calendar {
   display: inline-flex;
   align-items: center;
@@ -128,4 +135,32 @@
   font-size: 12px;
   font-style: italic;
   color: var(--color-text-secondary, #8e8e93);
+}
+
+.export-dialog__passwords {
+  display: grid;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.export-dialog__field {
+  display: grid;
+  gap: 4px;
+}
+
+.export-dialog__field-label {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.export-dialog__password-input,
+.export-dialog__password-confirm-input {
+  min-height: 30px;
+  border: 1px solid var(--color-border-muted);
+  border-radius: var(--radius-btn);
+  padding: 0 8px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--color-text-primary);
+  background: #fff;
 }
