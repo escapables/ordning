@@ -124,6 +124,7 @@ async function renderAppShell() {
     }
   });
   const eventModal = createEventModal({
+    confirmDialog,
     onPersist: refreshAndRender,
     onEnsureCalendars: loadCalendars,
     onDelete: deleteEventById,

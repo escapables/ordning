@@ -49,6 +49,7 @@ function createInput(type, name) {
 }
 
 export function createEventModal({
+  confirmDialog,
   onPersist,
   onEnsureCalendars = async () => {},
   onFocusCalendarCreate = () => {},
@@ -212,7 +213,9 @@ export function createEventModal({
 
   const state = {
     mode: "create",
-    editingId: null
+    editingId: null,
+    originalDescriptionPrivate: "",
+    originalDescriptionPublic: ""
   };
 
   function toggleNoCalendarsCreateState(enabled) {
@@ -393,6 +396,8 @@ export function createEventModal({
       locationInput.value = event.location ?? "";
       privateDescriptionInput.value = event.descriptionPrivate ?? "";
       publicDescriptionInput.value = event.descriptionPublic ?? "";
+      state.originalDescriptionPrivate = privateDescriptionInput.value;
+      state.originalDescriptionPublic = publicDescriptionInput.value;
       recurrencePicker.loadRecurrence(event.recurrence ?? null);
       applyAllDayState();
       setTitleValidationError(false);
@@ -450,6 +455,52 @@ export function createEventModal({
     }
   });
 
+  function descriptionChanged(payload) {
+    return payload.descriptionPrivate !== state.originalDescriptionPrivate
+      || payload.descriptionPublic !== state.originalDescriptionPublic;
+  }
+
+  async function maybeBulkUpdateDescriptions(payload) {
+    if (!confirmDialog || !state.editingId || !descriptionChanged(payload)) {
+      return true;
+    }
+
+    const matchCount = await invoke("count_events_by_title", {
+      title: payload.title,
+      calendarId: payload.calendarId,
+      excludeId: state.editingId
+    });
+
+    if (matchCount === 0) {
+      return true;
+    }
+
+    const choice = await confirmDialog.choose(
+      t("bulkDescriptionPrompt").replace("{count}", matchCount),
+      {
+        confirmLabel: t("bulkDescriptionUpdateAll"),
+        confirmTone: "success",
+        alternateLabel: t("bulkDescriptionOnlyThis")
+      }
+    );
+
+    if (choice === false) {
+      return false;
+    }
+
+    if (choice === true) {
+      await invoke("bulk_update_descriptions", {
+        title: payload.title,
+        calendarId: payload.calendarId,
+        excludeId: state.editingId,
+        descriptionPrivate: payload.descriptionPrivate,
+        descriptionPublic: payload.descriptionPublic
+      });
+    }
+
+    return true;
+  }
+
   form.addEventListener("submit", async (submitEvent) => {
     submitEvent.preventDefault();
     clearError();
@@ -474,6 +525,10 @@ export function createEventModal({
 
     try {
       if (state.mode === "edit" && state.editingId) {
+        const proceed = await maybeBulkUpdateDescriptions(payload);
+        if (!proceed) {
+          return;
+        }
         await invoke("update_event", { id: state.editingId, event: payload });
       } else {
         await invoke("create_event", { event: payload });

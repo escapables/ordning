@@ -260,6 +260,38 @@
         return Promise.resolve(null);
       }
 
+      case "count_events_by_title": {
+        var countTitle = String((payload && payload.title) || "").trim().toLowerCase();
+        var countCalendarId = payload && payload.calendarId;
+        var countExcludeId = payload && payload.excludeId;
+        var matchCount = state.events.filter(function (event) {
+          return event.id !== countExcludeId
+            && event.calendarId === countCalendarId
+            && String(event.title || "").trim().toLowerCase() === countTitle;
+        }).length;
+        return Promise.resolve(matchCount);
+      }
+
+      case "bulk_update_descriptions": {
+        var bulkTitle = String((payload && payload.title) || "").trim().toLowerCase();
+        var bulkCalendarId = payload && payload.calendarId;
+        var bulkExcludeId = payload && payload.excludeId;
+        var bulkPrivate = (payload && payload.descriptionPrivate) || "";
+        var bulkPublic = (payload && payload.descriptionPublic) || "";
+        var bulkCount = 0;
+        state.events.forEach(function (event) {
+          if (event.id !== bulkExcludeId
+            && event.calendarId === bulkCalendarId
+            && String(event.title || "").trim().toLowerCase() === bulkTitle) {
+            event.descriptionPrivate = bulkPrivate;
+            event.descriptionPublic = bulkPublic;
+            event.updated_at = toIso();
+            bulkCount++;
+          }
+        });
+        return Promise.resolve(bulkCount);
+      }
+
       case "get_past_events_count": {
         var todayKey = (payload && payload.beforeDate) || dateKey(new Date());
         var count = state.events.filter(function (event) {

@@ -307,6 +307,72 @@ fn ensure_calendar_exists(
     }
 }
 
+#[tauri::command]
+pub fn count_events_by_title(
+    title: String,
+    calendar_id: String,
+    exclude_id: String,
+    state: State<'_, AppState>,
+) -> Result<usize, String> {
+    let calendar_uuid = parse_uuid(&calendar_id)?;
+    let exclude_uuid = parse_uuid(&exclude_id)?;
+    let normalized = title.trim().to_lowercase();
+
+    let app_data = state
+        .data
+        .lock()
+        .map_err(|err| format!("failed to lock app state: {err}"))?;
+
+    let count = app_data
+        .events
+        .iter()
+        .filter(|event| {
+            event.id != exclude_uuid
+                && event.calendar_id == calendar_uuid
+                && event.title.trim().to_lowercase() == normalized
+        })
+        .count();
+
+    Ok(count)
+}
+
+#[tauri::command]
+pub fn bulk_update_descriptions(
+    title: String,
+    calendar_id: String,
+    exclude_id: String,
+    description_private: String,
+    description_public: String,
+    state: State<'_, AppState>,
+) -> Result<usize, String> {
+    let calendar_uuid = parse_uuid(&calendar_id)?;
+    let exclude_uuid = parse_uuid(&exclude_id)?;
+    let normalized = title.trim().to_lowercase();
+    let now = Utc::now().to_rfc3339();
+    let trimmed_private = description_private.trim().to_owned();
+    let trimmed_public = description_public.trim().to_owned();
+
+    let mut app_data = state
+        .data
+        .lock()
+        .map_err(|err| format!("failed to lock app state: {err}"))?;
+
+    let mut count = 0usize;
+    for event in &mut app_data.events {
+        if event.id != exclude_uuid
+            && event.calendar_id == calendar_uuid
+            && event.title.trim().to_lowercase() == normalized
+        {
+            event.description_private = trimmed_private.clone();
+            event.description_public = trimmed_public.clone();
+            event.updated_at = now.clone();
+            count += 1;
+        }
+    }
+
+    Ok(count)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
