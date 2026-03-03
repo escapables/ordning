@@ -1,6 +1,7 @@
 mod commands;
 mod import_export;
 mod models;
+mod recurrence;
 mod state;
 mod storage;
 

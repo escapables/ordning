@@ -1,4 +1,5 @@
 import {
+  eventDurationMinutes,
   MINUTES_PER_HOUR,
   TIME_STEP_MINUTES,
   formatTimeFromMinutes,
@@ -15,6 +16,7 @@ import {
 } from "../utils/ui-actions.js";
 
 const HOURS_PER_DAY = 24;
+const MINUTES_PER_DAY = HOURS_PER_DAY * MINUTES_PER_HOUR;
 const MIN_PREVIEW_HEIGHT = 18;
 
 function resolvePixelsPerHour(column) {
@@ -31,7 +33,7 @@ function resolvePixelsPerHour(column) {
 
 function readEventData(element) {
   return {
-    id: element.dataset.eventId ?? "",
+    id: element.dataset.eventActionId ?? element.dataset.eventId ?? "",
     title: element.querySelector(".event-block__title")?.textContent ?? "",
     time: element.querySelector(".event-block__time")?.textContent ?? ""
   };
@@ -39,7 +41,9 @@ function readEventData(element) {
 
 function findTimedEventElement(weekContainer, eventId) {
   return Array.from(weekContainer.querySelectorAll(".event-block")).find(
-    (element) => element instanceof HTMLElement && element.dataset.eventId === eventId
+    (element) =>
+      element instanceof HTMLElement
+      && (element.dataset.eventId === eventId || element.dataset.eventActionId === eventId)
   ) ?? null;
 }
 
@@ -54,6 +58,7 @@ function resolveEventColor(weekContainer, eventId, sourceElement = null) {
 }
 
 function resolveSlotFromPoint(weekContainer, clientX, clientY) {
+  const pointed = document.elementFromPoint(clientX, clientY);
   const column = resolveColumnFromPoint(clientX, clientY);
   if (!(column instanceof HTMLElement) || !weekContainer.contains(column)) {
     return null;
@@ -66,14 +71,75 @@ function resolveSlotFromPoint(weekContainer, clientX, clientY) {
 
   const rect = column.getBoundingClientRect();
   const pixelsPerHour = resolvePixelsPerHour(column);
+  const pointedHour = pointed instanceof Element ? pointed.closest(".day-column__hour") : null;
+  const hourCells = Array.from(column.querySelectorAll(".day-column__hour"));
+  const hourIndex = pointedHour instanceof HTMLElement ? hourCells.indexOf(pointedHour) : -1;
   const rawMinutes = pointerToMinutes(clientY, rect, pixelsPerHour);
-  const startMinutes = Math.max(
-    0,
-    Math.min(roundNearest(rawMinutes, TIME_STEP_MINUTES), (24 * MINUTES_PER_HOUR) - TIME_STEP_MINUTES)
-  );
+  const startMinutes = hourIndex >= 0
+    ? hourIndex * MINUTES_PER_HOUR
+    : Math.max(
+      0,
+      Math.min(roundNearest(rawMinutes, TIME_STEP_MINUTES), (24 * MINUTES_PER_HOUR) - TIME_STEP_MINUTES)
+    );
 
   return {
     column,
+    date,
+    startMinutes,
+    startTime: formatTimeFromMinutes(startMinutes)
+  };
+}
+
+function addDaysToDateKey(dateKey, days) {
+  const [year, month, day] = String(dateKey).split("-").map(Number);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
+    return "";
+  }
+
+  const date = new Date(year, month - 1, day);
+  date.setDate(date.getDate() + days);
+  const nextMonth = String(date.getMonth() + 1).padStart(2, "0");
+  const nextDay = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${nextMonth}-${nextDay}`;
+}
+
+function resolveCopyAnchorOffset(sourceEvent, sourceElement = null) {
+  if (sourceElement instanceof HTMLElement) {
+    const startMinutes = Number.parseFloat(sourceElement.dataset.startMinutes ?? "");
+    const endMinutes = Number.parseFloat(sourceElement.dataset.endMinutes ?? "");
+    if (Number.isFinite(startMinutes) && Number.isFinite(endMinutes) && endMinutes > startMinutes) {
+      return roundNearest((endMinutes - startMinutes) / 2, TIME_STEP_MINUTES);
+    }
+  }
+
+  return roundNearest(eventDurationMinutes(sourceEvent) / 2, TIME_STEP_MINUTES);
+}
+
+function applyAnchorOffset(slot, anchorOffsetMinutes) {
+  if (!slot || !Number.isFinite(anchorOffsetMinutes) || anchorOffsetMinutes <= 0) {
+    return slot;
+  }
+
+  let startMinutes = slot.startMinutes - anchorOffsetMinutes;
+  let dayOffset = 0;
+
+  while (startMinutes < 0) {
+    startMinutes += MINUTES_PER_DAY;
+    dayOffset -= 1;
+  }
+
+  while (startMinutes >= MINUTES_PER_DAY) {
+    startMinutes -= MINUTES_PER_DAY;
+    dayOffset += 1;
+  }
+
+  const date = dayOffset === 0 ? slot.date : addDaysToDateKey(slot.date, dayOffset);
+  if (!date) {
+    return slot;
+  }
+
+  return {
+    ...slot,
     date,
     startMinutes,
     startTime: formatTimeFromMinutes(startMinutes)
@@ -103,10 +169,12 @@ export function createEventCopyPasteController(options = {}) {
   const state = {
     active: false,
     sourceEvent: null,
+    anchorOffsetMinutes: 0,
     eventColor: "#007aff",
     previews: [],
     lastPointer: null,
     lastSlot: null,
+    lastResolvedSlot: null,
     pasteInFlight: false
   };
 
@@ -121,29 +189,31 @@ export function createEventCopyPasteController(options = {}) {
     clearPreview();
     state.active = false;
     state.sourceEvent = null;
+    state.anchorOffsetMinutes = 0;
     state.lastSlot = null;
+    state.lastResolvedSlot = null;
   }
 
   function renderPreview(slot) {
     clearPreview();
     state.lastSlot = slot;
+    state.lastResolvedSlot = applyAnchorOffset(slot, state.anchorOffsetMinutes);
 
-    if (!state.active || !state.sourceEvent || !slot) {
+    if (!state.active || !state.sourceEvent || !state.lastResolvedSlot) {
       return false;
     }
 
     const placement = resolvePastePlacement(state.sourceEvent, {
-      date: slot.date,
-      startTime: slot.startTime
+      date: state.lastResolvedSlot.date,
+      startTime: state.lastResolvedSlot.startTime
     });
     if (!placement) {
       return false;
     }
 
     placement.segments.forEach((segment) => {
-      const targetColumn = segment.date === slot.date
-        ? slot.column
-        : weekContainer.querySelector(`.day-column[data-date="${segment.date}"]`);
+      const targetColumn = weekContainer.querySelector(`.day-column[data-date="${segment.date}"]`)
+        ?? (segment.date === state.lastResolvedSlot.date ? state.lastResolvedSlot.column : null);
       if (!(targetColumn instanceof HTMLElement)) {
         return;
       }
@@ -180,6 +250,7 @@ export function createEventCopyPasteController(options = {}) {
 
       state.active = true;
       state.sourceEvent = sourceEvent;
+      state.anchorOffsetMinutes = resolveCopyAnchorOffset(sourceEvent, sourceElement);
       state.eventColor = resolveEventColor(weekContainer, eventData.id, sourceElement);
       if (state.lastPointer) {
         updatePreview(state.lastPointer.clientX, state.lastPointer.clientY);
@@ -196,7 +267,8 @@ export function createEventCopyPasteController(options = {}) {
   }
 
   async function pasteAtSlot(slot) {
-    if (!state.active || !slot || state.pasteInFlight) {
+    const resolvedSlot = applyAnchorOffset(slot, state.anchorOffsetMinutes);
+    if (!state.active || !resolvedSlot || state.pasteInFlight) {
       return false;
     }
 
@@ -208,12 +280,13 @@ export function createEventCopyPasteController(options = {}) {
       const pasted = await pasteCopiedEventAtSlot({
         invoke,
         refresh,
-        date: slot.date,
-        startTime: slot.startTime
+        date: resolvedSlot.date,
+        startTime: resolvedSlot.startTime
       });
       if (!pasted && sourceEvent) {
         state.active = true;
         state.sourceEvent = sourceEvent;
+        state.anchorOffsetMinutes = resolveCopyAnchorOffset(sourceEvent);
         renderPreview(slot);
       }
       return pasted;
@@ -221,6 +294,7 @@ export function createEventCopyPasteController(options = {}) {
       if (sourceEvent) {
         state.active = true;
         state.sourceEvent = sourceEvent;
+        state.anchorOffsetMinutes = resolveCopyAnchorOffset(sourceEvent);
         renderPreview(slot);
       }
       window.alert(String(error));
@@ -287,6 +361,7 @@ export function createEventCopyPasteController(options = {}) {
   function handlePointerLeave() {
     state.lastPointer = null;
     state.lastSlot = null;
+    state.lastResolvedSlot = null;
     if (state.active) {
       clearPreview();
     }

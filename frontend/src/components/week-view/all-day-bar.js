@@ -11,6 +11,7 @@ function renderAllDayEvent(event, handlers = {}) {
   const element = document.createElement("article");
   element.className = "all-day-event";
   element.dataset.eventId = event.id;
+  element.dataset.eventActionId = event.actionId ?? event.id;
   element.tabIndex = 3;
   element.style.setProperty("--event-color", event.color);
   element.textContent = event.title;
@@ -31,7 +32,7 @@ function renderAllDayEvent(event, handlers = {}) {
   });
   element.addEventListener("dblclick", (doubleClickEvent) => {
     doubleClickEvent.stopPropagation();
-    onEventClick(event.id);
+    onEventClick(event.actionId ?? event.id);
   });
   element.addEventListener("keydown", (keyboardEvent) => {
     if (keyboardEvent.key !== "Enter" && keyboardEvent.key !== " ") {
@@ -39,13 +40,13 @@ function renderAllDayEvent(event, handlers = {}) {
     }
     keyboardEvent.preventDefault();
     keyboardEvent.stopPropagation();
-    onEventClick(event.id);
+    onEventClick(event.actionId ?? event.id);
   });
   element.addEventListener("contextmenu", (contextMenuEvent) => {
     openEventContextMenu(
       contextMenuEvent,
       {
-        id: event.id,
+        id: event.actionId ?? event.id,
         title: event.title,
         time: ""
       },

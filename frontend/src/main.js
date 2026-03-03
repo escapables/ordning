@@ -468,7 +468,7 @@ async function renderAppShell() {
           : selectedEvent instanceof HTMLElement
             ? selectedEvent
             : null;
-      return targetEvent?.dataset.eventId ?? null;
+      return targetEvent?.dataset.eventActionId ?? targetEvent?.dataset.eventId ?? null;
     },
     deleteEventById,
     onDeleteError: (error) => {

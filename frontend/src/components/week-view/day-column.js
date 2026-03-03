@@ -158,7 +158,7 @@ function wireEventContextMenu(column, handlers) {
       return;
     }
 
-    const eventId = eventBlock.dataset.eventId;
+    const eventId = eventBlock.dataset.eventActionId ?? eventBlock.dataset.eventId;
     if (!eventId) {
       return;
     }

@@ -101,6 +101,8 @@ Swedish default, English toggle. Two-language only.
         │   ├── event.rs          # Event { ..., description_private, description_public }
         │   ├── recurrence.rs     # RecurrenceRule, Frequency, EndCondition
         │   └── app_data.rs       # AppData { version, settings, calendars, events }
+        ├── recurrence/
+        │   └── mod.rs            # expand_recurring_events — weekly/monthly expansion
         ├── storage/
         │   └── json_store.rs     # Load/save w/ atomic write
         └── import_export/

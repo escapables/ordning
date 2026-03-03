@@ -135,7 +135,9 @@ function createEventElement(event, pixelsPerMinute, handlers) {
   element.style.left = `calc(${event.column * widthPercent}% + 2px)`;
   element.style.setProperty("--event-color", event.color);
   element.dataset.eventId = event.id;
+  element.dataset.eventActionId = event.actionId ?? event.id;
   element.dataset.eventDate = event.date ?? "";
+  element.dataset.eventIsVirtual = event.isVirtual ? "true" : "false";
   element.dataset.startMinutes = String(event.startMinutes);
   element.dataset.endMinutes = String(event.endMinutes);
   element.dataset.clockStart = event.startTime ?? "";
@@ -169,6 +171,9 @@ function createEventElement(event, pixelsPerMinute, handlers) {
       return;
     }
     select(pointerEvent);
+    if (event.isVirtual) {
+      return;
+    }
     onEventPointerDown(pointerEvent, event, element);
   });
   element.addEventListener("pointermove", (pointerEvent) => {
@@ -182,7 +187,7 @@ function createEventElement(event, pixelsPerMinute, handlers) {
   });
   element.addEventListener("dblclick", (doubleClickEvent) => {
     doubleClickEvent.stopPropagation();
-    onEventOpen(event.id);
+    onEventOpen(event.actionId ?? event.id);
   });
   element.addEventListener("mouseenter", () => {
     toggleSyncedHover(element, true);
@@ -197,7 +202,7 @@ function createEventElement(event, pixelsPerMinute, handlers) {
 
     keyboardEvent.preventDefault();
     keyboardEvent.stopPropagation();
-    onEventOpen(event.id);
+    onEventOpen(event.actionId ?? event.id);
   });
 
   return element;
