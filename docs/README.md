@@ -13,15 +13,15 @@ read_when:
 
 Start here to understand and use the project:
 
-1. `README.md` - Project overview, quick start
+1. [`README.md`](../README.md) - Features, architecture, build instructions
 2. `docs/ARCHITECTURE.md` - System architecture and design decisions
 
 ### Contributors (Developers)
 
 Start here to contribute code:
 
-1. `README.md` - Project overview
-2. `CONTRIBUTING.md` - Contribution guidelines and PR workflow
+1. [`README.md`](../README.md) - Features, architecture, build instructions
+2. [`CONTRIBUTING.md`](../CONTRIBUTING.md) - Contribution guidelines and PR workflow
 3. `docs/STYLE.md` - Coding conventions
 4. `docs/ARCHITECTURE.md` - System architecture and design decisions
 
