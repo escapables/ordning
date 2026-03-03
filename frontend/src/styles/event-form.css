@@ -195,6 +195,42 @@
   height: 16px;
 }
 
+.recurrence-picker {
+  display: grid;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.recurrence-picker__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.recurrence-picker__row .event-modal__input {
+  width: auto;
+}
+
+.recurrence-picker__chip {
+  min-width: 34px;
+  height: 28px;
+  border: 1px solid var(--color-border-muted);
+  border-radius: var(--radius-chip);
+  background: #fff;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.recurrence-picker__chip[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: #fff;
+}
+
 .event-modal__actions {
   display: flex;
   justify-content: flex-end;

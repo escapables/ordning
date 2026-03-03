@@ -1,5 +1,6 @@
 import { t } from "../../i18n/strings.js";
 import { getState } from "../../state.js";
+import { createRecurrencePicker } from "./recurrence-picker.js";
 import { createEventTemplateSearch } from "./event-template-search.js";
 
 function invoke(command, payload = {}) {
@@ -143,6 +144,9 @@ export function createEventModal({
   locationInput.maxLength = 200;
   form.appendChild(createField(t("eventFormLocation"), locationInput));
 
+  const recurrencePicker = createRecurrencePicker({ startDateInput });
+  form.appendChild(recurrencePicker.element);
+
   const privateDescriptionInput = document.createElement("textarea");
   privateDescriptionInput.className =
     "event-modal__input event-modal__input--private event-modal__textarea";
@@ -216,7 +220,7 @@ export function createEventModal({
     noCalendarsPrompt.classList.toggle(FORCE_HIDDEN_CLASS, !enabled);
     templateField.setEnabled(!enabled && state.mode === "create");
     const editableSections = form.querySelectorAll(
-      ".event-modal__field, .event-modal__row, .event-modal__checkbox, .event-modal__actions"
+      ".event-modal__field, .event-modal__row, .event-modal__checkbox, .event-modal__actions, .recurrence-picker"
     );
     editableSections.forEach((section) => {
       section.hidden = enabled;
@@ -296,6 +300,7 @@ export function createEventModal({
     privateDescriptionInput.value = "";
     publicDescriptionInput.value = "";
     templateField.reset();
+    recurrencePicker.reset();
     applyAllDayState();
     setTitleValidationError(false);
   }
@@ -328,7 +333,8 @@ export function createEventModal({
       allDay: allDayInput.checked,
       descriptionPrivate: privateDescriptionInput.value,
       descriptionPublic: publicDescriptionInput.value,
-      location: locationInput.value
+      location: locationInput.value,
+      recurrence: recurrencePicker.collectRecurrence()
     };
   }
 
@@ -387,6 +393,7 @@ export function createEventModal({
       locationInput.value = event.location ?? "";
       privateDescriptionInput.value = event.descriptionPrivate ?? "";
       publicDescriptionInput.value = event.descriptionPublic ?? "";
+      recurrencePicker.loadRecurrence(event.recurrence ?? null);
       applyAllDayState();
       setTitleValidationError(false);
 

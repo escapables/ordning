@@ -25,12 +25,20 @@
       return null;
     }
 
-    const cached = timedEventDatesById.get(event.id);
+    if (event.start_date && event.end_date) {
+      return {
+        start_date: event.start_date,
+        end_date: event.end_date
+      };
+    }
+
+    const lookupId = event.source_id ?? event.id;
+    const cached = timedEventDatesById.get(lookupId);
     if (cached?.start_date && cached?.end_date) {
       return cached;
     }
 
-    const fullEvent = await baseInvoke("get_event", { id: event.id });
+    const fullEvent = await baseInvoke("get_event", { id: lookupId });
     if (!fullEvent?.startDate || !fullEvent?.endDate || fullEvent?.allDay) {
       return null;
     }
@@ -39,7 +47,7 @@
       start_date: fullEvent.startDate,
       end_date: fullEvent.endDate
     };
-    timedEventDatesById.set(event.id, resolved);
+    timedEventDatesById.set(lookupId, resolved);
     return resolved;
   }
 

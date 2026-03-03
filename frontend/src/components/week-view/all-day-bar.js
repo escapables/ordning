@@ -10,6 +10,7 @@ function renderAllDayEvent(event, handlers = {}) {
   } = handlers;
   const element = document.createElement("article");
   element.className = "all-day-event";
+  element.classList.toggle("all-day-event--recurring", Boolean(event.isVirtual));
   element.dataset.eventId = event.id;
   element.dataset.eventActionId = event.actionId ?? event.id;
   element.tabIndex = 3;

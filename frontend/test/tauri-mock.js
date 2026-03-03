@@ -4,26 +4,32 @@
 (function () {
   "use strict";
 
+  var recurrenceTools = window.__ORDNING_TAURI_MOCK_RECURRENCE || {
+    buildEventResponse: function (event) {
+      return { ...event, recurrence: null, recurrenceParentId: event.recurrenceParentId ?? null };
+    },
+    createWeekPayload: function () {
+      return { timed: [], all_day: [] };
+    },
+    normalizeRecurrencePayload: function () {
+      return null;
+    }
+  };
+
   function dateKey(date) {
-    var y = date.getFullYear();
-    var m = String(date.getMonth() + 1).padStart(2, "0");
-    var d = String(date.getDate()).padStart(2, "0");
-    return y + "-" + m + "-" + d;
+    var year = date.getFullYear();
+    var month = String(date.getMonth() + 1).padStart(2, "0");
+    var day = String(date.getDate()).padStart(2, "0");
+    return year + "-" + month + "-" + day;
   }
 
   function weekMonday(ref) {
-    var d = new Date(ref);
-    d.setHours(0, 0, 0, 0);
-    var day = d.getDay();
+    var current = new Date(ref);
+    current.setHours(0, 0, 0, 0);
+    var day = current.getDay();
     var diff = (day - 1 + 7) % 7;
-    d.setDate(d.getDate() - diff);
-    return d;
-  }
-
-  function addDays(date, n) {
-    var d = new Date(date);
-    d.setDate(d.getDate() + n);
-    return d;
+    current.setDate(current.getDate() - diff);
+    return current;
   }
 
   function toIso() {
@@ -32,10 +38,6 @@
 
   function makeId(prefix) {
     return prefix + "-" + Date.now() + "-" + Math.floor(Math.random() * 10000);
-  }
-
-  function inRange(date, startDate, endDate) {
-    return date >= startDate && date <= endDate;
   }
 
   function calendarById(id) {
@@ -54,47 +56,6 @@
           return calendar.id;
         })
     );
-  }
-
-  function toWeekEvent(event) {
-    var calendar = calendarById(event.calendarId);
-    return {
-      id: event.id,
-      date: event.startDate,
-      start_time: event.startTime,
-      end_time: event.endTime,
-      title: event.title,
-      color: calendar ? calendar.color : "#007aff"
-    };
-  }
-
-  function toAllDayEvent(event) {
-    var calendar = calendarById(event.calendarId);
-    return {
-      id: event.id,
-      date: event.startDate,
-      title: event.title,
-      color: calendar ? calendar.color : "#007aff"
-    };
-  }
-
-  function createWeekPayload(startDate, endDate) {
-    var visibleIds = visibleCalendarIds();
-    var inRangeEvents = state.events.filter(function (event) {
-      return visibleIds.has(event.calendarId) && inRange(event.startDate, startDate, endDate);
-    });
-
-    var timed = [];
-    var allDay = [];
-    inRangeEvents.forEach(function (event) {
-      if (event.allDay || !event.startTime || !event.endTime) {
-        allDay.push(toAllDayEvent(event));
-        return;
-      }
-      timed.push(toWeekEvent(event));
-    });
-
-    return { timed: timed, all_day: allDay };
   }
 
   function searchEvents(query) {
@@ -147,13 +108,15 @@
       calendarId: payload.calendarId,
       title: payload.title || "",
       startDate: payload.startDate,
-      endDate: payload.endDate,
+      endDate: payload.endDate ?? payload.startDate,
       startTime: payload.startTime ?? null,
       endTime: payload.endTime ?? null,
       allDay: Boolean(payload.allDay),
       location: payload.location || "",
       descriptionPrivate: payload.descriptionPrivate || "",
       descriptionPublic: payload.descriptionPublic || "",
+      recurrence: recurrenceTools.normalizeRecurrencePayload(payload.recurrence),
+      recurrenceParentId: payload.recurrenceParentId ?? null,
       updated_at: nowIso
     };
   }
@@ -162,15 +125,17 @@
   var monday = weekMonday(now);
   var ts = toIso();
   var mon = dateKey(monday);
-  var tue = dateKey(addDays(monday, 1));
-  var wed = dateKey(addDays(monday, 2));
-  var fri = dateKey(addDays(monday, 4));
+  var tue = dateKey(new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 1));
+  var wed = dateKey(new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 2));
+  var fri = dateKey(new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 4));
   var today = dateKey(now);
-  var past = dateKey(addDays(monday, -14));
+  var past = dateKey(new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() - 14));
   var createState = window.__createOrdningTauriMockState;
   var state = typeof createState === "function"
     ? createState({ ts: ts, mon: mon, tue: tue, wed: wed, fri: fri, today: today, past: past })
     : { settings: { lang: "sv", timezone: "Europe/Stockholm" }, calendars: [], events: [] };
+
+  window.__ORDNING_TAURI_MOCK_STATE = state;
 
   function invoke(command, payload) {
     switch (command) {
@@ -244,7 +209,7 @@
       case "get_week_events": {
         var startDate = (payload && payload.startDate) || "0000-00-00";
         var endDate = (payload && payload.endDate) || "9999-99-99";
-        return Promise.resolve(createWeekPayload(startDate, endDate));
+        return Promise.resolve(recurrenceTools.createWeekPayload(state, startDate, endDate));
       }
 
       case "search_events":
@@ -257,7 +222,7 @@
         if (!found) {
           return Promise.reject("Event not found: " + (payload && payload.id));
         }
-        return Promise.resolve({ ...found });
+        return Promise.resolve(recurrenceTools.buildEventResponse(found));
       }
 
       case "create_event": {
