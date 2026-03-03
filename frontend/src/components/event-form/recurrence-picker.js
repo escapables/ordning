@@ -1,5 +1,6 @@
 import { t, tDayShort } from "../../i18n/strings.js";
 import { createDatePicker } from "../pickers/date-picker.js";
+import { createSelectPicker } from "../pickers/select-picker.js";
 
 const WEEKDAY_OPTIONS = [
   { value: "mon", dayIndex: 1 },
@@ -79,22 +80,17 @@ export function createRecurrencePicker({ startDateInput } = {}) {
   repeatLabel.className = "event-modal__label";
   repeatLabel.textContent = t("recurrenceRepeat");
 
-  const repeatSelect = document.createElement("select");
-  repeatSelect.className = "event-modal__input";
-  repeatSelect.name = "recurrenceRepeat";
-
-  [
-    ["none", t("recurrenceNone")],
-    ["weekly", t("recurrenceWeekly")],
-    ["monthly", t("recurrenceMonthly")]
-  ].forEach(([value, label]) => {
-    const option = document.createElement("option");
-    option.value = value;
-    option.textContent = label;
-    repeatSelect.appendChild(option);
+  const repeatPicker = createSelectPicker({
+    name: "recurrenceRepeat",
+    items: [
+      ["none", t("recurrenceNone")],
+      ["weekly", t("recurrenceWeekly")],
+      ["monthly", t("recurrenceMonthly")]
+    ]
   });
+  const repeatSelect = repeatPicker.select;
 
-  repeatRow.append(repeatLabel, repeatSelect);
+  repeatRow.append(repeatLabel, repeatPicker.container);
   element.appendChild(repeatRow);
 
   const subGroup = document.createElement("div");
@@ -147,27 +143,19 @@ export function createRecurrencePicker({ startDateInput } = {}) {
   const monthlyPrefix = document.createElement("span");
   monthlyPrefix.textContent = t("recurrenceOnThe");
 
-  const weekOfMonthSelect = document.createElement("select");
-  weekOfMonthSelect.className = "event-modal__input";
-  weekOfMonthSelect.name = "recurrenceWeekOfMonth";
-  ORDINAL_VALUES.forEach((value) => {
-    const option = document.createElement("option");
-    option.value = String(value);
-    option.textContent = t(`recurrenceOrdinal${value}`);
-    weekOfMonthSelect.appendChild(option);
+  const weekOfMonthPicker = createSelectPicker({
+    name: "recurrenceWeekOfMonth",
+    items: ORDINAL_VALUES.map((value) => [String(value), t(`recurrenceOrdinal${value}`)])
   });
+  const weekOfMonthSelect = weekOfMonthPicker.select;
 
-  const dayOfWeekSelect = document.createElement("select");
-  dayOfWeekSelect.className = "event-modal__input";
-  dayOfWeekSelect.name = "recurrenceDayOfWeek";
-  WEEKDAY_OPTIONS.forEach((option) => {
-    const dayOption = document.createElement("option");
-    dayOption.value = option.value;
-    dayOption.textContent = tDayShort(option.dayIndex);
-    dayOfWeekSelect.appendChild(dayOption);
+  const dayOfWeekPicker = createSelectPicker({
+    name: "recurrenceDayOfWeek",
+    items: WEEKDAY_OPTIONS.map((option) => [option.value, tDayShort(option.dayIndex)])
   });
+  const dayOfWeekSelect = dayOfWeekPicker.select;
 
-  monthlyRow.append(monthlyPrefix, weekOfMonthSelect, dayOfWeekSelect);
+  monthlyRow.append(monthlyPrefix, weekOfMonthPicker.container, dayOfWeekPicker.container);
   subGroup.appendChild(monthlyRow);
 
   const endsRow = document.createElement("div");
@@ -176,19 +164,15 @@ export function createRecurrencePicker({ startDateInput } = {}) {
   const endsLabel = document.createElement("span");
   endsLabel.textContent = t("recurrenceEnds");
 
-  const endsSelect = document.createElement("select");
-  endsSelect.className = "event-modal__input";
-  endsSelect.name = "recurrenceEnds";
-  [
-    ["never", t("recurrenceNever")],
-    ["after", t("recurrenceAfter")],
-    ["on_date", t("recurrenceOnDate")]
-  ].forEach(([value, label]) => {
-    const option = document.createElement("option");
-    option.value = value;
-    option.textContent = label;
-    endsSelect.appendChild(option);
+  const endsPicker = createSelectPicker({
+    name: "recurrenceEnds",
+    items: [
+      ["never", t("recurrenceNever")],
+      ["after", t("recurrenceAfter")],
+      ["on_date", t("recurrenceOnDate")]
+    ]
   });
+  const endsSelect = endsPicker.select;
 
   const afterCountInput = document.createElement("input");
   afterCountInput.className = "event-modal__input";
@@ -206,7 +190,7 @@ export function createRecurrencePicker({ startDateInput } = {}) {
 
   endsRow.append(
     endsLabel,
-    endsSelect,
+    endsPicker.container,
     afterCountInput,
     afterCountLabel,
     untilDatePicker.container
@@ -244,7 +228,9 @@ export function createRecurrencePicker({ startDateInput } = {}) {
     const startDate = resolveStartDate();
     setSelectedDays([getDayValue(startDate)]);
     weekOfMonthSelect.value = String(getWeekOfMonth(startDate));
+    weekOfMonthPicker.syncDisplay();
     dayOfWeekSelect.value = getDayValue(startDate);
+    dayOfWeekPicker.syncDisplay();
     untilDateInput.value = defaultUntilDate();
   }
 
@@ -281,6 +267,7 @@ export function createRecurrencePicker({ startDateInput } = {}) {
 
     exceptionDates = normalizeDateList(rule.exception_dates);
     repeatSelect.value = rule.frequency === "monthly" ? "monthly" : "weekly";
+    repeatPicker.syncDisplay();
     intervalInput.value = String(clampNumber(rule.interval, 1, 1, 52));
 
     if (repeatSelect.value === "weekly") {
@@ -292,22 +279,27 @@ export function createRecurrencePicker({ startDateInput } = {}) {
       weekOfMonthSelect.value = String(
         clampNumber(rule.week_of_month, getWeekOfMonth(resolveStartDate()), 1, 5)
       );
+      weekOfMonthPicker.syncDisplay();
       dayOfWeekSelect.value = rule.day_of_week || getDayValue(resolveStartDate());
+      dayOfWeekPicker.syncDisplay();
     }
 
     const endCondition = rule.end_condition ?? { type: "never" };
     if (endCondition.type === "after_count") {
       endsSelect.value = "after";
+      endsPicker.syncDisplay();
       afterCountInput.value = String(clampNumber(endCondition.count, 10, 1, 999));
       untilDateInput.value = defaultUntilDate();
     } else if (endCondition.type === "until_date") {
       endsSelect.value = "on_date";
+      endsPicker.syncDisplay();
       afterCountInput.value = "10";
       untilDateInput.value = parseDateKey(endCondition.until_date)
         ? endCondition.until_date
         : defaultUntilDate();
     } else {
       endsSelect.value = "never";
+      endsPicker.syncDisplay();
       afterCountInput.value = "10";
       untilDateInput.value = defaultUntilDate();
     }
@@ -349,8 +341,10 @@ export function createRecurrencePicker({ startDateInput } = {}) {
   function reset() {
     exceptionDates = [];
     repeatSelect.value = "none";
+    repeatPicker.syncDisplay();
     intervalInput.value = "1";
     endsSelect.value = "never";
+    endsPicker.syncDisplay();
     afterCountInput.value = "10";
     applyStartDateDefaults();
     syncVisibility();
@@ -363,7 +357,9 @@ export function createRecurrencePicker({ startDateInput } = {}) {
 
     if (repeatSelect.value === "monthly") {
       weekOfMonthSelect.value = String(getWeekOfMonth(resolveStartDate()));
+      weekOfMonthPicker.syncDisplay();
       dayOfWeekSelect.value = getDayValue(resolveStartDate());
+      dayOfWeekPicker.syncDisplay();
     }
 
     if (repeatSelect.value !== "none" && endsSelect.value === "on_date") {

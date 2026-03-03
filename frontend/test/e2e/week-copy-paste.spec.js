@@ -17,7 +17,7 @@ test("keyboard copy enters paste mode, Escape cancels, and Ctrl+V pastes at curs
   await targetHour.scrollIntoViewIfNeeded();
   let targetBox = await targetHour.boundingBox();
   expect(targetBox).not.toBeNull();
-  await page.mouse.move(targetBox.x + 20, targetBox.y + Math.round(targetBox.height / 2));
+  await page.mouse.move(targetBox.x + 20, targetBox.y + 1);
   await pressShortcut(page, "c");
   await expect(page.locator(".day-column__move-preview")).toHaveCount(1);
 
@@ -29,7 +29,7 @@ test("keyboard copy enters paste mode, Escape cancels, and Ctrl+V pastes at curs
   await sourceEvent.click();
   await targetHour.scrollIntoViewIfNeeded();
   targetBox = await targetHour.boundingBox();
-  await page.mouse.move(targetBox.x + 20, targetBox.y + Math.round(targetBox.height / 2));
+  await page.mouse.move(targetBox.x + 20, targetBox.y + 1);
   await pressShortcut(page, "c");
   await expect(page.locator(".day-column__move-preview")).toHaveCount(1);
 
@@ -39,4 +39,29 @@ test("keyboard copy enters paste mode, Escape cancels, and Ctrl+V pastes at curs
   const pastedEvent = page.locator(".day-column").nth(2).locator(".event-block", { hasText: "Sprint Planning" });
   await expect(pastedEvent).toHaveCount(1);
   await expect(pastedEvent.locator(".event-block__time")).toContainText("12:15 - 13:45");
+});
+
+test("copy-paste snaps to 15-minute grid, not full hours", async ({ page }) => {
+  await page.goto("/");
+
+  const sourceEvent = page.locator(".day-column").nth(0).locator(".event-block", { hasText: "Sprint Planning" });
+  const targetHour = page.locator(".day-column").nth(2).locator(".day-column__hour").nth(10);
+  await expect(sourceEvent).toHaveCount(1);
+
+  await sourceEvent.click();
+  await targetHour.scrollIntoViewIfNeeded();
+  const targetBox = await targetHour.boundingBox();
+  expect(targetBox).not.toBeNull();
+  await page.mouse.move(targetBox.x + 20, targetBox.y + Math.round(targetBox.height * 0.25));
+  await pressShortcut(page, "c");
+  await expect(page.locator(".day-column__move-preview")).toHaveCount(1);
+  await pressShortcut(page, "v");
+
+  const pastedEvent = page.locator(".day-column").nth(2).locator(".event-block", { hasText: "Sprint Planning" });
+  await expect(pastedEvent).toHaveCount(1);
+  const timeText = await pastedEvent.locator(".event-block__time").textContent();
+  const startTime = timeText.split(" - ")[0].trim();
+  const [hours, minutes] = startTime.split(":").map(Number);
+  const startMinutes = hours * 60 + minutes;
+  expect(startMinutes % 60).not.toBe(0);
 });

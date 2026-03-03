@@ -56,6 +56,14 @@ async function fillBaseEvent(page, { title, startDate, startTime = "09:00", endT
   await page.locator(".event-modal__input[name='endTime']").fill(endTime);
 }
 
+async function selectPickerOption(page, name, value) {
+  await page.evaluate(({ n, v }) => {
+    const s = document.querySelector(`select[name='${n}']`);
+    s.value = v;
+    s.dispatchEvent(new Event("change", { bubbles: true }));
+  }, { n: name, v: value });
+}
+
 async function readStoredEventByTitle(page, title) {
   return page.evaluate((eventTitle) => (
     window.__ORDNING_TAURI_MOCK_STATE.events.find((event) => event.title === eventTitle) ?? null
@@ -92,9 +100,9 @@ async function advanceToWeek(page, targetDateKey) {
 async function createWeeklyEvent(page, { title, startDate, extraDay = "wed", count = 6 }) {
   await openCreateModal(page);
   await fillBaseEvent(page, { title, startDate });
-  await page.locator("select[name='recurrenceRepeat']").selectOption("weekly");
+  await selectPickerOption(page, "recurrenceRepeat", "weekly");
   await page.locator(`.recurrence-picker__chip[data-value='${extraDay}']`).click();
-  await page.locator("select[name='recurrenceEnds']").selectOption("after");
+  await selectPickerOption(page, "recurrenceEnds", "after");
   await page.locator("input[name='recurrenceOccurrences']").fill(String(count));
   await saveModal(page);
 }
@@ -102,10 +110,10 @@ async function createWeeklyEvent(page, { title, startDate, extraDay = "wed", cou
 async function createWeeklyPayloadEvent(page, { title, startDate, endMode, count, untilDate }) {
   await openCreateModal(page);
   await fillBaseEvent(page, { title, startDate });
-  await page.locator("select[name='recurrenceRepeat']").selectOption("weekly");
+  await selectPickerOption(page, "recurrenceRepeat", "weekly");
 
   if (endMode !== "never") {
-    await page.locator("select[name='recurrenceEnds']").selectOption(endMode);
+    await selectPickerOption(page, "recurrenceEnds", endMode);
   }
 
   if (endMode === "after") {
@@ -128,14 +136,14 @@ test("weekly recurrence picker creates recurring instances and shows repeat icon
 
   await openCreateModal(page);
   await fillBaseEvent(page, { title, startDate: monday, startTime: "08:30", endTime: "09:00" });
-  await page.locator("select[name='recurrenceRepeat']").selectOption("weekly");
+  await selectPickerOption(page, "recurrenceRepeat", "weekly");
   await expect(page.locator(".recurrence-picker__chip[data-value='mon']")).toHaveAttribute(
     "aria-pressed",
     "true"
   );
   await page.locator(".recurrence-picker__chip[data-value='wed']").click();
   await page.locator(".recurrence-picker__chip[data-value='fri']").click();
-  await page.locator("select[name='recurrenceEnds']").selectOption("after");
+  await selectPickerOption(page, "recurrenceEnds", "after");
   await page.locator("input[name='recurrenceOccurrences']").fill("4");
   await saveModal(page);
 
@@ -166,53 +174,47 @@ test("recurrence picker hides inactive controls as the mode changes", async ({ p
   await page.goto("/");
   await openCreateModal(page);
 
-  const repeatSelect = page.locator("select[name='recurrenceRepeat']");
-  const endsSelect = page.locator("select[name='recurrenceEnds']");
   const intervalInput = page.locator("input[name='recurrenceInterval']");
   const weeklyChip = page.locator(".recurrence-picker__chip[data-value='mon']");
-  const weekOfMonth = page.locator("select[name='recurrenceWeekOfMonth']");
-  const dayOfWeek = page.locator("select[name='recurrenceDayOfWeek']");
+  const weekOfMonthRow = page.locator(".recurrence-picker__row").filter({ has: page.locator("select[name='recurrenceWeekOfMonth']") });
+  const endsRow = page.locator(".recurrence-picker__row").filter({ has: page.locator("select[name='recurrenceEnds']") });
   const occurrences = page.locator("input[name='recurrenceOccurrences']");
   const untilDate = page.locator("input[name='recurrenceUntilDate']");
 
   await expect(intervalInput).toBeHidden();
   await expect(weeklyChip).toBeHidden();
-  await expect(weekOfMonth).toBeHidden();
-  await expect(dayOfWeek).toBeHidden();
-  await expect(endsSelect).toBeHidden();
+  await expect(weekOfMonthRow).toBeHidden();
+  await expect(endsRow).toBeHidden();
   await expect(occurrences).toBeHidden();
   await expect(untilDate).toBeHidden();
 
-  await repeatSelect.selectOption("weekly");
+  await selectPickerOption(page, "recurrenceRepeat", "weekly");
   await expect(intervalInput).toBeVisible();
   await expect(weeklyChip).toBeVisible();
-  await expect(weekOfMonth).toBeHidden();
-  await expect(dayOfWeek).toBeHidden();
-  await expect(endsSelect).toBeVisible();
+  await expect(weekOfMonthRow).toBeHidden();
+  await expect(endsRow).toBeVisible();
   await expect(occurrences).toBeHidden();
   await expect(untilDate).toBeHidden();
 
-  await endsSelect.selectOption("after");
+  await selectPickerOption(page, "recurrenceEnds", "after");
   await expect(occurrences).toBeVisible();
   await expect(untilDate).toBeHidden();
 
-  await repeatSelect.selectOption("monthly");
+  await selectPickerOption(page, "recurrenceRepeat", "monthly");
   await expect(weeklyChip).toBeHidden();
-  await expect(weekOfMonth).toBeVisible();
-  await expect(dayOfWeek).toBeVisible();
+  await expect(weekOfMonthRow).toBeVisible();
   await expect(occurrences).toBeVisible();
   await expect(untilDate).toBeHidden();
 
-  await endsSelect.selectOption("on_date");
+  await selectPickerOption(page, "recurrenceEnds", "on_date");
   await expect(occurrences).toBeHidden();
   await expect(untilDate).toBeVisible();
 
-  await repeatSelect.selectOption("none");
+  await selectPickerOption(page, "recurrenceRepeat", "none");
   await expect(intervalInput).toBeHidden();
   await expect(weeklyChip).toBeHidden();
-  await expect(weekOfMonth).toBeHidden();
-  await expect(dayOfWeek).toBeHidden();
-  await expect(endsSelect).toBeHidden();
+  await expect(weekOfMonthRow).toBeHidden();
+  await expect(endsRow).toBeHidden();
   await expect(occurrences).toBeHidden();
   await expect(untilDate).toBeHidden();
 });
@@ -226,9 +228,9 @@ test("monthly recurrence picker expands nth weekday into a future week", async (
 
   await openCreateModal(page);
   await fillBaseEvent(page, { title, startDate: weekStart, startTime: "11:00", endTime: "11:30" });
-  await page.locator("select[name='recurrenceRepeat']").selectOption("monthly");
-  await page.locator("select[name='recurrenceWeekOfMonth']").selectOption("1");
-  await page.locator("select[name='recurrenceDayOfWeek']").selectOption("wed");
+  await selectPickerOption(page, "recurrenceRepeat", "monthly");
+  await selectPickerOption(page, "recurrenceWeekOfMonth", "1");
+  await selectPickerOption(page, "recurrenceDayOfWeek", "wed");
   await saveModal(page);
 
   await advanceToWeek(page, targetDate);

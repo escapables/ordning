@@ -244,6 +244,11 @@ select.event-modal__input {
   min-width: 140px;
 }
 
+.recurrence-picker .picker--select {
+  min-width: 140px;
+  width: auto;
+}
+
 .recurrence-picker input[type="number"].event-modal__input {
   width: 60px;
   min-height: 30px;

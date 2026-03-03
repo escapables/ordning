@@ -1,4 +1,5 @@
 import { getLang, t } from "../../i18n/strings.js";
+import { createSelectPicker } from "../pickers/select-picker.js";
 
 function getTimezones(fallbackTimezone) {
   if (typeof Intl.supportedValuesOf === "function") {
@@ -29,19 +30,18 @@ export function createSettingsDialog({
   label.className = "settings-dialog__label";
   label.textContent = t("settingsLanguageLabel");
 
-  const select = document.createElement("select");
-  select.className = "settings-dialog__select";
+  const langPicker = createSelectPicker({
+    name: "settingsLanguage",
+    items: [
+      ["sv", t("settingsLanguageSwedish")],
+      ["en", t("settingsLanguageEnglish")]
+    ],
+    className: "settings-dialog__select-picker",
+    onChange: () => persistSettings()
+  });
+  const select = langPicker.select;
 
-  const swedishOption = document.createElement("option");
-  swedishOption.value = "sv";
-  swedishOption.textContent = t("settingsLanguageSwedish");
-
-  const englishOption = document.createElement("option");
-  englishOption.value = "en";
-  englishOption.textContent = t("settingsLanguageEnglish");
-
-  select.append(swedishOption, englishOption);
-  field.append(label, select);
+  field.append(label, langPicker.container);
 
   const timezoneField = document.createElement("label");
   timezoneField.className = "settings-dialog__field";
@@ -50,10 +50,15 @@ export function createSettingsDialog({
   timezoneLabel.className = "settings-dialog__label";
   timezoneLabel.textContent = t("settingsTimezoneLabel");
 
-  const timezoneSelect = document.createElement("select");
-  timezoneSelect.className = "settings-dialog__select";
+  const timezonePicker = createSelectPicker({
+    name: "settingsTimezone",
+    className: "settings-dialog__select-picker",
+    searchable: true,
+    onChange: () => persistSettings()
+  });
+  const timezoneSelect = timezonePicker.select;
 
-  timezoneField.append(timezoneLabel, timezoneSelect);
+  timezoneField.append(timezoneLabel, timezonePicker.container);
 
   const actions = document.createElement("div");
   actions.className = "settings-dialog__actions";
@@ -84,26 +89,19 @@ export function createSettingsDialog({
     dialog.close();
   };
 
-  select.addEventListener("change", persistSettings);
-  timezoneSelect.addEventListener("change", persistSettings);
-
   const open = () => {
     const currentTimezone = getTimezone();
-    timezoneSelect.innerHTML = "";
     const timezoneOptions = getTimezones(currentTimezone);
     if (!timezoneOptions.includes(currentTimezone)) {
       timezoneOptions.unshift(currentTimezone);
     }
-    timezoneOptions.forEach((timezone) => {
-      const option = document.createElement("option");
-      option.value = timezone;
-      option.textContent = timezone;
-      timezoneSelect.appendChild(option);
-    });
+    timezonePicker.setItems(timezoneOptions.map((tz) => [tz, tz]));
     select.value = getLang();
+    langPicker.syncDisplay();
     timezoneSelect.value = currentTimezone;
+    timezonePicker.syncDisplay();
     dialog.showModal();
-    select.focus();
+    langPicker.trigger.focus();
   };
 
   return {

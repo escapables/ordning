@@ -58,7 +58,6 @@ function resolveEventColor(weekContainer, eventId, sourceElement = null) {
 }
 
 function resolveSlotFromPoint(weekContainer, clientX, clientY) {
-  const pointed = document.elementFromPoint(clientX, clientY);
   const column = resolveColumnFromPoint(clientX, clientY);
   if (!(column instanceof HTMLElement) || !weekContainer.contains(column)) {
     return null;
@@ -71,16 +70,11 @@ function resolveSlotFromPoint(weekContainer, clientX, clientY) {
 
   const rect = column.getBoundingClientRect();
   const pixelsPerHour = resolvePixelsPerHour(column);
-  const pointedHour = pointed instanceof Element ? pointed.closest(".day-column__hour") : null;
-  const hourCells = Array.from(column.querySelectorAll(".day-column__hour"));
-  const hourIndex = pointedHour instanceof HTMLElement ? hourCells.indexOf(pointedHour) : -1;
   const rawMinutes = pointerToMinutes(clientY, rect, pixelsPerHour);
-  const startMinutes = hourIndex >= 0
-    ? hourIndex * MINUTES_PER_HOUR
-    : Math.max(
-      0,
-      Math.min(roundNearest(rawMinutes, TIME_STEP_MINUTES), (24 * MINUTES_PER_HOUR) - TIME_STEP_MINUTES)
-    );
+  const startMinutes = Math.max(
+    0,
+    Math.min(roundNearest(rawMinutes, TIME_STEP_MINUTES), (24 * MINUTES_PER_HOUR) - TIME_STEP_MINUTES)
+  );
 
   return {
     column,
