@@ -412,13 +412,12 @@ export function createEventMovePointerDownHandler(column, pixelsPerHour, handler
       resizePayload.instanceDate = dragState.eventDate;
       resizePayload.isVirtual = dragState.isVirtual;
     }
-    stopDrag();
-    if (movePayload) {
-      await onEventMove(movePayload);
-    }
-    if (resizePayload) {
-      await onEventResize(resizePayload);
-    }
+    const releaseBeforeAsync = dragState.isVirtual;
+    if (releaseBeforeAsync) { stopDrag(); }
+    try {
+      if (movePayload) { await onEventMove(movePayload); }
+      if (resizePayload) { await onEventResize(resizePayload); }
+    } finally { if (!releaseBeforeAsync) { stopDrag(); } }
   }
   return (pointerEvent, event, element) => {
     if (pointerEvent.button !== 0 || !(element instanceof HTMLElement)) {
