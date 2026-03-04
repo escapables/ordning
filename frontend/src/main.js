@@ -7,6 +7,7 @@ import { renderCalendarList } from "./components/sidebar/calendar-list.js";
 import { renderMiniMonth } from "./components/sidebar/mini-month.js";
 import { renderToolbar } from "./components/toolbar/toolbar.js";
 import { DEFAULT_PIXELS_PER_HOUR, installPinchZoom, installZoomGuards } from "./components/week-view/week-zoom.js";
+import { createAppSession } from "./main/app-session.js";
 import { installCloseGuard } from "./main/close-guard.js";
 import { bootstrapApp } from "./main/bootstrap.js";
 import { createEventHighlightHelpers } from "./main/event-highlight.js";
@@ -14,6 +15,7 @@ import { createEventMutationHandlers } from "./main/event-mutations.js";
 import { invoke } from "./main/invoke.js";
 import { createManualSaveController } from "./main/manual-save.js";
 import { createEventCopyPasteController } from "./main/event-copy-paste.js";
+import { renderShell } from "./main/shell-dom.js";
 import { mountSettingsDialog } from "./main/settings-dialog.js";
 import { getCurrentTimezone, initializeSettings } from "./main/settings.js";
 import { renderWeekSection } from "./main/week-render.js";
@@ -23,68 +25,27 @@ import { printWeek } from "./utils/print-week.js";
 import { addDays, getWeekBounds, mapAllDayEvents, mapBackendEvents, parseDateKey } from "./utils/week-view-events.js";
 import { purgePastEventsFlow } from "./utils/ui-actions.js";
 import { getState, loadCalendars, loadWeekEvents, setCurrentWeekStart, subscribe } from "./state.js";
-let unsubscribeState = null;
-let keydownHandler = null;
-let teardownZoomGuards = null; let teardownPinchZoom = null; let teardownCloseGuard = null; let teardownManualSave = null; let teardownCopyPaste = null;
-let pendingWeekViewRenderOptions = null;
+
+const appSession = createAppSession();
+
 export async function renderAppShell() {
-  if (unsubscribeState) {
-    unsubscribeState();
-    unsubscribeState = null;
-  }
-  if (keydownHandler) {
-    document.removeEventListener("keydown", keydownHandler);
-    keydownHandler = null;
-  }
-  if (teardownPinchZoom) {
-    teardownPinchZoom();
-    teardownPinchZoom = null;
-  }
-  if (teardownZoomGuards) {
-    teardownZoomGuards();
-    teardownZoomGuards = null;
-  }
-  if (teardownCloseGuard) {
-    teardownCloseGuard();
-    teardownCloseGuard = null;
-  }
-  if (teardownManualSave) {
-    teardownManualSave();
-    teardownManualSave = null;
-  }
-  if (teardownCopyPaste) { teardownCopyPaste(); teardownCopyPaste = null; }
-  const app = document.querySelector("#app");
-  if (!app) {
+  appSession.reset();
+  const shell = renderShell();
+  if (!shell) {
     return;
   }
+  const {
+    app,
+    sidebarList,
+    sidebarMiniMonth,
+    settingsButton,
+    newEventButton,
+    toolbarContainer,
+    weekContainer
+  } = shell;
   const now = new Date();
   const initialWeekStart = getState().currentWeekStart ?? getStartOfWeek(now, 1);
   setCurrentWeekStart(initialWeekStart);
-  app.innerHTML = `
-    <div class="app-shell">
-      <aside class="sidebar">
-        <div class="sidebar__header">
-          <button type="button" class="sidebar__new-event-btn">${t("newEventButton")}</button>
-          <button type="button" class="sidebar__settings-btn" aria-label="${t("settingsButtonAria")}">&#9881;</button>
-        </div>
-        <div class="sidebar__mini-month"></div>
-        <div class="sidebar__calendar-list"></div>
-      </aside>
-      <main class="main-content">
-        <div class="main-toolbar-container"></div>
-        <div class="week-view-container"></div>
-      </main>
-    </div>
-  `;
-  document.title = t("appName");
-  const sidebarList = app.querySelector(".sidebar__calendar-list");
-  const sidebarMiniMonth = app.querySelector(".sidebar__mini-month");
-  const settingsButton = app.querySelector(".sidebar__settings-btn");
-  const toolbarContainer = app.querySelector(".main-toolbar-container");
-  const weekContainer = app.querySelector(".week-view-container");
-  if (!sidebarList || !sidebarMiniMonth || !settingsButton || !toolbarContainer || !weekContainer) {
-    return;
-  }
   const refreshCurrentWeekEvents = async () => {
     const { startDate, endDate } = getWeekBounds(getState().currentWeekStart ?? getStartOfWeek(new Date(), 1));
     await loadWeekEvents(startDate, endDate);
@@ -101,7 +62,7 @@ export async function renderAppShell() {
   let currentPixelsPerHour = DEFAULT_PIXELS_PER_HOUR;
   const { clearEventSelection, highlightEventBlock } = createEventHighlightHelpers({ weekContainer, getState });
   const copyPasteController = createEventCopyPasteController({ weekContainer, invoke, refresh: refreshAndRender, t, clearEventSelection });
-  teardownCopyPaste = copyPasteController.dispose;
+  appSession.setTeardown("copyPaste", copyPasteController.dispose);
   const currentWeekStartOrDefault = () => getState().currentWeekStart ?? getStartOfWeek(new Date(), 1);
   const navigateWeek = async (start) => { setCurrentWeekStart(start); await refreshCurrentWeekEvents(); };
   const goToPreviousWeek = () => navigateWeek(addDays(currentWeekStartOrDefault(), -7));
@@ -120,9 +81,7 @@ export async function renderAppShell() {
     setPendingHighlightEvent: (value) => {
       pendingHighlightEvent = value;
     },
-    setPendingWeekViewRenderOptions: (value) => {
-      pendingWeekViewRenderOptions = value;
-    }
+    setPendingWeekViewRenderOptions: appSession.setPendingWeekViewRenderOptions
   });
   const eventModal = createEventModal({
     confirmDialog,
@@ -152,12 +111,12 @@ export async function renderAppShell() {
     onImported: refreshAndRender
   });
   app.appendChild(importDialog.element);
-  teardownCloseGuard = await installCloseGuard({
+  appSession.setTeardown("closeGuard", await installCloseGuard({
     invoke,
     t,
     choose: confirmDialog.choose,
     onDiscard: refreshAndRender
-  });
+  }));
   mountSettingsDialog({ app, settingsButton, invoke, renderAppShell });
   const renderToolbarSection = (weekStart) => {
     toolbarContainer.innerHTML = "";
@@ -188,7 +147,7 @@ export async function renderAppShell() {
       renderToolbarSection(currentWeekStartOrDefault());
     }
   });
-  teardownManualSave = saveController.dispose;
+  appSession.setTeardown("manualSave", saveController.dispose);
   const getSelectedEventTargets = () => {
     const seen = new Set();
     const targets = [];
@@ -295,15 +254,14 @@ export async function renderAppShell() {
     },
     true
   );
-  const newEventButton = app.querySelector(".sidebar__new-event-btn");
-  if (newEventButton) {
+  if (newEventButton instanceof HTMLElement) {
     newEventButton.tabIndex = 2;
     newEventButton.addEventListener("click", () => {
       eventModal.openCreate();
     });
   }
   let lastRenderedCalendarsJson = null;
-  unsubscribeState = subscribe(() => {
+  appSession.setUnsubscribeState(subscribe(() => {
     const calendars = getState().calendars;
     const weekStart = getState().currentWeekStart ?? getStartOfWeek(new Date(), 1);
     const { weekDates } = getWeekBounds(weekStart);
@@ -384,12 +342,7 @@ export async function renderAppShell() {
       })
     );
     renderToolbarSection(weekStart);
-    const weekViewRenderOptions = pendingWeekViewRenderOptions;
-    if (pendingWeekViewRenderOptions?.remainingRenders > 1) {
-      pendingWeekViewRenderOptions.remainingRenders -= 1;
-    } else {
-      pendingWeekViewRenderOptions = null;
-    }
+    const weekViewRenderOptions = appSession.consumePendingWeekViewRenderOptions();
     const hasExplicitOptions = weekViewRenderOptions != null;
     const weekChanged = weekContainer.dataset.renderedWeek !== String(weekDates[0]);
     const fallbackScrollTop = !hasExplicitOptions && !weekChanged
@@ -424,13 +377,13 @@ export async function renderAppShell() {
       activeHighlight = null;
     }
     void saveController.sync();
-  });
+  }));
   renderWeekSection(
     weekContainer,
     getWeekBounds(initialWeekStart).weekDates,
     { ...weekViewHandlers, timezone: getCurrentTimezone(), pixelsPerHour: currentPixelsPerHour }
   );
-  keydownHandler = setupKeyboardHandler({
+  const nextKeydownHandler = setupKeyboardHandler({
     closeOpenDialogs: () => {
       document.querySelectorAll("dialog[open]").forEach((dialogElement) => {
         dialogElement.close();
@@ -475,13 +428,14 @@ export async function renderAppShell() {
     deleteEventById,
     onDeleteError: () => {}
   });
-  document.addEventListener("keydown", keydownHandler);
-  teardownZoomGuards = installZoomGuards();
-  teardownPinchZoom = installPinchZoom({
+  document.addEventListener("keydown", nextKeydownHandler);
+  appSession.setKeydownHandler(nextKeydownHandler);
+  appSession.setTeardown("zoomGuards", installZoomGuards());
+  appSession.setTeardown("pinchZoom", installPinchZoom({
     getBody: () => weekContainer.querySelector(".week-grid__body"),
     getPixelsPerHour: () => currentPixelsPerHour,
     onZoomChange: handleZoomChange
-  });
+  }));
   await refreshAndRender();
   await saveController.sync();
 }
