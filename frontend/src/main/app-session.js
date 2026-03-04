@@ -10,6 +10,7 @@ export function createAppSession() {
     zoomGuards: null,
     pinchZoom: null,
     closeGuard: null,
+    contextMenuGuard: null,
     manualSave: null,
     copyPaste: null
   };
@@ -35,6 +36,7 @@ export function createAppSession() {
       runTeardown("pinchZoom");
       runTeardown("zoomGuards");
       runTeardown("closeGuard");
+      runTeardown("contextMenuGuard");
       runTeardown("manualSave");
       runTeardown("copyPaste");
     },
