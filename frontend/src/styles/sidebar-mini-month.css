@@ -1,0 +1,87 @@
+.mini-month {
+  border: 1px solid rgb(0 0 0 / 0.06);
+  border-radius: var(--radius-dialog);
+  background: rgb(255 255 255 / 0.62);
+  padding: 6px;
+}
+
+.mini-month__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.mini-month__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  text-transform: capitalize;
+}
+
+.mini-month__nav {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--color-border-muted);
+  border-radius: var(--radius-chip);
+  background: #fff;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.mini-month__weekdays,
+.mini-month__grid {
+  display: grid;
+  grid-template-columns: 18px repeat(7, minmax(0, 1fr));
+  gap: 1px;
+}
+
+.mini-month__week-number-spacer {
+  display: block;
+}
+
+.mini-month__weekday {
+  text-align: center;
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+}
+
+.mini-month__week-number {
+  align-self: center;
+  justify-self: center;
+  font-size: 10px;
+  color: var(--color-text-secondary);
+}
+
+.mini-month__day {
+  min-height: 28px;
+  border: 0;
+  border-radius: var(--radius-chip);
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.mini-month__day:hover {
+  background: rgb(0 122 255 / 0.08);
+}
+
+.mini-month__day--outside {
+  color: rgb(0 0 0 / 0.34);
+}
+
+.mini-month__day--today {
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
+.mini-month__day--current-week {
+  background: rgb(0 122 255 / 0.11);
+  border-radius: calc(var(--radius-chip) * 0.8);
+}
