@@ -184,6 +184,11 @@ impl JsonStore {
         }
     }
 
+    #[cfg(test)]
+    pub(crate) fn from_path_for_tests(data_path: PathBuf) -> Self {
+        Self::from_path(data_path)
+    }
+
     fn set_mode(&self, next_mode: StoreMode) -> Result<()> {
         let mut mode = self
             .mode

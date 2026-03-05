@@ -40,6 +40,31 @@
   const isWrappedClock = (startTime, endTime) =>
     String(endTime ?? "").localeCompare(String(startTime ?? "")) <= 0;
 
+  const promoteMockStoreEncryption = (password) => {
+    const state = window.__ORDNING_TAURI_MOCK_STATE;
+    if (!state?.settings || state.settings.storageEncrypted) {
+      return;
+    }
+
+    state.settings.storageEncrypted = true;
+    state.settings.storageLocked = false;
+    if (typeof password === "string" && password.trim()) {
+      state.encryptionPassword = password;
+    }
+
+    try {
+      window.localStorage.setItem("ordning.mock.storageEncrypted", "1");
+      if (state.encryptionPassword) {
+        window.localStorage.setItem(
+          "ordning.mock.encryptionPassword",
+          String(state.encryptionPassword)
+        );
+      }
+    } catch (_error) {
+      // Ignore storage failures in restrictive browser contexts.
+    }
+  };
+
   const resolveVirtualFile = (file, password) => {
     if (!file) {
       throw "read import file: not found";
@@ -210,13 +235,18 @@
     if (command === "import_json") {
       let snapshot;
       const path = lastPath;
+      const file = virtualFiles.get(path);
       try {
         snapshot = resolveVirtualFile(
-          virtualFiles.get(path),
+          file,
           payload?.password
         );
       } catch (error) {
         return Promise.reject(error);
+      }
+
+      if (file?.format === "ordning-encrypted-1") {
+        promoteMockStoreEncryption(payload?.password);
       }
 
       return Promise.all(

@@ -1,4 +1,5 @@
 mod import_file;
+mod import_persistence;
 mod path_state;
 
 use std::collections::HashSet;
@@ -12,6 +13,7 @@ use uuid::Uuid;
 use zeroize::Zeroize;
 
 use self::import_file::{preview_import_file, read_import_file};
+use self::import_persistence::persist_imported_data;
 use self::path_state::{
     clear_pending_import_path, get_pending_import_path, pick_import_file, resolve_dialog_directory,
     set_pending_import_path,
@@ -107,7 +109,7 @@ pub async fn preview_import_json(
 ) -> Result<ImportPreview, String> {
     let path = resolve_import_path(default_path, password.as_deref(), &app, &state)?;
     set_pending_import_path(&state, &path)?;
-    let (imported, encrypted) = preview_import_file(&path, password)?;
+    let (imported, encrypted) = preview_import_file(&path, password.as_deref())?;
     let summary = if let Some(imported_data) = imported {
         let current = snapshot_data(&state)?;
         Some(summarize_import(&current, &imported_data, strategy))
@@ -128,16 +130,26 @@ pub fn import_json(
     password: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<ImportResult, String> {
+    let mut password = password;
+    let result = import_json_with_password(strategy, password.as_deref(), state);
+    if let Some(secret) = password.as_mut() {
+        secret.zeroize();
+    }
+    result
+}
+
+fn import_json_with_password(
+    strategy: ImportStrategy,
+    password: Option<&str>,
+    state: State<'_, AppState>,
+) -> Result<ImportResult, String> {
     let file_path =
         get_pending_import_path(&state)?.ok_or_else(|| "no import file selected".to_owned())?;
-    let imported = read_import_file(&file_path, password)?;
+    let (imported, import_was_encrypted) = read_import_file(&file_path, password)?;
     let current = snapshot_data(&state)?;
     let (updated_data, summary) = apply_import(&current, &imported, strategy);
 
-    state
-        .store
-        .save(&updated_data)
-        .map_err(|err| format!("failed to persist import: {err}"))?;
+    persist_imported_data(&state.store, &updated_data, import_was_encrypted, password)?;
 
     {
         let mut locked = state
@@ -437,12 +449,9 @@ mod tests {
             .expect("encrypted export payload");
         let content = String::from_utf8(payload).expect("utf8 export payload");
 
-        let (imported, encrypted) = super::import_file::parse_import_content(
-            &content,
-            Some("top secret".to_owned()),
-            false,
-        )
-        .expect("import works");
+        let (imported, encrypted) =
+            super::import_file::parse_import_content(&content, Some("top secret"), false)
+                .expect("import works");
         let imported = imported.expect("imported app data");
 
         assert!(encrypted);

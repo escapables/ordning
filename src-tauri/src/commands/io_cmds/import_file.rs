@@ -10,16 +10,18 @@ use crate::storage::encryption::{EncryptedEnvelope, EncryptionContext, ENCRYPTED
 
 pub(super) fn read_import_file(
     path: &PathBuf,
-    password: Option<String>,
-) -> Result<AppData, String> {
+    password: Option<&str>,
+) -> Result<(AppData, bool), String> {
     let content = fs::read_to_string(path).map_err(|err| format!("read import file: {err}"))?;
-    let (imported, _) = parse_import_content(&content, password, false)?;
-    imported.ok_or_else(|| "password is required for encrypted import".to_owned())
+    let (imported, encrypted) = parse_import_content(&content, password, false)?;
+    let imported =
+        imported.ok_or_else(|| "password is required for encrypted import".to_owned())?;
+    Ok((imported, encrypted))
 }
 
 pub(super) fn preview_import_file(
     path: &PathBuf,
-    password: Option<String>,
+    password: Option<&str>,
 ) -> Result<(Option<AppData>, bool), String> {
     let content = fs::read_to_string(path).map_err(|err| format!("read import file: {err}"))?;
     parse_import_content(&content, password, true)
@@ -27,7 +29,7 @@ pub(super) fn preview_import_file(
 
 pub(super) fn parse_import_content(
     content: &str,
-    password: Option<String>,
+    password: Option<&str>,
     allow_encrypted_probe: bool,
 ) -> Result<(Option<AppData>, bool), String> {
     let parsed = serde_json::from_str::<Value>(content)
@@ -37,7 +39,7 @@ pub(super) fn parse_import_content(
         Some(ENCRYPTED_FORMAT) => {
             let envelope = serde_json::from_value::<EncryptedEnvelope>(parsed)
                 .map_err(|err| format!("invalid encrypted import JSON: {err}"))?;
-            let mut password = password.unwrap_or_default();
+            let mut password = password.unwrap_or_default().to_owned();
             if password.trim().is_empty() {
                 password.zeroize();
                 if allow_encrypted_probe {

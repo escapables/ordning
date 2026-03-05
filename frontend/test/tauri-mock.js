@@ -135,6 +135,26 @@
     ? createState({ ts: ts, mon: mon, tue: tue, wed: wed, fri: fri, today: today, past: past })
     : { settings: { lang: "sv", timezone: "Europe/Stockholm" }, calendars: [], events: [] };
 
+  function persistEncryptionState() {
+    try {
+      if (state.settings.storageEncrypted) {
+        window.localStorage.setItem("ordning.mock.storageEncrypted", "1");
+        if (state.encryptionPassword) {
+          window.localStorage.setItem(
+            "ordning.mock.encryptionPassword",
+            String(state.encryptionPassword)
+          );
+        }
+      } else {
+        window.localStorage.removeItem("ordning.mock.storageEncrypted");
+        window.localStorage.removeItem("ordning.mock.encryptionPassword");
+      }
+    } catch (_error) {
+      // Ignore storage failures in restrictive browser contexts.
+    }
+  }
+
+  persistEncryptionState();
   window.__ORDNING_TAURI_MOCK_STATE = state;
 
   function invoke(command, payload) {
@@ -173,6 +193,7 @@
           );
         }
         state.settings.storageLocked = false;
+        persistEncryptionState();
         return Promise.resolve({ ...state.settings });
       }
 
@@ -184,6 +205,7 @@
         state.encryptionPassword = String(enablePassword);
         state.settings.storageEncrypted = true;
         state.settings.storageLocked = false;
+        persistEncryptionState();
         return Promise.resolve({ encrypted: true, locked: false });
       }
 
@@ -204,6 +226,7 @@
         state.settings.storageEncrypted = false;
         state.settings.storageLocked = false;
         state.encryptionPassword = null;
+        persistEncryptionState();
         return Promise.resolve({ encrypted: false, locked: false });
       }
 

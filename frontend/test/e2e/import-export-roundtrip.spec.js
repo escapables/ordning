@@ -149,3 +149,48 @@ test("encrypted export dialog round-trip restores event with password", async ({
   });
   expect(importedCount).toBe(1);
 });
+
+test("importing encrypted backup enables encrypted startup on reopen", async ({ page }) => {
+  await page.goto("/");
+
+  const calendarId = await page.evaluate(async () => {
+    const created = await window.__TAURI__.core.invoke("create_calendar", {
+      name: "Encrypted Reopen",
+      color: "#ff2d55"
+    });
+    return created.id;
+  });
+
+  await page.evaluate(async (selectedCalendarId) => {
+    await window.__TAURI__.core.invoke("export_json", {
+      mode: "full",
+      calendarIds: [selectedCalendarId],
+      password: "top secret"
+    });
+    await window.__TAURI__.core.invoke("preview_import_json", {
+      strategy: "merge"
+    });
+    await window.__TAURI__.core.invoke("preview_import_json", {
+      strategy: "merge",
+      password: "top secret"
+    });
+    await window.__TAURI__.core.invoke("import_json", {
+      strategy: "merge",
+      password: "top secret"
+    });
+  }, calendarId);
+
+  const encrypted = await page.evaluate(() => {
+    return window.__ORDNING_TAURI_MOCK_STATE.settings.storageEncrypted;
+  });
+  expect(encrypted).toBe(true);
+
+  await page.reload();
+  await expect(page.locator(".unlock-screen")).toBeVisible();
+  await expect(page.locator(".app-shell")).toHaveCount(0);
+
+  await page.locator(".unlock-screen__input").fill("top secret");
+  await page.locator(".unlock-screen__submit").click();
+  await expect(page.locator(".unlock-screen")).toHaveCount(0);
+  await expect(page.locator(".app-shell")).toBeVisible();
+});

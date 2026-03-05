@@ -5,9 +5,19 @@
   window.__createOrdningTauriMockState = function (dates) {
     var ts = dates.ts;
     var params = new URLSearchParams(window.location.search);
-    var locked = params.get("locked") === "1";
-    var encrypted = locked || params.get("encrypted") === "1";
-    var encryptionPassword = params.get("unlockPassword") || "top secret";
+    var persistedEncrypted = false;
+    var persistedPassword = null;
+    try {
+      persistedEncrypted = window.localStorage.getItem("ordning.mock.storageEncrypted") === "1";
+      persistedPassword = window.localStorage.getItem("ordning.mock.encryptionPassword");
+    } catch (_error) {
+      persistedEncrypted = false;
+      persistedPassword = null;
+    }
+    var lockedParam = params.get("locked");
+    var locked = lockedParam === "1" || (lockedParam !== "0" && persistedEncrypted);
+    var encrypted = locked || params.get("encrypted") === "1" || persistedEncrypted;
+    var encryptionPassword = params.get("unlockPassword") || persistedPassword || "top secret";
 
     return {
       settings: {
