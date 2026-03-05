@@ -276,9 +276,8 @@ export function createImportDialog({ onImported = async () => {} } = {}) {
 
     try {
       const preview = await invoke("preview_import_json", {
-        path: state.filePath,
         strategy: selectedStrategy(),
-        password: passwordField.input.value || undefined
+        password: passwordField.input.value
       });
       applyPreview(preview);
     } catch (previewError) {
@@ -320,7 +319,6 @@ export function createImportDialog({ onImported = async () => {} } = {}) {
 
     try {
       const result = await invoke("import_json", {
-        path: state.filePath,
         strategy: selectedStrategy(),
         password: state.fileIsEncrypted
           ? passwordField.input.value || undefined

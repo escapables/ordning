@@ -7,6 +7,7 @@ use crate::storage::json_store::JsonStore;
 pub struct AppState {
     pub data: Mutex<AppData>,
     pub persisted: Mutex<AppData>,
+    pub pending_import_path: Mutex<Option<PathBuf>>,
     pub store: JsonStore,
     pub launch_directory: PathBuf,
 }

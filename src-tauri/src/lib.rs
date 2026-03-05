@@ -81,6 +81,7 @@ pub fn run() {
     let state = AppState {
         data: Mutex::new(app_data.clone()),
         persisted: Mutex::new(app_data),
+        pending_import_path: Mutex::new(None),
         store,
         launch_directory,
     };
@@ -135,6 +136,8 @@ pub fn run() {
                         let phase = pinch.as_ref().phase;
                         let scale = pinch.scale();
                         let (x, y) = pinch.position();
+                        // SAFETY: phase/scale/x/y are numeric GTK event values,
+                        // never user-provided strings.
                         let js = format!(
                             "document.dispatchEvent(new CustomEvent('__pinch',\
                              {{detail:{{phase:{phase},scale:{scale},x:{x},y:{y}}}}}))"

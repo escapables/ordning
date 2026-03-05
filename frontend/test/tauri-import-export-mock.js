@@ -170,11 +170,15 @@
 
     if (command === "preview_import_json") {
       window.__ORDNING_DIALOG_DEFAULTS.importDefaultPath = payload?.defaultPath ?? null;
-      const path = payload?.path ?? lastPath;
+      const path = lastPath;
+      if (!path) {
+        return Promise.reject("no import file selected");
+      }
       const file = virtualFiles.get(path);
       if (!file) {
         return Promise.reject("read import file: not found");
       }
+      lastPath = path;
       if (file.format === "ordning-encrypted-1" && !payload?.password) {
         return Promise.resolve({
           path,
@@ -205,9 +209,10 @@
 
     if (command === "import_json") {
       let snapshot;
+      const path = lastPath;
       try {
         snapshot = resolveVirtualFile(
-          virtualFiles.get(payload?.path ?? ""),
+          virtualFiles.get(path),
           payload?.password
         );
       } catch (error) {
@@ -238,7 +243,7 @@
           });
         })
       ).then(() => ({
-        path: payload?.path ?? "",
+        path,
         summary: {
           newEvents: snapshot.events.length,
           updatedEvents: 0,

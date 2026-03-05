@@ -1,4 +1,5 @@
 mod import_file;
+mod path_state;
 
 use std::collections::HashSet;
 use std::fs;
@@ -11,6 +12,10 @@ use uuid::Uuid;
 use zeroize::Zeroize;
 
 use self::import_file::{preview_import_file, read_import_file};
+use self::path_state::{
+    clear_pending_import_path, get_pending_import_path, pick_import_file, resolve_dialog_directory,
+    set_pending_import_path,
+};
 
 use crate::import_export::importer::{
     apply_import, summarize_import, ImportStrategy, ImportSummary,
@@ -96,12 +101,12 @@ pub fn get_launch_directory(state: State<'_, AppState>) -> Result<String, String
 pub async fn preview_import_json(
     strategy: ImportStrategy,
     password: Option<String>,
-    path: Option<String>,
     default_path: Option<String>,
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<ImportPreview, String> {
-    let path = resolve_import_path(path, default_path, &app, &state)?;
+    let path = resolve_import_path(default_path, password.as_deref(), &app, &state)?;
+    set_pending_import_path(&state, &path)?;
     let (imported, encrypted) = preview_import_file(&path, password)?;
     let summary = if let Some(imported_data) = imported {
         let current = snapshot_data(&state)?;
@@ -119,12 +124,12 @@ pub async fn preview_import_json(
 
 #[tauri::command]
 pub fn import_json(
-    path: String,
     strategy: ImportStrategy,
     password: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<ImportResult, String> {
-    let file_path = PathBuf::from(path);
+    let file_path =
+        get_pending_import_path(&state)?.ok_or_else(|| "no import file selected".to_owned())?;
     let imported = read_import_file(&file_path, password)?;
     let current = snapshot_data(&state)?;
     let (updated_data, summary) = apply_import(&current, &imported, strategy);
@@ -148,6 +153,7 @@ pub fn import_json(
             .map_err(|err| format!("failed to lock persisted state: {err}"))?;
         *persisted = updated_data;
     }
+    clear_pending_import_path(&state)?;
 
     Ok(ImportResult {
         path: file_path.display().to_string(),
@@ -163,37 +169,17 @@ fn snapshot_data(state: &State<'_, AppState>) -> Result<AppData, String> {
     Ok(app_data.clone())
 }
 
-fn resolve_dialog_directory(state: &State<'_, AppState>, default_path: Option<String>) -> PathBuf {
-    default_path
-        .map(|path| path.trim().to_owned())
-        .filter(|path| !path.is_empty())
-        .map(PathBuf::from)
-        .unwrap_or_else(|| state.launch_directory.clone())
-}
-
 fn resolve_import_path(
-    selected_path: Option<String>,
     default_path: Option<String>,
+    password: Option<&str>,
     app: &AppHandle,
     state: &State<'_, AppState>,
 ) -> Result<PathBuf, String> {
-    if let Some(path) = selected_path
-        .map(|path| path.trim().to_owned())
-        .filter(|path| !path.is_empty())
-    {
-        return Ok(PathBuf::from(path));
+    if password.is_some() {
+        return get_pending_import_path(state)?.ok_or_else(|| "no import file selected".to_owned());
     }
 
-    let file_path = app
-        .dialog()
-        .file()
-        .set_title("Import Ordning JSON")
-        .set_directory(resolve_dialog_directory(state, default_path))
-        .add_filter("JSON", &["json"])
-        .blocking_pick_file()
-        .ok_or_else(|| "import canceled".to_owned())?;
-
-    to_path_buf(file_path)
+    pick_import_file(app, resolve_dialog_directory(state, default_path))
 }
 
 fn parse_calendar_ids(raw: Option<Vec<String>>) -> Result<Option<HashSet<Uuid>>, String> {

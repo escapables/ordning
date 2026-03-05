@@ -47,7 +47,7 @@ test("cross-midnight event survives export/import round-trip", async ({ page }) 
   const eventBlocks = page.locator(".event-block", { hasText: "Roundtrip Wrap" });
   await expect(eventBlocks).toHaveCount(2);
 
-  const exportResult = await page.evaluate(async (calendarId) => {
+  await page.evaluate(async (calendarId) => {
     return window.__TAURI__.core.invoke("export_json", {
       mode: "full",
       calendarIds: [calendarId]
@@ -61,12 +61,14 @@ test("cross-midnight event survives export/import round-trip", async ({ page }) 
   await page.locator(".main-toolbar__today-btn").click();
   await expect(page.locator(".event-block", { hasText: "Roundtrip Wrap" })).toHaveCount(0);
 
-  await page.evaluate(async (path) => {
-    await window.__TAURI__.core.invoke("import_json", {
-      path,
+  await page.evaluate(async () => {
+    await window.__TAURI__.core.invoke("preview_import_json", {
       strategy: "merge"
     });
-  }, exportResult.path);
+    await window.__TAURI__.core.invoke("import_json", {
+      strategy: "merge"
+    });
+  });
 
   await page.locator(".main-toolbar__today-btn").click();
   await expect(page.locator(".event-block", { hasText: "Roundtrip Wrap" })).toHaveCount(2);
