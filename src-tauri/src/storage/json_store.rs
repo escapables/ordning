@@ -1,6 +1,6 @@
 use std::fs;
 use std::io;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use anyhow::{anyhow, Context, Result};
@@ -236,13 +236,29 @@ impl JsonStore {
                 Err(rename_err.into())
             }
         })?;
+        set_owner_only_permissions(&self.data_path)?;
 
         Ok(())
     }
 }
 
+#[cfg(unix)]
+fn set_owner_only_permissions(path: &Path) -> Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+
+    fs::set_permissions(path, fs::Permissions::from_mode(0o600))
+        .with_context(|| format!("failed to set permissions on {}", path.display()))
+}
+
+#[cfg(not(unix))]
+fn set_owner_only_permissions(_path: &Path) -> Result<()> {
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
+    #[cfg(unix)]
+    use std::os::unix::fs::PermissionsExt;
     use std::time::{SystemTime, UNIX_EPOCH};
 
     use super::*;
@@ -399,6 +415,33 @@ mod tests {
             LoadState::Ready(app_data) => assert_eq!(app_data, original),
             LoadState::Locked => panic!("disabled encryption should restore plaintext storage"),
         }
+
+        cleanup(&path);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn load_or_create_and_save_set_owner_only_permissions() {
+        let path = unique_temp_file();
+        let store = JsonStore::from_path(path.clone());
+
+        let _ = store.load_or_create().expect("load should succeed");
+        let mode_after_create = fs::metadata(&path)
+            .expect("metadata after create")
+            .permissions()
+            .mode()
+            & 0o777;
+        assert_eq!(mode_after_create, 0o600);
+
+        store
+            .save(&AppData::default())
+            .expect("save should succeed");
+        let mode_after_save = fs::metadata(&path)
+            .expect("metadata after save")
+            .permissions()
+            .mode()
+            & 0o777;
+        assert_eq!(mode_after_save, 0o600);
 
         cleanup(&path);
     }
